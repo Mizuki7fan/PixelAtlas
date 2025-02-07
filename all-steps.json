@@ -1,0 +1,52 @@
+{
+    "Preprocess":[
+        {
+            "step_idx"  : 0,
+            "input_files":[
+            ],
+            "output_files":[
+                "a.obj",
+                "b.txt"    
+            ]
+        }
+    ],
+    "Pixelation":[
+        {
+            "step_idx"  : 1,
+            "input_files":[
+                "a.obj",
+                "b.txt"
+            ],
+            "output_files":[
+                "a.obj",
+                "b.txt"    
+            ]
+        }
+    ],
+    "Dissection":[
+        {
+            "step_idx"  : 2,
+            "input_files":[
+                "a.obj",
+                "b.txt"
+            ],
+            "output_files":[
+                "a.obj",
+                "b.txt"    
+            ]
+        }
+    ],
+    "GutterGeneration":[
+        {
+            "step_idx"  : 3,
+            "input_files":[
+                "a.obj",
+                "b.txt"
+            ],
+            "output_files":[
+                "a.obj",
+                "b.txt"    
+            ]
+        }
+    ]
+}

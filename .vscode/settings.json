@@ -1,0 +1,23 @@
+{
+    "clang-format.executable": "C:\\Program Files\\LLVM\\bin\\clang-format.exe",
+    "clangd.path": "C:\\Program Files\\LLVM\\bin\\clangd.exe",
+    "clangd.arguments": [
+        "--header-insertion=never"
+    ],
+    "workbench.colorTheme": "Solarized Dark",
+    //vscode内置output窗口不输出汉字乱码
+    "cmake.outputLogEncoding": "utf-8",
+    "cmake.configureSettings": {
+    "CMAKE_BUILD_TYPE": "${buildType}"
+    },
+    //"cmake.loggingLevel": "debug",//查看build的日志
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "files.associations": {
+        "xstring": "cpp",
+        "vector": "cpp"
+    }, 
+    "search.exclude": {//设置搜索排除范围
+        "**/build": true,//排除build目录
+    }    
+//    "workbench.colorTheme": "Abyss",
+}
