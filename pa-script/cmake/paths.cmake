@@ -10,3 +10,5 @@ endif()
 
 set (JSONCPP ${MyLib}/jsoncpp)
 set (BOOST ${MyLib}/boost)
+
+#${CMAKE_SOURCE_DIR}=项目根目录=G:/PixelAtlas

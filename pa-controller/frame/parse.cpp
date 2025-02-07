@@ -78,6 +78,7 @@ std::vector<StepArguments> ParseAllStepList() {
 // 根据指令筛选本次运行需要执行的所有命令
 void ParseRunCommandListsOfSingleStep(std::stringstream &all_input_args_stream,
                                       std::vector<std::string> &run_cmd_list) {
+  // 仿照CmdProgram::CmdProgram(int argc, const char* const* argv)函数
   InputCommandArguments all_input_cmd_args =
       ParseInputArgs(all_input_args_stream);
   std::vector<StepArguments> all_step_list = ParseAllStepList();

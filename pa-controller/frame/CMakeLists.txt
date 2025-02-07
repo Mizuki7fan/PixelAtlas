@@ -14,6 +14,8 @@ file (GLOB FRAME_FILES
     io.h
     parse.cpp
     parse.h
+    common_program.cpp
+    common_program.h
 )
 
 add_library(${SUBPROJ_NAME} STATIC ${FRAME_FILES})

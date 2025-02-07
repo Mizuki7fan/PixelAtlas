@@ -1,6 +1,6 @@
 {
-    "clang-format.executable": "C:\\Program Files\\LLVM\\bin\\clang-format.exe",
-    "clangd.path": "C:\\Program Files\\LLVM\\bin\\clangd.exe",
+    "clang-format.executable": "D:\\LLVM\\bin\\clang-format.exe",
+    "clangd.path": "D:\\LLVM\\bin\\clangd.exe",
     "clangd.arguments": [
         "--header-insertion=never"
     ],
