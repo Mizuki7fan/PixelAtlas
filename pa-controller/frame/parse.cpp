@@ -43,7 +43,7 @@ InputCommandArguments ParseInputArgs(std::stringstream &all_input_args) {
   return all_cmd_args;
 }
 
-std::vector<StepArguments> ParseAllStepList() {
+std::vector<StepArguments> LoadAllStepList() {
   std::vector<StepArguments> all_step_list;
   std::ifstream in_stream(STEPLIST_FILE);
   Json::CharReaderBuilder reader_builder;
@@ -75,14 +75,4 @@ std::vector<StepArguments> ParseAllStepList() {
   return all_step_list;
 }
 
-// 根据指令筛选本次运行需要执行的所有命令
-void ParseRunCommandListsOfSingleStep(std::stringstream &all_input_args_stream,
-                                      std::vector<std::string> &run_cmd_list) {
-  // 仿照CmdProgram::CmdProgram(int argc, const char* const* argv)函数
-  InputCommandArguments all_input_cmd_args =
-      ParseInputArgs(all_input_args_stream);
-  std::vector<StepArguments> all_step_list = ParseAllStepList();
-  // 已知: 工具名, 其他参数, 和step_list, 返回需要执行的每一条命令
-  std::cout << run_cmd_list.size() << std::endl;
-}
 } // namespace frm

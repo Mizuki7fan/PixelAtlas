@@ -4,7 +4,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-
 struct InputCommandArguments { // 表示控制程序的输入指令
   int begin_step_idx = 0;
   int end_step_idx = 255;

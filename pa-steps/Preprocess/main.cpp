@@ -2,7 +2,9 @@
 #include <frame/parse.h>
 #include <iostream>
 
-static void MainProcess() { std::cout << "MainProcess" << std::endl; }
+void MainProcess(std::string model_name) {
+  std::cout << model_name << std::endl;
+}
 
 int main(int argc, char *argv[]) {
 

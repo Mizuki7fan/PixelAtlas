@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
       frm::ParseInputArgs(all_input_cmd_args_stream);
 
   // 2. 读取并解析所有工具参数
-  std::vector<StepArguments> all_step_list = frm::ParseAllStepList();
+  std::vector<StepArguments> all_step_list = frm::LoadAllStepList();
 
   // 3. 读取并处理work文件夹
   fs::path work_dir = fs::current_path() / ".." / "work"; // 拼接
