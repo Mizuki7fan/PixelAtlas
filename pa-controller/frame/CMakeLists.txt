@@ -1,9 +1,6 @@
 set(SUBPROJ_NAME pa_frame)
 
-if (NOT DEFINED JSONCPP OR ${JSONCPP} STREQUAL "")
-    message(FATAL_ERROR "没有在环境变量中设置jsoncpp库目录的路径.")#检查JSONCPP的路径
-endif()
-include_directories(${JSONCPP}/include) 
+include_directories(${BOOST})
 
 file (GLOB FRAME_FILES
     assert.hpp
@@ -20,13 +17,13 @@ file (GLOB FRAME_FILES
 
 add_library(${SUBPROJ_NAME} STATIC ${FRAME_FILES})
 
-target_link_libraries(pa_frame PRIVATE
-    debug ${JSONCPP}/build/lib/Debug/jsoncpp.lib
-    optimized ${JSONCPP}/build/lib/Release/jsoncpp.lib
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+target_link_libraries(${SUBPROJ_NAME} PRIVATE 
+    debug   ${BOOST}/stage/lib/libboost_json-vc143-mt-gd-x64-1_84.lib
+    optimized   ${BOOST}/stage/lib/libboost_json-vc143-mt-x64-1_84.lib  
+    debug   ${BOOST}/stage/lib/libboost_container-vc143-mt-gd-x64-1_84.lib
+    optimized   ${BOOST}/stage/lib/libboost_container-vc143-mt-x64-1_84.lib     
 )
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-copy_file(${SUBPROJ_NAME} jsoncpp.dll ${JSONCPP}/build/bin/Debug ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG})
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-copy_file(${SUBPROJ_NAME} jsoncpp.dll ${JSONCPP}/build/bin/Release ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE})
+elseif()
+    message(FATAL_ERROR 尚未编译clang版本的Boost库)
 endif()

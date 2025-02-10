@@ -1,6 +1,6 @@
 #include "parse.h"
+#include <boost/json.hpp>
 #include <fstream>
-#include <json/json.h> //jsoncpp
 #include <sstream>
 #include <string>
 
@@ -44,34 +44,49 @@ InputCommandArguments ParseInputArgs(std::stringstream &all_input_args) {
 }
 
 std::vector<StepArguments> LoadAllStepList() {
+  // 使用boost/json解析json文件
   std::vector<StepArguments> all_step_list;
-  std::ifstream in_stream(STEPLIST_FILE);
-  Json::CharReaderBuilder reader_builder;
-  Json::Value json_root;
-  std::string errs;
-  bool parsing_successful_flag =
-      Json::parseFromStream(reader_builder, in_stream, &json_root, &errs);
-  std::cout << std::format("parsing_successful: {}", parsing_successful_flag)
-            << std::endl;
-  PA_ASSERT(parsing_successful_flag);
-  all_step_list.resize(json_root.size());
+  std::ifstream file(STEPLIST_FILE);
 
-  for (auto &json_cmd : json_root.getMemberNames()) {
+  PA_ASSERT(file.is_open());
+  // 使用std::istreambuf_iterator将整个文件流转换为字符串
+  std::string str((std::istreambuf_iterator<char>(file)),
+                  (std::istreambuf_iterator<char>()));
+  auto jv = boost::json::parse(str);
 
-    const Json::Value &cmd_info = json_root[json_cmd][0];
-    int curr_step_idx = cmd_info["step_idx"].asInt();
-    StepArguments &curr_step = all_step_list[curr_step_idx];
-
-    curr_step.step_name = json_cmd;     // 命令的名字
-    curr_step.step_idx = curr_step_idx; // 命令的序号
-    for (const auto &input_file : cmd_info["input_files"]) {
-      curr_step.input_files.insert(input_file.asString()); // 命令的输入文件
-    }
-    for (const auto &output_file : cmd_info["output_files"]) {
-      curr_step.output_files.insert(output_file.asString()); // 命令的输出文件
-    }
+  // 验证jv是否是对象类型（即{}包裹的数据）
+  if (!jv.is_object()) {
+    throw std::runtime_error("Parsed value is not a JSON object.");
   }
 
+  const boost::json::object &json_root = jv.as_object();
+  all_step_list.resize(json_root.size());
+  for (const auto &[key, val] : json_root) {
+    PA_ASSERT(val.is_array());
+    std::string step_name = key.data(); // 取步骤的名字
+    if (val.is_array()) {
+      const boost::json::array &step_array = val.get_array();
+      for (auto step_value : step_array) {
+        const boost::json::object &step_obj = step_value.get_object();
+        int step_index = static_cast<int>(step_obj.at("step_idx").as_int64());
+        StepArguments &curr_step = all_step_list[step_index];
+        curr_step.step_idx = step_index;
+        curr_step.step_name = step_name;
+        const boost::json::array &step_input_files =
+            step_obj.at("input_files").get_array();
+        for (auto value : step_input_files) {
+          curr_step.input_files.insert(value.as_string().c_str());
+          // std::cout << value.as_string() << std::endl;
+        }
+        const boost::json::array &step_output_files =
+            step_obj.at("output_files").get_array();
+        for (auto value : step_output_files) {
+          curr_step.output_files.insert(value.as_string().c_str());
+          // std::cout << value.as_string() << std::endl;
+        }
+      }
+    }
+  }
   return all_step_list;
 }
 
