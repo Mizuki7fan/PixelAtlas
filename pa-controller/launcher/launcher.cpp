@@ -28,63 +28,66 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < argc; ++i)
     all_input_cmd_args_stream << argv[i] << " ";
   // 解析命令行参数
-  InputCommandArguments all_input_cmd_args =
-      frm::ParseInputArgs(all_input_cmd_args_stream);
+  std::size_t begin_cmd_idx, end_cmd_idx;
+  InputArguments input_args;
+
+  frm::ParseMultiStepArgs(all_input_cmd_args_stream, begin_cmd_idx, end_cmd_idx,
+                          input_args);
 
   // 2. 读取并解析所有工具参数
   std::vector<StepArguments> all_step_list = frm::LoadAllStepList();
 
-  // 3. 读取并处理work文件夹
-  fs::path work_dir = fs::current_path() / ".." / "work"; // 拼接
-  std::cout << work_dir << std::endl;
-  if (fs::exists(work_dir)) {
-    for (fs::directory_iterator iter(work_dir);
-         iter != fs::directory_iterator(); ++iter) {
-      std::string dir_name = iter->path().filename().string();
-      std::cout << dir_name << std::endl;
+  // // 3. 读取并处理work文件夹
+  // fs::path work_dir = fs::current_path() / ".." / "work"; // 拼接
+  // std::cout << work_dir << std::endl;
+  // if (fs::exists(work_dir)) {
+  //   for (fs::directory_iterator iter(work_dir);
+  //        iter != fs::directory_iterator(); ++iter) {
+  //     std::string dir_name = iter->path().filename().string();
+  //     std::cout << dir_name << std::endl;
 
-      std::smatch match; // string-match
-      std::regex pattern(R"((\d+)-(.+))");
-      //\d表示任意一个数字字符, 等效于[0-9]
-      //\d+表示该模式可重复多次
-      //()表示捕获分组, 用()括起来的内容会被作为一个整体, 通过match[xx]即可获取
-      //.表示任意单个字符
-      //+表示该模式可重复多次
+  //     std::smatch match; // string-match
+  //     std::regex pattern(R"((\d+)-(.+))");
+  //     //\d表示任意一个数字字符, 等效于[0-9]
+  //     //\d+表示该模式可重复多次
+  //     //()表示捕获分组, 用()括起来的内容会被作为一个整体,
+  //     通过match[xx]即可获取
+  //     //.表示任意单个字符
+  //     //+表示该模式可重复多次
 
-      if (std::regex_match(dir_name, match, pattern)) {
-        // 匹配成功
-        std::cout << std::format("{}匹配成功, 拆成{}和{}", dir_name,
-                                 match[1].str(), match[2].str())
-                  << std::endl;
-        int cmd_idx = std::stoi(match[1].str());
-        if (cmd_idx >= all_input_cmd_args.begin_step_idx &&
-            cmd_idx <= all_input_cmd_args.end_step_idx) {
-          std::cout << std::format("删除路径: {}", iter->path().string())
-                    << std::endl;
-          fs::remove_all(iter->path()); // 删除文件夹
-        }
-      } else {
-        std::cout << std::format("{}匹配失败", dir_name) << std::endl;
-      }
-    }
-  } else {
-    fs::create_directories(work_dir);
-  }
+  //     if (std::regex_match(dir_name, match, pattern)) {
+  //       // 匹配成功
+  //       std::cout << std::format("{}匹配成功, 拆成{}和{}", dir_name,
+  //                                match[1].str(), match[2].str())
+  //                 << std::endl;
+  //       int cmd_idx = std::stoi(match[1].str());
+  //       if (cmd_idx >= all_input_cmd_args.begin_step_idx &&
+  //           cmd_idx <= all_input_cmd_args.end_step_idx) {
+  //         std::cout << std::format("删除路径: {}", iter->path().string())
+  //                   << std::endl;
+  //         fs::remove_all(iter->path()); // 删除文件夹
+  //       }
+  //     } else {
+  //       std::cout << std::format("{}匹配失败", dir_name) << std::endl;
+  //     }
+  //   }
+  // } else {
+  //   fs::create_directories(work_dir);
+  // }
 
   // 4. 进程管理
-  for (int cmd_idx = all_input_cmd_args.begin_step_idx;
-       cmd_idx <= all_input_cmd_args.end_step_idx; ++cmd_idx) {
+  for (std::size_t cmd_idx = begin_cmd_idx; cmd_idx <= end_cmd_idx; ++cmd_idx) {
     // 依次执行每个步骤
     std::cout << cmd_idx << " " << all_step_list.size() << std::endl;
     StepArguments &curr_step = all_step_list[cmd_idx];
     std::string cmd_filename = curr_step.step_name + ".exe";
     std::cout << "cmd_name: " << cmd_filename << std::endl;
     std::vector<std::string> args;
-    args.push_back(std::format("-j{}", all_input_cmd_args.num_parallel_cnt));
-    args.push_back(std::format("-d{}", all_input_cmd_args.num_debug_level));
-    args.push_back(std::format("-f{}", all_input_cmd_args.filename_regex_str));
-    args.push_back(std::format("-t{}", all_input_cmd_args.max_time_elapsed));
-    args.push_back(std::format("-ds{}", all_input_cmd_args.dataset_str));
+    args.push_back(std::format("-j {}", input_args.num_parallel_cnt));
+    args.push_back(std::format("-d {}", input_args.num_debug_level));
+    args.push_back(std::format("-f {}", input_args.filename_regex_str));
+    args.push_back(std::format("-t {}", input_args.max_time_elapsed));
+    args.push_back(std::format("-ds {}", input_args.dataset_str));
 
     bp::child process;
     auto env = boost::this_process::environment();

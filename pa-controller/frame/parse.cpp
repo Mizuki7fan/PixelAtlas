@@ -6,17 +6,49 @@
 
 namespace frm {
 // 该函数应该放到parse.h中
-InputCommandArguments ParseInputArgs(std::stringstream &all_input_args) {
-  InputCommandArguments all_cmd_args;
+void ParseMultiStepArgs(std::stringstream &all_input_args,
+                        std::size_t &begin_cmd_idx, std::size_t &end_cmd_idx,
+                        InputArguments &input_args) {
   std::string tag, value;
   std::string exe_name;
   all_input_args >> exe_name;
   while (all_input_args >> tag >> value) {
     if (tag == "-b") { //
-      all_cmd_args.begin_step_idx = std::stoi(value);
+      begin_cmd_idx = std::stoi(value);
     } else if (tag == "-e") {
-      all_cmd_args.end_step_idx = std::stoi(value);
+      end_cmd_idx = std::stoi(value);
     } else if (tag == "-p") {
+      input_args.num_parallel_cnt = std::stoi(value);
+    } else if (tag == "-d") {
+      input_args.num_debug_level = std::stoi(value);
+    } else if (tag == "-f") {
+      input_args.filename_regex_str = value;
+    } else if (tag == "-ds") {
+      input_args.dataset_str = value;
+    } else if (tag == "-t") {
+      input_args.max_time_elapsed = std::stoi(value);
+    } else {
+      PA_ASSERT_WITH_MSG(0, std::format("错误的tag: {}", tag));
+    }
+  }
+  PA_ASSERT(begin_cmd_idx <= end_cmd_idx);
+  std::cout
+      << std::format(
+             "{} start_cmd_idx: {}, end_cmd_idx: {}, "
+             "parallel_cnt: {}, debug_level: {}, file_regex: {}, dataset: {}",
+             exe_name, begin_cmd_idx, end_cmd_idx, input_args.num_parallel_cnt,
+             input_args.num_debug_level, input_args.filename_regex_str,
+             input_args.dataset_str)
+      << std::endl;
+}
+
+InputArguments ParseSingleStepArgs(std::stringstream &all_input_args) {
+  InputArguments all_cmd_args;
+  std::string tag, value;
+  std::string exe_name;
+  all_input_args >> exe_name;
+  while (all_input_args >> tag >> value) {
+    if (tag == "-p") {
       all_cmd_args.num_parallel_cnt = std::stoi(value);
     } else if (tag == "-d") {
       all_cmd_args.num_debug_level = std::stoi(value);
@@ -30,17 +62,30 @@ InputCommandArguments ParseInputArgs(std::stringstream &all_input_args) {
       PA_ASSERT_WITH_MSG(0, std::format("错误的tag: {}", tag));
     }
   }
-  PA_ASSERT(all_cmd_args.begin_step_idx <= all_cmd_args.end_step_idx);
   std::cout
       << std::format(
-             "{} start_cmd_idx: {}, end_cmd_idx: {}, "
+             "{} , "
              "parallel_cnt: {}, debug_level: {}, file_regex: {}, dataset: {}",
-             exe_name, all_cmd_args.begin_step_idx, all_cmd_args.end_step_idx,
-             all_cmd_args.num_parallel_cnt, all_cmd_args.num_debug_level,
-             all_cmd_args.filename_regex_str, all_cmd_args.dataset_str)
+             exe_name, all_cmd_args.num_parallel_cnt,
+             all_cmd_args.num_debug_level, all_cmd_args.filename_regex_str,
+             all_cmd_args.dataset_str)
       << std::endl;
 
   return all_cmd_args;
+}
+
+std::vector<std::string> SplitString(const std::string &full_string,
+                                     const std::string &delimiter) {
+  std::vector<std::string> parts;
+  size_t start = 0;
+  size_t end = full_string.find(delimiter);
+  while (end != std::string::npos) {
+    parts.push_back(full_string.substr(start, end - start));
+    start = end + delimiter.length();
+    end = full_string.find(delimiter, start);
+  }
+  parts.push_back(full_string.substr(start, end));
+  return parts;
 }
 
 std::vector<StepArguments> LoadAllStepList() {
@@ -72,18 +117,18 @@ std::vector<StepArguments> LoadAllStepList() {
         StepArguments &curr_step = all_step_list[step_index];
         curr_step.step_idx = step_index;
         curr_step.step_name = step_name;
+
+        // 读输入文件名
         const boost::json::array &step_input_files =
             step_obj.at("input_files").get_array();
-        for (auto value : step_input_files) {
+        for (auto value : step_input_files)
           curr_step.input_files.insert(value.as_string().c_str());
-          // std::cout << value.as_string() << std::endl;
-        }
+
+        // 读输出文件名
         const boost::json::array &step_output_files =
             step_obj.at("output_files").get_array();
-        for (auto value : step_output_files) {
+        for (auto value : step_output_files)
           curr_step.output_files.insert(value.as_string().c_str());
-          // std::cout << value.as_string() << std::endl;
-        }
       }
     }
   }

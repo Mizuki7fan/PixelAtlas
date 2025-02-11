@@ -18,7 +18,7 @@
             "program": "${workspaceRoot}/run/bin_Debug/Preprocess.exe",//程序入口
             "console": "integratedTerminal",//执行cout输出在哪个终端
             "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
-            "args": ["-j","1","-d","0","-t","1800","-f",".*alien.obj.*","-ds","PolyAtlas-Sample-30"],//参数
+            "args": ["-p","1","-d","0","-t","1800","-f","0001","-ds","PolyAtlas-Sample-30"],//参数
             "preLaunchTask": "build-preprocess-debug"//debug前先进行build
         }
     ]
