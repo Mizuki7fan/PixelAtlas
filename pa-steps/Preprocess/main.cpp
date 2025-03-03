@@ -11,5 +11,7 @@ int main(int argc, char *argv[]) {
   frm::CommonProgram common_program(argc, argv);
 
   common_program.Run(MainProcess);
+
+  std::cout << frm::GetGlobalWorkDir() << std::endl;
   return 0;
 }

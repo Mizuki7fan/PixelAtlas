@@ -1,11 +1,15 @@
 #pragma once
 #include "command_structures.h"
 #include "parse.h"
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <vector>
 
+namespace fs = std::filesystem;
 namespace frm {
+// 全局变量
+
 class CommonProgram {
 public:
   CommonProgram(int argc, char *argv[]);
@@ -29,4 +33,8 @@ private:
 
   InputArguments input_args;
 };
+
+fs::path GetGlobalWorkDir();
+fs::path GetGlobalCurrCmdDir();
+
 } // namespace frm

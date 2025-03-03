@@ -1,15 +1,15 @@
 #include "common_program.h"
-#include <filesystem>
 #include <iostream>
-// #include <queue>
 #include <regex>
-
-namespace fs = std::filesystem;
 
 namespace frm {
 
-std::size_t CommonProgram::GetCurrentProgramIndex() {
+static fs::path global_work_dir; // 设置全局变量
+fs::path GetGlobalWorkDir() { return global_work_dir; };
+static fs::path global_curr_cmd_dir;
+fs::path GetGlobalCurrCmdDir() { return global_curr_cmd_dir; };
 
+std::size_t CommonProgram::GetCurrentProgramIndex() {
   fs::path program_path = all_args[0];                     // 取exe路径
   std::string program_name = program_path.stem().string(); // 取exe名
 
@@ -41,13 +41,13 @@ std::unordered_set<std::size_t> CommonProgram::GetCurrentProgramDependencies() {
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 准备当前项目运行需要依赖的文件夹
-  fs::path root_work_dir = fs::current_path() / "..work";
+  global_work_dir = fs::current_path() / "../work";
   std::unordered_map<std::size_t, std::string> existing_subdirs;
 
-  if (!fs::exists(root_work_dir)) {
-    fs::create_directories(root_work_dir); // 创建work文件夹
+  if (!fs::exists(global_work_dir)) {
+    fs::create_directories(global_work_dir); // 创建work文件夹
   } else {
-    for (fs::directory_iterator iter(root_work_dir);
+    for (fs::directory_iterator iter(global_work_dir);
          iter != fs::directory_iterator(); ++iter) {
       std::string subdir_name = iter->path().filename().string();
       std::vector<std::string> parts =
@@ -88,7 +88,7 @@ bool CommonProgram::PrepareWorkingDirectory() {
 
   // 否则: 新建当前工具的结果文件夹, 并统计本次运行一共需要跑的例子数量
   fs::path curr_working_dir =
-      root_work_dir /
+      global_work_dir /
       std::format("{}_{}", curr_cmd_idx, all_step_list[curr_cmd_idx].step_name);
   if (fs::exists(curr_working_dir)) {
     fs::remove_all(curr_working_dir);
