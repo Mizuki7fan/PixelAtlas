@@ -40,8 +40,14 @@ std::unordered_set<std::size_t> CommonProgram::GetCurrentProgramDependencies() {
 }
 
 bool CommonProgram::PrepareWorkingDirectory() {
-  // 准备当前项目运行需要依赖的文件夹
+  // 检查work文件夹是否存在
   global_work_dir = fs::current_path() / "../work";
+  if (!fs::exists(global_work_dir)) {
+    fs::create_directories(global_work_dir);
+  }
+
+  // 分析当前命令的依赖前置命令
+
   std::unordered_map<std::size_t, std::string> existing_subdirs;
 
   if (!fs::exists(global_work_dir)) {
@@ -58,33 +64,32 @@ bool CommonProgram::PrepareWorkingDirectory() {
       existing_subdirs[cmd_idx] = parts[1];
     }
   }
-  // 扫描work文件夹下的所有子文件夹
 
-  std::unordered_set<std::size_t> program_dependencies =
-      GetCurrentProgramDependencies();
-  // 确定当前工具依赖的前置工具
-  // 检测相应的文件夹是否存在
+  // std::unordered_set<std::size_t> program_dependencies =
+  //     GetCurrentProgramDependencies();
+  // // 确定当前工具依赖的前置工具
+  // // 检测相应的文件夹是否存在
 
-  // 当前工具运行时所缺乏的前置工具
-  std::unordered_set<std::size_t> lacking_programs;
+  // // 当前工具运行时所缺乏的前置工具
+  // std::unordered_set<std::size_t> lacking_programs;
 
-  for (auto depend_cmd_idx : program_dependencies) {
-    std::cout << depend_cmd_idx << std::endl;
-    if (!existing_subdirs.contains(depend_cmd_idx))
-      lacking_programs.insert(depend_cmd_idx);
-    else if (existing_subdirs[depend_cmd_idx] !=
-             all_step_list[depend_cmd_idx].step_name)
-      lacking_programs.insert(depend_cmd_idx);
-  }
+  // for (auto depend_cmd_idx : program_dependencies) {
+  //   std::cout << depend_cmd_idx << std::endl;
+  //   if (!existing_subdirs.contains(depend_cmd_idx))
+  //     lacking_programs.insert(depend_cmd_idx);
+  //   else if (existing_subdirs[depend_cmd_idx] !=
+  //            all_step_list[depend_cmd_idx].step_name)
+  //     lacking_programs.insert(depend_cmd_idx);
+  // }
 
-  if (lacking_programs.size() != 0) {
-    std::cout << "前置程序的结果缺失:" << std::endl;
-    for (auto lacking : lacking_programs)
-      std::cout << std::format("{}_{}", lacking,
-                               all_step_list[lacking].step_name)
-                << std::endl;
-    return false;
-  }
+  // if (lacking_programs.size() != 0) {
+  //   std::cout << "前置程序的结果缺失:" << std::endl;
+  //   for (auto lacking : lacking_programs)
+  //     std::cout << std::format("{}_{}", lacking,
+  //                              all_step_list[lacking].step_name)
+  //               << std::endl;
+  //   return false;
+  // }
 
   // 否则: 新建当前工具的结果文件夹, 并统计本次运行一共需要跑的例子数量
   fs::path curr_working_dir =
@@ -143,19 +148,21 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
   for (std::size_t cmd_idx = 0; cmd_idx < all_step_list.size(); ++cmd_idx)
     map_step_name_to_step_idx[all_step_list[cmd_idx].step_name] = cmd_idx;
 
+  // 获取当前工具的索引
   curr_cmd_idx = std::numeric_limits<std::size_t>::max();
-
   curr_cmd_idx = GetCurrentProgramIndex();
   if (curr_cmd_idx == std::numeric_limits<std::size_t>::max())
     std::cerr << "invalid command: " << argv[0] << std::endl;
 
+  // 解析当前工具的参数
   std::stringstream all_input_cmd_args_stream;
   for (int i = 0; i < argc; ++i)
     all_input_cmd_args_stream << argv[i] << " ";
-
   input_args = ParseSingleStepArgs(all_input_cmd_args_stream);
 
+  // 准备当前工具运行需要的文件夹
   PrepareWorkingDirectory();
+
   SelectRunTargets();
 };
 

@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Visual Studio 2022 Dark",
+    "workbench.colorTheme": "Visual Studio 2022 Blue",
     "clang-format.executable": "D:\\LLVM\\bin\\clang-format.exe",
     "clangd.path": "D:\\LLVM\\bin\\clangd.exe",
     "clangd.arguments": [

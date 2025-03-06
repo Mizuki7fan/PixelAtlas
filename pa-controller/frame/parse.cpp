@@ -93,7 +93,7 @@ std::vector<StepArguments> LoadAllStepList() {
   std::vector<StepArguments> all_step_list;
   std::ifstream file(STEPLIST_FILE);
 
-  PA_ASSERT_WITH_MSG(!file.is_open(), "没有找到all_step_list.json文件");
+  PA_ASSERT_WITH_MSG(file.is_open(), "没有找到all_step_list.json文件");
   // 使用std::istreambuf_iterator将整个文件流转换为字符串
   std::string str((std::istreambuf_iterator<char>(file)),
                   (std::istreambuf_iterator<char>()));
