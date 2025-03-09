@@ -17,9 +17,9 @@ public:
 
 private:                                // functions
   std::size_t GetCurrentProgramIndex(); // 取当前的cmd的idx
-  std::unordered_set<std::size_t>
-  GetCurrentProgramDependencies(); // 取当前program所依赖的前置program
-  bool PrepareWorkingDirectory();  // 准备work文件夹
+  // std::unordered_set<std::size_t>
+  // GetCurrentProgramDependencies(); // 取当前program所依赖的前置program
+  bool PrepareWorkingDirectory(); // 准备work文件夹
 
   bool
   SelectRunTargets(); // 根据依赖的前置工具和文件通配符, 确定本次运行所有的目标
@@ -30,11 +30,9 @@ private:
   std::vector<std::string> all_args;
   std::vector<std::string> all_models;
   std::size_t curr_cmd_idx;
-
-  InputArguments input_args;
 };
 
 fs::path GetGlobalWorkDir();
 fs::path GetGlobalCurrCmdDir();
-
+int GetDebugLevel();
 } // namespace frm

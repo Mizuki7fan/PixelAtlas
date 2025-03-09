@@ -1,13 +1,41 @@
 #include "common_program.h"
+#include "assert.hpp"
+#include "debug.h"
+#include <boost/program_options.hpp>
 #include <iostream>
 #include <regex>
 
-namespace frm {
+namespace po = boost::program_options;
 
-static fs::path global_work_dir; // 设置全局变量
-fs::path GetGlobalWorkDir() { return global_work_dir; };
-static fs::path global_curr_cmd_dir;
-fs::path GetGlobalCurrCmdDir() { return global_curr_cmd_dir; };
+namespace frm {
+// work目录
+static fs::path g_working_dir;
+fs::path GetGlobalWorkDir() { return g_working_dir; };
+// 当前工具目录
+static fs::path g_curr_working_dir;
+fs::path GetCurrWorkingDir() { return g_curr_working_dir; };
+// 当前调试输出目录
+static fs::path g_curr_debug_dir;
+fs::path GetCurrDebugDir() { return g_curr_debug_dir; };
+// 当前日志输出目录
+static fs::path g_curr_log_dir;
+fs::path GetCurrLogDir() { return g_curr_log_dir; };
+// 当前结果输出目录
+static fs::path g_curr_result_dir;
+fs::path GetResultDir() { return g_curr_result_dir; };
+// 调试等级
+static int g_debug_level_arg = 0;
+int GetDebugLevel() { return g_debug_level_arg; };
+// 文件名通配符
+static std::string g_filename_regex_str = ".*.*";
+// 数据集名
+static std::string g_dataset_str = ".";
+// 并行数
+static int g_num_parallel_cnt = 1;
+// 是否每个文件独立新建文件夹
+static bool g_use_individual_model_dir = false;
+// 程序执行最大用时
+static int g_max_time_elapsed = 1800;
 
 std::size_t CommonProgram::GetCurrentProgramIndex() {
   fs::path program_path = all_args[0];                     // 取exe路径
@@ -21,119 +49,94 @@ std::size_t CommonProgram::GetCurrentProgramIndex() {
 }
 
 // 取当前工具的前置依赖工具
-std::unordered_set<std::size_t> CommonProgram::GetCurrentProgramDependencies() {
-  std::unordered_set<std::size_t> denpendcies;
-  // std::queue<std::size_t> queue_denpendcies;
-  // queue_denpendcies.push(curr_cmd_idx);
+// std::unordered_set<std::size_t>
+// CommonProgram::GetCurrentProgramDependencies() {
+//   std::unordered_set<std::size_t> denpendcies;
+// std::queue<std::size_t> queue_denpendcies;
+// queue_denpendcies.push(curr_cmd_idx);
 
-  // while (!queue_denpendcies.empty()) {
-  //   std::size_t cmd_idx = queue_denpendcies.front();
-  //   denpendcies.insert(cmd_idx);
-  //   // 取当前cmd_idx的依赖idx
-  //   for (auto depend_cmd_name : all_step_list[cmd_idx].dependencies) {
-  //     std::size_t depend_cmd_idx =
-  //     map_step_name_to_step_idx[depend_cmd_name]; PA_ASSERT(depend_cmd_idx <
-  //     cmd_idx); queue_denpendcies.push(depend_cmd_idx);
-  //   }
-  // };
-  return denpendcies;
-}
+// while (!queue_denpendcies.empty()) {
+//   std::size_t cmd_idx = queue_denpendcies.front();
+//   denpendcies.insert(cmd_idx);
+//   // 取当前cmd_idx的依赖idx
+//   for (auto depend_cmd_name : all_step_list[cmd_idx].dependencies) {
+//     std::size_t depend_cmd_idx =
+//     map_step_name_to_step_idx[depend_cmd_name]; PA_ASSERT(depend_cmd_idx <
+//     cmd_idx); queue_denpendcies.push(depend_cmd_idx);
+//   }
+// };
+//   return denpendcies;
+// }
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
-  global_work_dir = fs::current_path() / "../work";
-  if (!fs::exists(global_work_dir)) {
-    fs::create_directories(global_work_dir);
-  }
+  g_working_dir = fs::current_path() / "../work";
+  // 如果没有work文件夹则新建
+  if (!fs::exists(g_working_dir))
+    fs::create_directories(g_working_dir);
 
-  // 分析当前命令的依赖前置命令
-
-  std::unordered_map<std::size_t, std::string> existing_subdirs;
-
-  if (!fs::exists(global_work_dir)) {
-    fs::create_directories(global_work_dir); // 创建work文件夹
-  } else {
-    for (fs::directory_iterator iter(global_work_dir);
-         iter != fs::directory_iterator(); ++iter) {
-      std::string subdir_name = iter->path().filename().string();
-      std::vector<std::string> parts =
-          SplitString(subdir_name, "_"); // 根据"_"的前后拆分字符串
-      if (parts.size() != 2)
-        continue;
-      std::size_t cmd_idx = static_cast<std::size_t>(std::stoi(parts[0]));
-      existing_subdirs[cmd_idx] = parts[1];
-    }
-  }
-
-  // std::unordered_set<std::size_t> program_dependencies =
-  //     GetCurrentProgramDependencies();
-  // // 确定当前工具依赖的前置工具
-  // // 检测相应的文件夹是否存在
-
-  // // 当前工具运行时所缺乏的前置工具
-  // std::unordered_set<std::size_t> lacking_programs;
-
-  // for (auto depend_cmd_idx : program_dependencies) {
-  //   std::cout << depend_cmd_idx << std::endl;
-  //   if (!existing_subdirs.contains(depend_cmd_idx))
-  //     lacking_programs.insert(depend_cmd_idx);
-  //   else if (existing_subdirs[depend_cmd_idx] !=
-  //            all_step_list[depend_cmd_idx].step_name)
-  //     lacking_programs.insert(depend_cmd_idx);
-  // }
-
-  // if (lacking_programs.size() != 0) {
-  //   std::cout << "前置程序的结果缺失:" << std::endl;
-  //   for (auto lacking : lacking_programs)
-  //     std::cout << std::format("{}_{}", lacking,
-  //                              all_step_list[lacking].step_name)
-  //               << std::endl;
-  //   return false;
-  // }
-
-  // 否则: 新建当前工具的结果文件夹, 并统计本次运行一共需要跑的例子数量
-  fs::path curr_working_dir =
-      global_work_dir /
+  // 检查并刷新本步骤的工作目录
+  g_curr_working_dir =
+      g_working_dir /
       std::format("{}_{}", curr_cmd_idx, all_step_list[curr_cmd_idx].step_name);
-  if (fs::exists(curr_working_dir)) {
-    fs::remove_all(curr_working_dir);
-  }
-  fs::create_directories(curr_working_dir);
+  if (fs::exists(g_curr_working_dir))
+    fs::remove_all(g_curr_working_dir);
+  fs::create_directories(g_curr_working_dir);
 
-  // 取当前项目需要运行的所有文件
+  g_curr_debug_dir = g_curr_working_dir / "debug";
+  fs::create_directories(g_curr_debug_dir);
+
+  g_curr_log_dir = g_curr_working_dir / "log";
+  fs::create_directories(g_curr_log_dir);
+
+  g_curr_result_dir = g_curr_working_dir / "result";
+  fs::create_directories(g_curr_result_dir);
 
   return true;
 }
 
 bool CommonProgram::SelectRunTargets() {
-  //
+  // 匹配规则
   std::smatch match;
-  std::string &file_regex = input_args.filename_regex_str;
+  std::string &file_regex = g_filename_regex_str;
   std::regex pattern(file_regex);
 
+  // 如果当前工具为第一个工具
   if (curr_cmd_idx == 0) {
     fs::path project_root_dir = fs::current_path() / ".." / "..";
     fs::path project_asset_dir = project_root_dir / "asset";
-    fs::path run_data_dir = project_asset_dir / input_args.dataset_str;
+    // 指定数据集
+    fs::path run_dataset_dir = project_asset_dir / g_dataset_str;
 
     std::vector<std::string> run_files;
     for (const auto &entry :
-         std::filesystem::directory_iterator(run_data_dir)) {
+         std::filesystem::directory_iterator(run_dataset_dir)) {
       if (entry.is_directory())
         continue;
       //
       std::string filename = entry.path().filename().string();
       if (std::regex_match(filename, match, pattern)) {
-        run_files.push_back(filename);
+        run_files.push_back(entry.path().string());
       }
     }
-    std::cout << std::format("共成功匹配{}个例子:", run_files.size())
-              << std::endl;
-    for (auto run_file : run_files)
-      std::cout << run_file << std::endl;
+    if (DebugLevel() > 1) {
+      std::cout << std::format("共成功匹配{}个例子:", run_files.size())
+                << std::endl;
+      for (auto run_file : run_files)
+        std::cout << run_file << std::endl;
+    }
   }
 
   return true;
+}
+
+int CommonProgram::Run(const std::function<void(std::string)> &func) const {
+  // 清空当前步骤的结果
+
+  // 每个工具将要执行的函数传到这里, 该函数负责进行输入控制以及并行控制
+  std::string model_name = "alien.obj";
+  func(model_name);
+  return 1;
 }
 
 CommonProgram::CommonProgram(int argc, char *argv[]) {
@@ -142,6 +145,38 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
     std::cout << all_args.back() << " ";
   }
   std::cout << std::endl;
+
+  po::options_description desc("Allowed options");
+  desc.add_options()("help,h", "帮助信息")(
+      "debug,d", po::value<int>(&g_debug_level_arg)->default_value(0),
+      "设置调试等级")(
+      "filename_regex,f",
+      po::value<std::string>(&g_filename_regex_str)->default_value(".*.*"),
+      "文件名正则")(
+      "dataset,s",
+      po::value<std::string>(&g_dataset_str)->default_value("Model"),
+      "数据集名称")("parallel,p",
+                    po::value<int>(&g_num_parallel_cnt)->default_value(1),
+                    "并行执行数")(
+      "use_individual_model_dir",
+      po::bool_switch(&g_use_individual_model_dir)->default_value(false),
+      "是否每个文件独立建立文件夹")(
+      "max_time_elapsed,t",
+      po::value<int>(&g_max_time_elapsed)->default_value(1800), "最大耗时");
+
+  po::variables_map vm;
+  try {
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    if (vm.count("help")) {
+      std::cout << desc << std::endl;
+      exit(0);
+    }
+    po::notify(vm);
+  } catch (const po::error &e) {
+    std::cerr << "error: " << e.what() << std::endl;
+    std::cerr << desc << std::endl;
+    PA_ASSERT_WITH_MSG(0, "输入异常");
+  }
 
   // 加载all-step.json文件
   all_step_list = LoadAllStepList();
@@ -153,25 +188,10 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
   curr_cmd_idx = GetCurrentProgramIndex();
   if (curr_cmd_idx == std::numeric_limits<std::size_t>::max())
     std::cerr << "invalid command: " << argv[0] << std::endl;
-
-  // 解析当前工具的参数
-  std::stringstream all_input_cmd_args_stream;
-  for (int i = 0; i < argc; ++i)
-    all_input_cmd_args_stream << argv[i] << " ";
-  input_args = ParseSingleStepArgs(all_input_cmd_args_stream);
-
   // 准备当前工具运行需要的文件夹
   PrepareWorkingDirectory();
-
+  // 选择本次运行需要处理的模型
   SelectRunTargets();
 };
 
-int CommonProgram::Run(const std::function<void(std::string)> &func) const {
-  // 清空当前步骤的结果
-
-  // 每个工具将要执行的函数传到这里, 该函数负责进行输入控制以及并行控制
-  std::string model_name = "alien.obj";
-  func(model_name);
-  return 1;
-}
 } // namespace frm

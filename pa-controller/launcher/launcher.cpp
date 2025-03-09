@@ -1,41 +1,44 @@
 #include <boost/process.hpp>
-#include <filesystem>
-#include <format>
+// #include <filesystem>
+// #include <format>
 #include <frame/assert.hpp>
 #include <frame/command_structures.h>
 #include <frame/parse.h>
 #include <iostream>
-#include <regex>
-#include <sstream>
+// #include <regex>
+// #include <sstream>
 
-namespace fs = std::filesystem;
-namespace bp = boost::process;
+// namespace fs = std::filesystem;
+// namespace bp = boost::process;
 
 int main(int argc, char *argv[]) {
+  std::cout << argc << argv[0] << std::endl;
+  return 0;
   // 查看项目的工作目录, 该值通过launch.json的cwd字段指定
-  std::cout << "工作目录: " << fs::current_path() << std::endl;
-  PA_ASSERT_WITH_MSG(fs::exists(STEPLIST_FILE), "宏STEPLIST_FILE不存在");
-  PA_ASSERT_WITH_MSG(fs::exists("jsoncpp.dll"), "jsoncpp.dll不存在");
+  // std::cout << "工作目录: " << fs::current_path() << std::endl;
+  // PA_ASSERT_WITH_MSG(fs::exists(STEPLIST_FILE), "宏STEPLIST_FILE不存在");
+  // PA_ASSERT_WITH_MSG(fs::exists("jsoncpp.dll"), "jsoncpp.dll不存在");
 
-  // 1. 读取并解析输入命令行参数
+  // // 1. 读取并解析输入命令行参数
 
-  std::cout << "argc: " << argc << std::endl;
-  std::cout << "输入参数: " << std::endl;
-  for (int i = 0; i < argc; ++i)
-    std::cout << argv[i] << " ";
-  std::cout << std::endl;
-  std::stringstream all_input_cmd_args_stream;
-  for (int i = 0; i < argc; ++i)
-    all_input_cmd_args_stream << argv[i] << " ";
-  // 解析命令行参数
-  std::size_t begin_cmd_idx, end_cmd_idx;
-  InputArguments input_args;
+  // std::cout << "argc: " << argc << std::endl;
+  // std::cout << "输入参数: " << std::endl;
+  // for (int i = 0; i < argc; ++i)
+  //   std::cout << argv[i] << " ";
+  // std::cout << std::endl;
+  // std::stringstream all_input_cmd_args_stream;
+  // for (int i = 0; i < argc; ++i)
+  //   all_input_cmd_args_stream << argv[i] << " ";
+  // // 解析命令行参数
+  // std::size_t begin_cmd_idx, end_cmd_idx;
+  // InputArguments input_args;
 
-  frm::ParseMultiStepArgs(all_input_cmd_args_stream, begin_cmd_idx, end_cmd_idx,
-                          input_args);
+  // frm::ParseMultiStepArgs(all_input_cmd_args_stream, begin_cmd_idx,
+  // end_cmd_idx,
+  //                         input_args);
 
   // 2. 读取并解析所有工具参数
-  std::vector<StepArguments> all_step_list = frm::LoadAllStepList();
+  // std::vector<StepArguments> all_step_list = frm::LoadAllStepList();
 
   // // 3. 读取并处理work文件夹
   // fs::path work_dir = fs::current_path() / ".." / "work"; // 拼接
@@ -76,31 +79,32 @@ int main(int argc, char *argv[]) {
   // }
 
   // 4. 进程管理
-  for (std::size_t cmd_idx = begin_cmd_idx; cmd_idx <= end_cmd_idx; ++cmd_idx) {
-    // 依次执行每个步骤
-    std::cout << cmd_idx << " " << all_step_list.size() << std::endl;
-    StepArguments &curr_step = all_step_list[cmd_idx];
-    std::string cmd_filename = curr_step.step_name + ".exe";
-    std::cout << "cmd_name: " << cmd_filename << std::endl;
-    std::vector<std::string> args;
-    args.push_back(std::format("-j {}", input_args.num_parallel_cnt));
-    args.push_back(std::format("-d {}", input_args.num_debug_level));
-    args.push_back(std::format("-f {}", input_args.filename_regex_str));
-    args.push_back(std::format("-t {}", input_args.max_time_elapsed));
-    args.push_back(std::format("-ds {}", input_args.dataset_str));
+  // for (std::size_t cmd_idx = begin_cmd_idx; cmd_idx <= end_cmd_idx;
+  // ++cmd_idx) {
+  //   // 依次执行每个步骤
+  //   std::cout << cmd_idx << " " << all_step_list.size() << std::endl;
+  //   StepArguments &curr_step = all_step_list[cmd_idx];
+  //   std::string cmd_filename = curr_step.step_name + ".exe";
+  //   std::cout << "cmd_name: " << cmd_filename << std::endl;
+  //   std::vector<std::string> args;
+  //   args.push_back(std::format("-j {}", input_args.num_parallel_cnt));
+  //   args.push_back(std::format("-d {}", input_args.num_debug_level));
+  //   args.push_back(std::format("-f {}", input_args.filename_regex_str));
+  //   args.push_back(std::format("-t {}", input_args.max_time_elapsed));
+  //   args.push_back(std::format("-ds {}", input_args.dataset_str));
 
-    bp::child process;
-    auto env = boost::this_process::environment();
-    try {
-      process = bp::child(cmd_filename, bp::args(args), env);
-      process.wait();
-    } catch (const std::exception &e) {
-      std::cout << std::format("进程{}异常: {}", cmd_filename, e.what())
-                << std::endl;
-      exit(0);
-    } catch (...) {
-      std::cout << std::format("进程{}异常", cmd_filename) << std::endl;
-      exit(0);
-    }
-  }
+  //   bp::child process;
+  //   auto env = boost::this_process::environment();
+  //   try {
+  //     process = bp::child(cmd_filename, bp::args(args), env);
+  //     process.wait();
+  //   } catch (const std::exception &e) {
+  //     std::cout << std::format("进程{}异常: {}", cmd_filename, e.what())
+  //               << std::endl;
+  //     exit(0);
+  //   } catch (...) {
+  //     std::cout << std::format("进程{}异常", cmd_filename) << std::endl;
+  //     exit(0);
+  //   }
+  // }
 }

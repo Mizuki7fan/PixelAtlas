@@ -23,6 +23,8 @@ target_link_libraries(${SUBPROJ_NAME} PRIVATE
     optimized   ${BOOST}/stage/lib/libboost_json-vc143-mt-x64-1_84.lib  
     debug   ${BOOST}/stage/lib/libboost_container-vc143-mt-gd-x64-1_84.lib
     optimized   ${BOOST}/stage/lib/libboost_container-vc143-mt-x64-1_84.lib     
+    debug   ${BOOST}/stage/lib/libboost_program_options-vc143-mt-gd-x64-1_84.lib
+    optimized   ${BOOST}/stage/lib/libboost_program_options-vc143-mt-x64-1_84.lib     
 )
 elseif()
     message(FATAL_ERROR 尚未编译clang版本的Boost库)

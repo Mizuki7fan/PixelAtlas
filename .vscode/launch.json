@@ -1,16 +1,16 @@
 {
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "debug-launcher",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/run/bin_Debug/launcher.exe",//程序入口
-            "console": "integratedTerminal",//执行cout输出在哪个终端
-            "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
-            "args": ["-b","0","-e","2","-f",".*alien.obj.*","-ds","PolyAtlas-Sample-30"],//参数
-            "preLaunchTask": "build-launcher-debug"//debug前先进行build
-        },
+        // {
+        //     "name": "debug-launcher",
+        //     "type": "cppvsdbg",
+        //     "request": "launch",
+        //     "program": "${workspaceRoot}/run/bin_Debug/launcher.exe",//程序入口
+        //     "console": "integratedTerminal",//执行cout输出在哪个终端
+        //     "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
+        //     "args": ["-b","0","-e","2","-f",".*alien.obj.*","-s","PolyAtlas-Sample-30"],//参数
+        //     "preLaunchTask": "build-launcher-debug"//debug前先进行build
+        // },
         {
             "name": "debug-preprocess",
             "type": "cppvsdbg",
@@ -18,7 +18,7 @@
             "program": "${workspaceRoot}/run/bin_Debug/Preprocess.exe",//程序入口
             "console": "integratedTerminal",//执行cout输出在哪个终端
             "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
-            "args": ["-p","1","-d","0","-t","1800","-f","0001","-ds","PolyAtlas-Sample-30"],//参数
+            "args": ["-p","1","-d","2","-t","1800","-f",".*0001.*","-s","PolyAtlas-Sample-30","--use_individual_model_dir"],//参数
             "preLaunchTask": "build-preprocess-debug"//debug前先进行build
         }
     ]
