@@ -1,6 +1,7 @@
 #include "common_program.h"
 #include "assert.hpp"
 #include "debug.h"
+#include "thread_parallel_processor.h"
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <regex>
@@ -36,37 +37,6 @@ static int g_num_parallel_cnt = 1;
 static bool g_use_individual_model_dir = false;
 // 程序执行最大用时
 static int g_max_time_elapsed = 1800;
-
-std::size_t CommonProgram::GetCurrentProgramIndex() {
-  fs::path program_path = all_args[0];                     // 取exe路径
-  std::string program_name = program_path.stem().string(); // 取exe名
-
-  // 取当前program的名字
-  if (map_step_name_to_step_idx.contains(program_name))
-    curr_cmd_idx = map_step_name_to_step_idx.at(program_name);
-
-  return curr_cmd_idx;
-}
-
-// 取当前工具的前置依赖工具
-// std::unordered_set<std::size_t>
-// CommonProgram::GetCurrentProgramDependencies() {
-//   std::unordered_set<std::size_t> denpendcies;
-// std::queue<std::size_t> queue_denpendcies;
-// queue_denpendcies.push(curr_cmd_idx);
-
-// while (!queue_denpendcies.empty()) {
-//   std::size_t cmd_idx = queue_denpendcies.front();
-//   denpendcies.insert(cmd_idx);
-//   // 取当前cmd_idx的依赖idx
-//   for (auto depend_cmd_name : all_step_list[cmd_idx].dependencies) {
-//     std::size_t depend_cmd_idx =
-//     map_step_name_to_step_idx[depend_cmd_name]; PA_ASSERT(depend_cmd_idx <
-//     cmd_idx); queue_denpendcies.push(depend_cmd_idx);
-//   }
-// };
-//   return denpendcies;
-// }
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
@@ -108,7 +78,7 @@ bool CommonProgram::SelectRunTargets() {
     // 指定数据集
     fs::path run_dataset_dir = project_asset_dir / g_dataset_str;
 
-    std::vector<std::string> run_files;
+    run_targets.clear();
     for (const auto &entry :
          std::filesystem::directory_iterator(run_dataset_dir)) {
       if (entry.is_directory())
@@ -116,13 +86,13 @@ bool CommonProgram::SelectRunTargets() {
       //
       std::string filename = entry.path().filename().string();
       if (std::regex_match(filename, match, pattern)) {
-        run_files.push_back(entry.path().string());
+        run_targets.push_back(entry.path().string());
       }
     }
     if (DebugLevel() > 1) {
-      std::cout << std::format("共成功匹配{}个例子:", run_files.size())
+      std::cout << std::format("共成功匹配{}个例子:", run_targets.size())
                 << std::endl;
-      for (auto run_file : run_files)
+      for (auto run_file : run_targets)
         std::cout << run_file << std::endl;
     }
   }
@@ -130,22 +100,57 @@ bool CommonProgram::SelectRunTargets() {
   return true;
 }
 
-int CommonProgram::Run(const std::function<void(std::string)> &func) const {
-  // 清空当前步骤的结果
+int CommonProgram::RunThreadParallel(
+    const std::function<void(std::string)> &func) const {
+  // 执行线程级并行
+  ThreadParallelProcessor thread_parallel_processor(func, run_targets,
+                                                    g_num_parallel_cnt);
+  thread_parallel_processor.Exec();
 
-  // 每个工具将要执行的函数传到这里, 该函数负责进行输入控制以及并行控制
-  std::string model_name = "alien.obj";
-  func(model_name);
+  auto thread_worker = [&]() -> void {
+    while (true) {
+      std::string model_name;
+      { // 取当前的任务名
+        queue_cv.wait(lock, [&] { return !task_queue.empty() || stop_flag; });
+        if (stop_flag && task_queue.empty())
+          break;
+        if (task_queue.empty())
+          continue;
+        model_name = task_queue.front(); // 取出队列头
+        task_queue.pop_front();          // 移除队列头
+      }
+
+      // 执行处理
+      try {
+        func(model_name);
+        // std::memory_order_relaxed: 无序, 有锁
+        success_count.fetch_add(1, std::memory_order_relaxed);
+      } catch (const std::exception &e) {
+        std::cerr << "\n发现错误: " << model_name << ": " << e.what()
+                  << std::endl;
+      }
+      processed_count.fetch_add(1, std::memory_order_relaxed);
+    }
+  };
+
+  boost::thread_group workers;
+  for (size_t i = 0; i < num_targets; ++i) {
+    workers.create_thread(thread_worker);
+  }
+
+  while (processed_count.load() < num_targets) {
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+  }
+
+  // 清理资源
+  stop_flag.store(true);
+  queue_cv.notify_all();
+  workers.join_all();
+
   return 1;
 }
 
 CommonProgram::CommonProgram(int argc, char *argv[]) {
-  for (int i = 0; i < argc; ++i) {
-    all_args.push_back(argv[i]);
-    std::cout << all_args.back() << " ";
-  }
-  std::cout << std::endl;
-
   po::options_description desc("Allowed options");
   desc.add_options()("help,h", "帮助信息")(
       "debug,d", po::value<int>(&g_debug_level_arg)->default_value(0),
@@ -184,10 +189,13 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
     map_step_name_to_step_idx[all_step_list[cmd_idx].step_name] = cmd_idx;
 
   // 获取当前工具的索引
-  curr_cmd_idx = std::numeric_limits<std::size_t>::max();
-  curr_cmd_idx = GetCurrentProgramIndex();
+  fs::path curr_cmd_path = argv[0];                          // 取exe路径
+  std::string curr_cmd_name = curr_cmd_path.stem().string(); // 取exe名
+  if (map_step_name_to_step_idx.contains(curr_cmd_name))
+    curr_cmd_idx = map_step_name_to_step_idx.at(curr_cmd_name);
   if (curr_cmd_idx == std::numeric_limits<std::size_t>::max())
     std::cerr << "invalid command: " << argv[0] << std::endl;
+
   // 准备当前工具运行需要的文件夹
   PrepareWorkingDirectory();
   // 选择本次运行需要处理的模型

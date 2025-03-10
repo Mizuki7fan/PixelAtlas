@@ -13,10 +13,10 @@ namespace frm {
 class CommonProgram {
 public:
   CommonProgram(int argc, char *argv[]);
-  int Run(const std::function<void(std::string model_name)> &func) const;
+  int RunThreadParallel(
+      const std::function<void(std::string model_name)> &func) const;
 
-private:                                // functions
-  std::size_t GetCurrentProgramIndex(); // 取当前的cmd的idx
+private: // functions
   // std::unordered_set<std::size_t>
   // GetCurrentProgramDependencies(); // 取当前program所依赖的前置program
   bool PrepareWorkingDirectory(); // 准备work文件夹
@@ -27,9 +27,10 @@ private:                                // functions
 private:
   std::vector<StepArguments> all_step_list;
   std::unordered_map<std::string, std::size_t> map_step_name_to_step_idx;
-  std::vector<std::string> all_args;
-  std::vector<std::string> all_models;
   std::size_t curr_cmd_idx;
+
+  // 通过正则表达式筛选出来的例子
+  std::vector<std::string> run_targets;
 };
 
 fs::path GetGlobalWorkDir();

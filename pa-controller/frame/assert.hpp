@@ -1,50 +1,47 @@
 #pragma once
 #ifdef _WIN32
-#ifndef NOMINMAX // 仅在未定义时添加
-#define NOMINMAX // 阻止 Windows 的 min/max 宏
+#ifndef NOMINMAX
+#define NOMINMAX
 #endif
+#define WIN32_LEAN_AND_MEAN // 阻止windows.h包含WinSock.h
 #include <windows.h>
 #else
 #include <iostream>
 #endif
 
+#include <cstdlib>
+#include <sstream>
 #include <string>
 
-// 辅助函数处理消息显示
-inline void AssertOutput(const std::string &message) {
+// 核心断言处理函数（内联）
+inline void AssertInternal(bool condition, const std::string &expr,
+                           const std::string &message, const char *file,
+                           int line, const char *function) {
+  if (!condition) {
+    std::ostringstream oss;
+    oss << "Assertion failed: " << expr << "\n"
+        << "Function: " << function << "\n"
+        << "File: " << file << "\n"
+        << "Line: " << line << "\n";
+    if (!message.empty()) {
+      oss << "Message: " << message << "\n";
+    }
+
 #ifdef _WIN32
-  MessageBoxA(nullptr, message.c_str(), "Assertion Failed",
-              MB_ICONERROR | MB_OK);
+    MessageBoxA(nullptr, oss.str().c_str(), "Assertion Failed",
+                MB_ICONERROR | MB_OK);
 #else
-  std::cerr << message << std::endl;
+    std::cerr << oss.str() << std::endl;
 #endif
+    std::abort();
+  }
 }
 
-// 主断言宏
+// 包装宏（用于捕获 __FILE__、__LINE__ 等编译时信息）
 #define PA_ASSERT(expr)                                                        \
-  do {                                                                         \
-    if (!(expr)) {                                                             \
-      std::ostringstream oss;                                                  \
-      oss << "Assertion failed: " #expr "\n"                                   \
-          << "Function: " << __FUNCTION__ << "\n"                              \
-          << "File: " << __FILE__ << "\n"                                      \
-          << "Line: " << __LINE__;                                             \
-      AssertOutput(oss.str());                                                 \
-      std::abort();                                                            \
-    }                                                                          \
-  } while (0)
+  AssertInternal(static_cast<bool>(expr), #expr, "", __FILE__, __LINE__,       \
+                 __FUNCTION__)
 
-// 带自定义消息的断言宏
 #define PA_ASSERT_WITH_MSG(expr, msg)                                          \
-  do {                                                                         \
-    if (!(expr)) {                                                             \
-      std::ostringstream oss;                                                  \
-      oss << "Assertion failed: " #expr "\n"                                   \
-          << "Function: " << __FUNCTION__ << "\n"                              \
-          << "File: " << __FILE__ << "\n"                                      \
-          << "Line: " << __LINE__ << "\n"                                      \
-          << "Message: " << (msg);                                             \
-      AssertOutput(oss.str());                                                 \
-      std::abort();                                                            \
-    }                                                                          \
-  } while (0)
+  AssertInternal(static_cast<bool>(expr), #expr, (msg), __FILE__, __LINE__,    \
+                 __FUNCTION__)

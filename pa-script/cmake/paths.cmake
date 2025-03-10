@@ -8,7 +8,6 @@ else()
     message("本地库目录为: ${MyLib}")
 endif()
 
-#set (JSONCPP ${MyLib}/jsoncpp)不使用jsoncpp
 set (BOOST ${MyLib}/boost)
 
 #${CMAKE_SOURCE_DIR}=项目根目录=G:/PixelAtlas
