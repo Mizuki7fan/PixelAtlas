@@ -1,0 +1,184 @@
+#include "process_parallel_executor.h"
+#include "global_static.h"
+
+#include <boost/process.hpp>
+#include <deque>
+#include <iostream>
+
+#include <boost/asio.hpp>
+#include <boost/asio/windows/object_handle.hpp>
+namespace frm {
+#include <format>
+namespace bp = boost::process;
+
+struct ProcessInfo {
+  bp::child process;
+  std::string target;
+  bool completed = false;
+};
+
+ProcessParallelExecutor::ProcessParallelExecutor(
+    const std::function<void(std::string)> &func, // 需要并行处理的函数
+    const std::vector<std::string> &run_targets,  // 需要并行处理的目标
+    const std::size_t num_parallel_cnt,           // 并行数
+    const std::string exe_path)                   // exe路径
+    : m_func(func),                               //
+      m_run_targets(run_targets),                 //
+      m_num_parallel_cnt(num_parallel_cnt),       //
+      m_exe_path(exe_path) {}
+
+bool ProcessParallelExecutor::Exec() {
+  // 如果并行数为1, 则直接执行
+  if (m_num_parallel_cnt == 1) {
+    m_func(m_run_targets[0]);
+    return true;
+  }
+  // 否则, 通过bp::child实现进程级的并行
+  // bp::child的argv[0]应该是m_exe_path
+  // 该函数含有较多的参数, 需要进行指令的拼接
+  // 线程级并行的时候, 每次从run_target中取出一个模型, 并放入bp::child中。
+
+  std::deque<std::string> task_queue(
+      {m_run_targets.begin(), m_run_targets.end()});
+  const size_t num_targets = task_queue.size();
+
+  std::mutex queue_mutex, process_mutex;
+  std::list<ProcessInfo> running_processes;
+  std::atomic<size_t> success_count{0}, processed_count{0};
+
+  // ASIO上下文和定时器
+  boost::asio::io_context io;
+  boost::asio::deadline_timer monitor_timer(io);
+  bp::group process_group;
+
+  // 统计执行状态
+  std::function<void(const boost::system::error_code &)> progress_monitor;
+  progress_monitor = [&](const boost::system::error_code &ec) {
+    if (ec)
+      return;
+    const size_t done = processed_count.load();
+    std::cout << "\r进度: " << done << "/" << num_targets << " ("
+              << (done * 100 / num_targets) << "%)" << std::flush;
+    monitor_timer.expires_from_now(boost::posix_time::milliseconds(500));
+    monitor_timer.async_wait(progress_monitor);
+  };
+
+  // 进程状态检查定时器
+  boost::asio::deadline_timer check_timer(io);
+  std::function<void(const boost::system::error_code &)> check_processes;
+
+  check_processes = [&](const boost::system::error_code &ec) {
+    if (ec)
+      return;
+
+    std::lock_guard<std::mutex> plock(process_mutex);
+    auto it = running_processes.begin();
+    while (it != running_processes.end()) {
+      if (!it->completed && it->process.running()) {
+        ++it;
+        continue;
+      }
+
+      // 处理已完成的进程
+      if (!it->completed) {
+        int exit_code = it->process.exit_code();
+        success_count.fetch_add(exit_code == 0 ? 1 : 0);
+        processed_count.fetch_add(1);
+        it->completed = true;
+      }
+
+      // 尝试启动新任务
+      std::lock_guard<std::mutex> qlock(queue_mutex);
+      if (!task_queue.empty()) {
+        auto target = task_queue.front();
+        task_queue.pop_front();
+
+        std::vector<std::string> args = {
+            "-p",        "1",
+            "-d",        std::to_string(global::DebugLevel()),
+            "-t",        std::to_string(global::MaxTimeElapsed()),
+            "-f",        target,
+            "--dataset", global::DataSet()};
+        if (global::UseIndividualModelDir()) {
+          args.emplace_back("--use_individual_model_dir");
+        }
+        args.push_back("--" + global::ParallelLevel());
+
+        try {
+          running_processes.emplace_back(
+              bp::child(m_exe_path, bp::args(args), bp::std_out > bp::null,
+                        bp::std_err > stderr, io, process_group),
+              target);
+        } catch (const bp::process_error &e) {
+          std::cerr << "\n进程创建失败: " << e.what() << std::endl;
+          processed_count.fetch_add(1);
+        }
+      }
+      it = running_processes.erase(it);
+    }
+
+    // 继续下一次检查
+    check_timer.expires_from_now(boost::posix_time::milliseconds(100));
+    check_timer.async_wait(check_processes);
+  };
+
+  // 启动IO线程
+  std::thread io_thread([&io] { io.run(); });
+  // 启动初始进程
+  {
+    std::lock_guard<std::mutex> qlock(queue_mutex);
+    std::lock_guard<std::mutex> plock(process_mutex);
+    const size_t initial_count =
+        std::min(m_num_parallel_cnt, task_queue.size());
+
+    for (size_t i = 0; i < initial_count; ++i) {
+      auto target = task_queue.front();
+      task_queue.pop_front();
+
+      std::vector<std::string> args = {
+          "-p",        "1",
+          "-d",        std::to_string(global::DebugLevel()),
+          "-t",        std::to_string(global::MaxTimeElapsed()),
+          "-f",        target,
+          "--dataset", global::DataSet()};
+      if (global::UseIndividualModelDir()) {
+        args.emplace_back("--use_individual_model_dir");
+      }
+      args.push_back("--parallel_level");
+      args.push_back(global::ParallelLevel());
+
+      try {
+        running_processes.emplace_back(
+            bp::child(m_exe_path, bp::args(args), bp::std_out > bp::null,
+                      bp::std_err > stderr, io, process_group),
+            target);
+      } catch (const bp::process_error &e) {
+        std::cerr << "\n进程创建失败: " << e.what() << std::endl;
+        processed_count.fetch_add(1);
+      }
+    }
+  }
+
+  // 启动监控定时器
+  monitor_timer.expires_from_now(boost::posix_time::milliseconds(500));
+  monitor_timer.async_wait(progress_monitor);
+
+  // 启动进程检查定时器
+  check_timer.expires_from_now(boost::posix_time::milliseconds(100));
+  check_timer.async_wait(check_processes);
+
+  // 等待所有任务完成
+  while (processed_count.load() < num_targets) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  // 清理资源
+  io.stop();
+  if (io_thread.joinable()) {
+    io_thread.join();
+  }
+
+  // 最终输出
+  std::cout << "\n完成: " << success_count << "/" << num_targets << " 成功\n";
+  return success_count == num_targets;
+}
+} // namespace frm

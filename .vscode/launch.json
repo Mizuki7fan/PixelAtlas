@@ -18,7 +18,15 @@
             "program": "${workspaceRoot}/run/bin_Debug/Preprocess.exe",//程序入口
             "console": "integratedTerminal",//执行cout输出在哪个终端
             "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
-            "args": ["-p","1","-d","2","-t","1800","-f",".*0001.*","-s","PolyAtlas-Sample-30","--use_individual_model_dir"],//参数
+            "args": [
+                "-p","4",
+                "-d","0",
+                "-t","1800",
+                "-f",".*0001.*",
+                "--dataset","PolyAtlas-Sample-30",
+                "--use_individual_model_dir",
+                "--parallel_level","process"
+                ],//参数
             "preLaunchTask": "build-preprocess-debug"//debug前先进行build
         }
     ]

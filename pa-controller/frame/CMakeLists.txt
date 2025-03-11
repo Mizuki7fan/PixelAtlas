@@ -5,16 +5,18 @@ include_directories(${BOOST}/include/boost-1_87)
 file (GLOB FRAME_FILES
     assert.hpp
     command_structures.h
-    debug.cpp
-    debug.h
+    global_static.cpp
+    global_static.h
     io.cpp
     io.h
     parse.cpp
     parse.h
     common_program.cpp
     common_program.h
-    thread_parallel_processor.cpp
-    thread_parallel_processor.h
+    process_parallel_executor.cpp
+    process_parallel_executor.h
+    thread_parallel_executor.cpp
+    thread_parallel_executor.h
 )
 
 add_library(${SUBPROJ_NAME} STATIC ${FRAME_FILES})
@@ -28,7 +30,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         set(LIB_BUILD_TYPE mt)
     endif()
     set (LIB_SUFFIX "x64-1_87")
-    foreach(LIB_NAME json container program_options thread chrono)
+    foreach(LIB_NAME json container program_options thread chrono filesystem)
         message(STATUS ${BOOST}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)
         target_link_libraries(${SUBPROJ_NAME} PRIVATE 
         ${BOOST}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)

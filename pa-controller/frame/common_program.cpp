@@ -1,7 +1,9 @@
 #include "common_program.h"
 #include "assert.hpp"
-#include "debug.h"
-#include "thread_parallel_processor.h"
+#include "global_static.h"
+#include "parse.h"
+#include "process_parallel_executor.h"
+#include "thread_parallel_executor.h"
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <regex>
@@ -31,12 +33,19 @@ int GetDebugLevel() { return g_debug_level_arg; };
 static std::string g_filename_regex_str = ".*.*";
 // 数据集名
 static std::string g_dataset_str = ".";
+std::string GetDataset() { return g_dataset_str; };
 // 并行数
 static int g_num_parallel_cnt = 1;
+int GetNumParallelCnt() { return g_num_parallel_cnt; };
 // 是否每个文件独立新建文件夹
 static bool g_use_individual_model_dir = false;
+bool UseIndividualModelDir() { return g_use_individual_model_dir; };
 // 程序执行最大用时
 static int g_max_time_elapsed = 1800;
+int GetMaxTimeElapsed() { return g_max_time_elapsed; };
+// 默认采用进程级并行
+static std::string g_parallel_level = "process";
+std::string GetParallelLevel() { return g_parallel_level; };
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
@@ -89,7 +98,7 @@ bool CommonProgram::SelectRunTargets() {
         run_targets.push_back(entry.path().string());
       }
     }
-    if (DebugLevel() > 1) {
+    if (global::DebugLevel() > 1) {
       std::cout << std::format("共成功匹配{}个例子:", run_targets.size())
                 << std::endl;
       for (auto run_file : run_targets)
@@ -100,74 +109,52 @@ bool CommonProgram::SelectRunTargets() {
   return true;
 }
 
-int CommonProgram::RunThreadParallel(
-    const std::function<void(std::string)> &func) const {
+int CommonProgram::Run(const std::function<void(std::string)> &func) const {
   // 执行线程级并行
-  ThreadParallelProcessor thread_parallel_processor(func, run_targets,
+  if (g_parallel_level == "thread") {
+    ThreadParallelExecutor thread_parallel_executor(func, run_targets,
                                                     g_num_parallel_cnt);
-  thread_parallel_processor.Exec();
-
-  auto thread_worker = [&]() -> void {
-    while (true) {
-      std::string model_name;
-      { // 取当前的任务名
-        queue_cv.wait(lock, [&] { return !task_queue.empty() || stop_flag; });
-        if (stop_flag && task_queue.empty())
-          break;
-        if (task_queue.empty())
-          continue;
-        model_name = task_queue.front(); // 取出队列头
-        task_queue.pop_front();          // 移除队列头
-      }
-
-      // 执行处理
-      try {
-        func(model_name);
-        // std::memory_order_relaxed: 无序, 有锁
-        success_count.fetch_add(1, std::memory_order_relaxed);
-      } catch (const std::exception &e) {
-        std::cerr << "\n发现错误: " << model_name << ": " << e.what()
-                  << std::endl;
-      }
-      processed_count.fetch_add(1, std::memory_order_relaxed);
-    }
-  };
-
-  boost::thread_group workers;
-  for (size_t i = 0; i < num_targets; ++i) {
-    workers.create_thread(thread_worker);
+    thread_parallel_executor.Exec();
+  } else if (g_parallel_level == "process") {
+    // 执行进程级并行
+    ProcessParallelExecutor process_parallel_executor(
+        func, run_targets, g_num_parallel_cnt, curr_cmd_path.string());
+    process_parallel_executor.Exec();
   }
-
-  while (processed_count.load() < num_targets) {
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-  }
-
-  // 清理资源
-  stop_flag.store(true);
-  queue_cv.notify_all();
-  workers.join_all();
 
   return 1;
 }
 
 CommonProgram::CommonProgram(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
-  desc.add_options()("help,h", "帮助信息")(
-      "debug,d", po::value<int>(&g_debug_level_arg)->default_value(0),
-      "设置调试等级")(
-      "filename_regex,f",
-      po::value<std::string>(&g_filename_regex_str)->default_value(".*.*"),
-      "文件名正则")(
-      "dataset,s",
-      po::value<std::string>(&g_dataset_str)->default_value("Model"),
-      "数据集名称")("parallel,p",
-                    po::value<int>(&g_num_parallel_cnt)->default_value(1),
-                    "并行执行数")(
-      "use_individual_model_dir",
-      po::bool_switch(&g_use_individual_model_dir)->default_value(false),
-      "是否每个文件独立建立文件夹")(
-      "max_time_elapsed,t",
-      po::value<int>(&g_max_time_elapsed)->default_value(1800), "最大耗时");
+  desc.add_options()("help,h", "帮助信息") //
+      ("debug,d", po::value<int>(&g_debug_level_arg)->default_value(0),
+       "调试等级") //
+      ("filename_regex,f",
+       po::value<std::string>(&g_filename_regex_str)->default_value(".*.*"),
+       "文件名正则") //
+      ("dataset,s",
+       po::value<std::string>(&g_dataset_str)
+           ->default_value("PolyAtlas-Sample-30"),
+       "数据集名称") //
+      ("parallel,p", po::value<int>(&g_num_parallel_cnt)->default_value(1),
+       "并行执行数") //
+      ("parallel_level",
+       po::value<std::string>(&g_parallel_level)
+           ->default_value("process")
+           ->notifier([](const std::string &val) { // 参数校验lambda
+             if (val != "process" && val != "thread") {
+               throw po::validation_error(
+                   po::validation_error::invalid_option_value, "parallel_level",
+                   val);
+             }
+           }),
+       "并行级别 (process|thread)") //
+      ("use_individual_model_dir",
+       po::bool_switch(&g_use_individual_model_dir)->default_value(false),
+       "是否每个文件独立建立文件夹") //
+      ("max_time_elapsed,t",
+       po::value<int>(&g_max_time_elapsed)->default_value(1800), "最大耗时");
 
   po::variables_map vm;
   try {
@@ -189,8 +176,8 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
     map_step_name_to_step_idx[all_step_list[cmd_idx].step_name] = cmd_idx;
 
   // 获取当前工具的索引
-  fs::path curr_cmd_path = argv[0];                          // 取exe路径
-  std::string curr_cmd_name = curr_cmd_path.stem().string(); // 取exe名
+  curr_cmd_path = argv[0];                       // 取exe路径
+  curr_cmd_name = curr_cmd_path.stem().string(); // 取exe名
   if (map_step_name_to_step_idx.contains(curr_cmd_name))
     curr_cmd_idx = map_step_name_to_step_idx.at(curr_cmd_name);
   if (curr_cmd_idx == std::numeric_limits<std::size_t>::max())

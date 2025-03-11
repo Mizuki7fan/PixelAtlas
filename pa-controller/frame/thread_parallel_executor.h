@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <deque>
 #include <functional>
@@ -8,13 +7,13 @@
 // 用来运行线程级并行
 
 namespace frm {
-class ThreadParallelProcessor {
+class ThreadParallelExecutor {
 public:
-  explicit ThreadParallelProcessor(
+  explicit ThreadParallelExecutor(
       const std::function<void(std::string)> &func, // 需要并行处理的函数
       const std::vector<std::string> &run_targets,  // 需要并行处理的目标
       const std::size_t num_parallel_cnt);
-  void Exec();
+  bool Exec();
 
 private:
   void ThreadWorker();
@@ -22,6 +21,7 @@ private:
 private:
   const std::function<void(std::string)> m_func;
   const std::vector<std::string> m_run_targets;
+  const std::size_t m_num_targets;
   const std::size_t m_num_parallel_cnt;
 
 private:
