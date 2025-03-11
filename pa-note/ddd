@@ -1,0 +1,160 @@
+现在希望在windows下使用boost和标准库stl实现一个c++类, ProcessParallelExecutor
+输入参数为:
+  explicit ProcessParallelExecutor(
+      const std::function<void(std::string)> &func, // 需要并行处理的函数
+      const std::vector<std::string> &run_targets,  // 需要并行处理的目标
+      const std::size_t num_parallel_cnt,           // 并行数
+      const std::string exe_path);                  // exe路径
+
+该类的功能是在windows系统下实现进程级并行, 为run_targets中的每个元素执行一次func函数, 并行数由num_parallel_cnt指定.
+由于windows没有fork函数, 需要使用boost::process::child创建子进程. 
+如果系统发现读入的run_targets只有一个元素, 则直接调用func(run_targets[0])即可, 不需要并行处理.
+如果系统发现读入的run_targets大于1个元素, 则创建num_parallel_cnt个子进程, 每个子进程调用func(run_targets[i])处理run_targets[i]元素.
+
+一般来说, run_targets的元素数量会大于num_parallel_cnt, 因此创建子进程执行完毕后应该立即读取没有被调用过的run_targets元素, 并创建新进程处理新的元素.
+
+
+以下是使用Boost库和C++标准库实现的ProcessParallelExecutor类，满足Windows平台进程级并行执行需求：
+
+```cpp
+#include <boost/process.hpp>
+#include <boost/asio.hpp>
+#include <functional>
+#include <vector>
+#include <string>
+#include <atomic>
+#include <memory>
+#include <algorithm>
+#include <optional>
+
+namespace bp = boost::process;
+
+class ProcessParallelExecutor {
+public:
+    explicit ProcessParallelExecutor(
+        const std::function<void(std::string)>& func,
+        const std::vector<std::string>& run_targets,
+        const std::size_t num_parallel_cnt,
+        const std::string& exe_path)
+        : m_func(func),
+          m_run_targets(run_targets),
+          m_parallel_num(num_parallel_cnt),
+          m_exe_path(exe_path),
+          m_next_index(0),
+          m_active_procs(0),
+          m_io(),
+          m_work_guard(std::in_place, boost::asio::make_work_guard(m_io)) {}
+
+    void Execute() {
+        if (m_run_targets.empty()) return;
+
+        if (m_run_targets.size() == 1) {
+            m_func(m_run_targets[0]);
+            return;
+        }
+
+        m_next_index = 0;
+        m_active_procs = 0;
+
+        const auto initial = std::min(m_parallel_num, m_run_targets.size());
+        for (size_t i = 0; i < initial; ++i) {
+            StartProcess();
+        }
+
+        m_io.run();
+    }
+
+private:
+    std::function<void(std::string)> m_func;
+    std::vector<std::string> m_run_targets;
+    size_t m_parallel_num;
+    std::string m_exe_path;
+
+    boost::asio::io_context m_io;
+    std::atomic<size_t> m_next_index;
+    std::atomic<size_t> m_active_procs;
+    std::vector<std::shared_ptr<bp::child>> m_children;
+    using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+    std::optional<WorkGuard> m_work_guard;
+
+    void StartProcess() {
+        if (m_next_index >= m_run_targets.size()) {
+            CheckCompletion();
+            return;
+        }
+
+        if (m_active_procs >= m_parallel_num) return;
+
+        const auto target = m_run_targets[m_next_index++];
+        ++m_active_procs;
+
+        auto child_ptr = std::make_shared<bp::child>(
+            m_io,
+            bp::exe(m_exe_path),
+            bp::args(target),
+            bp::on_exit([this, child_ptr](int, const std::error_code&) {
+                --m_active_procs;
+                RemoveChild(child_ptr);
+                boost::asio::post(m_io, [this] { StartProcess(); });
+                CheckCompletion();
+            })
+        );
+
+        m_children.emplace_back(child_ptr);
+    }
+
+    void RemoveChild(const std::shared_ptr<bp::child>& c) {
+        m_children.erase(
+            std::remove_if(m_children.begin(), m_children.end(),
+                [&](const auto& ptr) { return ptr == c; }),
+            m_children.end());
+    }
+
+    void CheckCompletion() {
+        if (m_active_procs == 0 && m_next_index >= m_run_targets.size()) {
+            m_work_guard.reset();
+        }
+    }
+};
+```
+
+### 关键特性说明：
+1. **单元素直接执行**：当输入目标数量为1时直接调用函数，避免进程创建开销
+2. **动态进程管理**：使用Boost.Asio进行异步进程管理，保证最大并行度
+3. **资源安全**：
+   - 使用shared_ptr管理子进程对象生命周期
+   - 原子计数器保证线程安全
+   - 自动清理已完成进程
+4. **流量控制**：严格保证同时运行的进程数不超过num_parallel_cnt
+5. **完成检测**：当所有任务完成后自动退出事件循环
+
+### 使用注意事项：
+1. 需要链接Boost.Process和Boost.System库
+2. 子进程程序（m_exe_path）需要实现以下功能：
+   - 接收命令行参数作为处理目标
+   - 包含与m_func等效的处理逻辑
+3. 编译时需要支持C++17及以上标准（因使用std::optional）
+
+### 典型调用示例：
+```cpp
+// 子进程程序示例（需要单独编译为exe）
+void ProcessTask(const std::string& target) {
+    // 具体处理逻辑
+}
+
+int main(int argc, char* argv[]) {
+    if (argc > 1) ProcessTask(argv[1]);
+    return 0;
+}
+
+// 主程序调用示例
+int main() {
+    ProcessParallelExecutor executor(
+        [](auto target) { /* 单任务处理逻辑 */ },
+        {"target1", "target2", "target3"},  // 待处理目标
+        2,                                   // 并行度
+        "child_process.exe"                 // 子进程程序路径
+    );
+    executor.Execute();
+}
+```
