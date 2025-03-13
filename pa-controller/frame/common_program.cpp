@@ -1,6 +1,6 @@
 #include "common_program.h"
 #include "assert.hpp"
-#include "global_static.h"
+#include "global_defs.h"
 #include "parse.h"
 #include "process_parallel_executor.h"
 #include "thread_parallel_executor.h"
@@ -14,36 +14,49 @@ namespace frm {
 // work目录
 static fs::path g_working_dir;
 fs::path GetGlobalWorkDir() { return g_working_dir; };
+
 // 当前工具目录
 static fs::path g_curr_working_dir;
 fs::path GetCurrWorkingDir() { return g_curr_working_dir; };
+
 // 当前调试输出目录
 static fs::path g_curr_debug_dir;
 fs::path GetCurrDebugDir() { return g_curr_debug_dir; };
+
 // 当前日志输出目录
 static fs::path g_curr_log_dir;
 fs::path GetCurrLogDir() { return g_curr_log_dir; };
+
 // 当前结果输出目录
 static fs::path g_curr_result_dir;
 fs::path GetResultDir() { return g_curr_result_dir; };
+
 // 调试等级
 static int g_debug_level_arg = 0;
 int GetDebugLevel() { return g_debug_level_arg; };
-// 文件名通配符
-static std::string g_filename_regex_str = ".*.*";
+
+// 批量执行时的文件名通配符
+static std::string g_batch_filename_regex_ = ".*.*";
+// 单一文件执行时的文件名
+static std::string g_single_filename = "alien.obj";
+
 // 数据集名
 static std::string g_dataset_str = ".";
 std::string GetDataset() { return g_dataset_str; };
+
 // 并行数
 static int g_num_parallel_cnt = 1;
 int GetNumParallelCnt() { return g_num_parallel_cnt; };
+
 // 是否每个文件独立新建文件夹
 static bool g_use_individual_model_dir = false;
 bool UseIndividualModelDir() { return g_use_individual_model_dir; };
+
 // 程序执行最大用时
 static int g_max_time_elapsed = 1800;
 int GetMaxTimeElapsed() { return g_max_time_elapsed; };
-// 默认采用进程级并行
+
+// 并行级别: 默认为进程级的并行, 也可以设置为线程级并行(thread), 不并行
 static std::string g_parallel_level = "process";
 std::string GetParallelLevel() { return g_parallel_level; };
 
@@ -77,7 +90,7 @@ bool CommonProgram::PrepareWorkingDirectory() {
 bool CommonProgram::SelectRunTargets() {
   // 匹配规则
   std::smatch match;
-  std::string &file_regex = g_filename_regex_str;
+  std::string &file_regex = g_batch_filename_regex_;
   std::regex pattern(file_regex);
 
   // 如果当前工具为第一个工具
@@ -98,7 +111,7 @@ bool CommonProgram::SelectRunTargets() {
         run_targets.push_back(entry.path().string());
       }
     }
-    if (global::DebugLevel() > 1) {
+    if (g_debug_level_arg > 1) {
       std::cout << std::format("共成功匹配{}个例子:", run_targets.size())
                 << std::endl;
       for (auto run_file : run_targets)
@@ -110,16 +123,22 @@ bool CommonProgram::SelectRunTargets() {
 }
 
 int CommonProgram::Run(const std::function<void(std::string)> &func) const {
-  // 执行线程级并行
+  // 如果只处理单个文件, 则直接调用func
+  if (!g_single_filename.empty()) {
+    func(g_single_filename);
+    return 0;
+  }
   if (g_parallel_level == "thread") {
     ThreadParallelExecutor thread_parallel_executor(func, run_targets,
                                                     g_num_parallel_cnt);
     thread_parallel_executor.Exec();
+    return 0;
   } else if (g_parallel_level == "process") {
     // 执行进程级并行
     ProcessParallelExecutor process_parallel_executor(
         func, run_targets, g_num_parallel_cnt, curr_cmd_path.string());
     process_parallel_executor.Exec();
+    return 0;
   }
 
   return 1;
@@ -130,18 +149,18 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
   desc.add_options()("help,h", "帮助信息") //
       ("debug,d", po::value<int>(&g_debug_level_arg)->default_value(0),
        "调试等级") //
-      ("filename_regex,f",
-       po::value<std::string>(&g_filename_regex_str)->default_value(".*.*"),
+      ("batch",
+       po::value<std::string>(&g_batch_filename_regex_)->default_value(""),
        "文件名正则") //
-      ("dataset,s",
-       po::value<std::string>(&g_dataset_str)
-           ->default_value("PolyAtlas-Sample-30"),
+      ("single", po::value<std::string>(&g_single_filename)->default_value(""),
+       "单一执行文件") //
+      ("dataset", po::value<std::string>(&g_dataset_str)->default_value(""),
        "数据集名称") //
       ("parallel,p", po::value<int>(&g_num_parallel_cnt)->default_value(1),
-       "并行执行数") //
-      ("parallel_level",
+       "并行执行数")     //
+      ("parallel_level", // 并行级别, 取值必须为thread或者process
        po::value<std::string>(&g_parallel_level)
-           ->default_value("process")
+           ->default_value("process")              // 默认进程级并行
            ->notifier([](const std::string &val) { // 参数校验lambda
              if (val != "process" && val != "thread") {
                throw po::validation_error(
@@ -168,6 +187,17 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
     std::cerr << "error: " << e.what() << std::endl;
     std::cerr << desc << std::endl;
     PA_ASSERT_WITH_MSG(0, "输入异常");
+  }
+
+  if (g_batch_filename_regex_.empty() && g_single_filename.empty()) {
+    std::cerr << "error: 未指定需要处理的文件" << std::endl;
+    std::cerr << desc << std::endl;
+    exit(0);
+  } else if (!g_batch_filename_regex_.empty() && !g_single_filename.empty()) {
+    std::cerr << "不能既指定batch运行, 又指定单个文件" << std::endl;
+    std::cerr << std::format("batch: {}, single: {}", g_batch_filename_regex_,
+                             g_single_filename);
+    exit(0);
   }
 
   // 加载all-step.json文件

@@ -14,9 +14,7 @@ public:
   CommonProgram(int argc, char *argv[]);
   int Run(const std::function<void(std::string model_name)> &func) const;
 
-private: // functions
-  // std::unordered_set<std::size_t>
-  // GetCurrentProgramDependencies(); // 取当前program所依赖的前置program
+private:                          // functions
   bool PrepareWorkingDirectory(); // 准备work文件夹
 
   bool
