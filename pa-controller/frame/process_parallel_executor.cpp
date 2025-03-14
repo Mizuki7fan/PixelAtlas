@@ -17,10 +17,11 @@ ProcessParallelExecutor::ProcessParallelExecutor(
       m_exe_path(exe_path) {}
 
 bool ProcessParallelExecutor::Exec() {
-  std::atomic<std::size_t> running_processes{0};
-  std::deque<bp::child> processes;
-  // 当前正在处理的target的idx
-  std::atomic<std::size_t> curr_target_idx{0};
+  std::size_t running_processes = 0, curr_target_idx = 0;
+  std::deque<std::pair<bp::child, std::chrono::steady_clock::time_point>>
+      processes;
+  // 设置允许进程运行的最大时间
+  const auto max_duration = std::chrono::seconds(global::MaxTimeElapsed());
 
   while (1) {
     if (curr_target_idx >= m_run_targets.size())
@@ -32,29 +33,38 @@ bool ProcessParallelExecutor::Exec() {
       try {
         const std::string &target = m_run_targets[curr_target_idx];
         // 传递变量
-        std::vector<std::string> args{
-            "-d",                                     //
-            std::to_string(global::DebugLevel()),     //
-            "-t",                                     //
-            std::to_string(global::MaxTimeElapsed()), //
-            "--single",
-            target};
+        std::vector<std::string> args{"-d",                                 //
+                                      std::to_string(global::DebugLevel()), //
+                                      "--single",                           //
+                                      target};
         if (global::UseIndividualModelDir())
           args.emplace_back("--use_individual_model_dir");
 
-        processes.emplace_back(bp::exe = m_exe_path, bp::args = args);
-        ++running_processes;
-        ++curr_target_idx;
+        processes.emplace_back(
+            bp::child(bp::exe = m_exe_path,    //
+                      bp::args = args),        //
+            std::chrono::steady_clock::now()); // 记录启动时间
+        ++running_processes;                   // 当前运行的进程数+1
+        ++curr_target_idx;                     // 当前处理的例子idx+1
       } catch (const bp::process_error &e) {
         std::cerr << "Fail to launch process: " << e.what() << std::endl;
         return false;
       }
     }
+    // 等待所有进程结束
     for (auto it = processes.begin(); it != processes.end();) {
-      if (it->running())
+      auto &[child_proc, start_time] = *it;
+      // 判断进程是否超时
+      if (std::chrono::steady_clock::now() - start_time > max_duration) {
+        std::cerr << "Timeout: " << m_run_targets[curr_target_idx - 1]
+                  << std::endl;
+        child_proc.terminate();
+      }
+
+      if (child_proc.running()) {
         ++it;
-      else {
-        it->wait();
+      } else {
+        child_proc.wait();
         it = processes.erase(it);
         --running_processes;
       }

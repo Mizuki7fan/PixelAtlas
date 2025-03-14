@@ -1,5 +1,6 @@
 #include <chrono>
 #include <frame/common_program.h>
+#include <frame/global_defs.h>
 #include <frame/parse.h>
 #include <iostream>
 #include <random>
