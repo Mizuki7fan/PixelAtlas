@@ -2,7 +2,6 @@
 #include "common_program.h"
 
 namespace frm::global {
-
 int DebugLevel() { return frm::GetDebugLevel(); }
 std::string DataSet() { return frm::GetDataset(); }
 int NumParallelCount() { return frm::GetNumParallelCnt(); }

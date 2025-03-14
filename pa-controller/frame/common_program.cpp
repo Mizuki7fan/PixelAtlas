@@ -125,6 +125,7 @@ bool CommonProgram::SelectRunTargets() {
 int CommonProgram::Run(const std::function<void(std::string)> &func) const {
   // 如果只处理单个文件, 则直接调用func
   if (!g_single_filename.empty()) {
+
     func(g_single_filename);
     return 0;
   }

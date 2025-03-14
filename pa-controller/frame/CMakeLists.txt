@@ -5,8 +5,8 @@ include_directories(${BOOST}/include/boost-1_87)
 file (GLOB FRAME_FILES
     assert.hpp
     command_structures.h
-    global_static.cpp
-    global_static.h
+    global_defs.cpp
+    global_defs.h
     io.cpp
     io.h
     parse.cpp

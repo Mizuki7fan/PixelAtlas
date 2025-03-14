@@ -1,5 +1,7 @@
 #include "process_parallel_executor.h"
+#include "global_defs.h"
 #include <boost/process.hpp>
+#include <iostream>
 
 namespace frm {
 namespace bp = boost::process;
@@ -15,8 +17,50 @@ ProcessParallelExecutor::ProcessParallelExecutor(
       m_exe_path(exe_path) {}
 
 bool ProcessParallelExecutor::Exec() {
-  //
+  std::atomic<std::size_t> running_processes{0};
+  std::deque<bp::child> processes;
+  // 当前正在处理的target的idx
+  std::atomic<std::size_t> curr_target_idx{0};
+
+  while (1) {
+    if (curr_target_idx >= m_run_targets.size())
+      break;
+    // 如果当前运行进程数小于并行数, 且当前例子idx小于总的例子数
+    while (running_processes < m_num_parallel_cnt &&
+           curr_target_idx < m_run_targets.size()) {
+      // 启动一个新的进程
+      try {
+        const std::string &target = m_run_targets[curr_target_idx];
+        // 传递变量
+        std::vector<std::string> args{
+            "-d",                                     //
+            std::to_string(global::DebugLevel()),     //
+            "-t",                                     //
+            std::to_string(global::MaxTimeElapsed()), //
+            "--single",
+            target};
+        if (global::UseIndividualModelDir())
+          args.emplace_back("--use_individual_model_dir");
+
+        processes.emplace_back(bp::exe = m_exe_path, bp::args = args);
+        ++running_processes;
+        ++curr_target_idx;
+      } catch (const bp::process_error &e) {
+        std::cerr << "Fail to launch process: " << e.what() << std::endl;
+        return false;
+      }
+    }
+    for (auto it = processes.begin(); it != processes.end();) {
+      if (it->running())
+        ++it;
+      else {
+        it->wait();
+        it = processes.erase(it);
+        --running_processes;
+      }
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
   return true;
 }
-
 } // namespace frm
