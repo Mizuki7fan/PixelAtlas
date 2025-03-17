@@ -123,11 +123,15 @@ bool CommonProgram::SelectRunTargets() {
 }
 
 int CommonProgram::Run(const std::function<void(std::string)> &func) const {
+  if (run_targets.size() == 0)
+    return 0;
   // 如果只处理单个文件, 则直接调用func
   if (!g_single_filename.empty()) {
-
     func(g_single_filename);
     return 0;
+  } else if (g_num_parallel_cnt == 1) { // 如果并行数为1, 则依次执行
+    for (auto run_file : run_targets)
+      func(run_file);
   }
   if (g_parallel_level == "thread") {
     ThreadParallelExecutor thread_parallel_executor(func, run_targets,
