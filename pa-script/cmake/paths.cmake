@@ -8,6 +8,7 @@ else()
     message("本地库目录为: ${MyLib}")
 endif()
 
-set (BOOST ${MyLib}/boost)
+set (BOOST_PATH ${MyLib}/boost)
+set (CGAL_PATH ${MyLib}/CGAL-6.0.1)
 
 #${CMAKE_SOURCE_DIR}=项目根目录=G:/PixelAtlas

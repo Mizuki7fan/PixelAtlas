@@ -1,6 +1,6 @@
 set(SUBPROJ_NAME pa_frame)
 
-include_directories(${BOOST}/include/boost-1_87)
+include_directories(${BOOST_PATH}/include/boost-1_87)
 
 file (GLOB FRAME_FILES
     assert.hpp
@@ -31,9 +31,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     endif()
     set (LIB_SUFFIX "x64-1_87")
     foreach(LIB_NAME json container program_options thread chrono filesystem)
-        message(STATUS ${BOOST}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)
+        message(STATUS ${BOOST_PATH}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)
         target_link_libraries(${SUBPROJ_NAME} PRIVATE 
-        ${BOOST}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)
+        ${BOOST_PATH}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)
     endforeach()
 elseif()
     message(FATAL_ERROR 尚未编译clang版本的Boost库)

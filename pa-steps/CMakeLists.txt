@@ -1,4 +1,5 @@
 #设定需要使用的各个子项目
+add_subdirectory(common)
 add_subdirectory(Preprocess)
 add_subdirectory(Pixelation)
 add_subdirectory(Dissection)

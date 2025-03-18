@@ -1,7 +1,7 @@
 set(SUBPROJ_NAME launcher)
 
 include_directories("..")
-include_directories(${BOOST}/include/boost-1_87)
+include_directories(${BOOST_PATH}/include/boost-1_87)
 
 add_executable(${SUBPROJ_NAME} launcher.cpp)
 
@@ -18,8 +18,8 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 target_link_libraries(${SUBPROJ_NAME} PRIVATE 
-    debug   ${BOOST}/lib/libboost_filesystem-vc143-mt-gd-x64-1_87.lib
-    optimized   ${BOOST}/lib/libboost_filesystem-vc143-mt-x64-1_87.lib     
+    debug   ${BOOST_PATH}/lib/libboost_filesystem-vc143-mt-gd-x64-1_87.lib
+    optimized   ${BOOST_PATH}/lib/libboost_filesystem-vc143-mt-x64-1_87.lib     
 )
 elseif()
     message(FATAL_ERROR 尚未编译clang版本的Boost库)

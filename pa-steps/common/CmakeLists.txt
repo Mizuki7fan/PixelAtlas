@@ -1,0 +1,11 @@
+include_directories(SYSTEM ${CGAL_PATH}/include)
+message(STATUS "CGAL_PATH: ${CGAL_PATH}")
+include_directories(${BOOST_PATH}/include/boost-1_87)
+include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
+
+file (GLOB CGALMeshInterface_FILE
+CGALMeshInterface/CGALMeshInterface.cpp
+CGALMeshInterface/CGALMeshInterface.h
+)
+
+add_library(CGALMeshInterface ${CGALMeshInterface_FILE})
