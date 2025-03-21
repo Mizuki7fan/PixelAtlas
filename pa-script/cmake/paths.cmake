@@ -10,5 +10,7 @@ endif()
 
 set (BOOST_PATH ${MyLib}/boost)
 set (CGAL_PATH ${MyLib}/CGAL-6.0.1)
+set (EIGEN_PATH ${MyLib}/eigen-3.4.0)
+set (TRIANGLE_PATH ${MyLib}/triangle)
 
 #${CMAKE_SOURCE_DIR}=项目根目录=G:/PixelAtlas

@@ -1,0 +1,8 @@
+include_directories(SYSTEM ${TRIANGLE_PATH})
+include_directories(SYSTEM ${EIGEN_PATH})
+file (GLOB TriangleInterface_FILE
+    TriangleInterface.h
+    TriangleInterface.cpp
+)
+
+add_library(TriangleInterface ${TriangleInterface_FILE})

@@ -31,8 +31,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/run/bin_Release"
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if( ${CMAKE_CXX_STANDARD} EQUAL "23")
+    add_definitions(-D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING)
+endif()
 
 #添加各个子步骤
 add_subdirectory(pa-controller)
 add_subdirectory(pa-steps)
 add_subdirectory(pa-aux-proj)#辅助项目, 不被pa-controller控制
+add_subdirectory(pa-interface)# 接口
+add_subdirectory(pa-algorithm)# 公用算法
