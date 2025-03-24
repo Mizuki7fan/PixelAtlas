@@ -3,13 +3,14 @@ project(EfficientBijectiveParameterization)
 
 if (${LINSYSSOLVER} STREQUAL "Eigen")
     include_directories(SYSTEM ${EIGEN_PATH})
-    add_compile_definitions(-DUSE_EIGEN)
+    add_definitions(-DUSE_EIGEN)
 elseif(${LINSYSSOLVER} STREQUAL "MKL")
-    add_compile_definitions(-DUSE_MKL)
+add_definitions(-DUSE_MKL)
 endif()
 
 include_directories(${EIGEN_PATH})
 include_directories(${CMAKE_SOURCE_DIR}/pa-interface)
+include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
 include_directories(SYSTEM ${TRIANGLE_PATH})
 include_directories(SYSTEM ${CGAL_PATH}/include)
 include_directories(${BOOST_PATH}/include/boost-1_87)
@@ -25,4 +26,10 @@ file (GLOB all_files
     ShellData.cpp
 )
 
-add_library(EfficientBijectiveParameterization ${all_files})
+add_library(EfficientBijectiveParameterization ${all_files} )
+
+target_link_libraries(EfficientBijectiveParameterization PRIVATE
+    TriangleInterface
+    pa_frame
+    LinSysSolverInterface
+)

@@ -6,26 +6,25 @@
 class BiljectivePara {
 public:
   BiljectivePara(const cgl::SurfaceMesh3 &M);
-  ~BiljectivePara();
+  ~BiljectivePara() {};
 
-  void parameterization();
-  void load();
-  cgl::SurfaceMesh3 getResult();
-  void shelltri(Eigen::MatrixXi &tri, Eigen::MatrixXd &pre_pos,
+public:
+  void Parameterization();
+  void Load();
+  cgl::SurfaceMesh3 GetResult();
+
+private:
+  void ShellTri(Eigen::MatrixXi &tri, Eigen::MatrixXd &pre_pos,
                 Eigen::MatrixXd &pos, Eigen::VectorXi &bnd);
-  double adjust_weight(double conv_mesh, double last_energy);
+  double AdjustWeight(double conv_mesh, double last_energy);
 
-protected:
-  std::string modelname;
-  const cgl::SurfaceMesh3 &mesh;
-  cgl::SurfaceMesh3 uv_mesh;
-  ShellData shell_data;
-  std::shared_ptr<Parafun> parafun_solver = nullptr;
+  const cgl::SurfaceMesh3 &tri_mesh_;
+  cgl::SurfaceMesh3 uv_mesh_;
+  std::unique_ptr<ShellData> shell_data_ = nullptr;
+  std::unique_ptr<Parafun> parafun_solver_ = nullptr;
+  const double convgence_con_rate_ = 1e-5;
+  const int kMaxIterNum = 5000;
+  bool is_initialization_;
 
-  double convgence_con_rate = 1e-5;
-  int MAX_ITER_NUM = 5000;
-  bool is_initialization;
-
-  bool weight1;
-  bool weight2;
+  bool weight_1_, weight_2_;
 };

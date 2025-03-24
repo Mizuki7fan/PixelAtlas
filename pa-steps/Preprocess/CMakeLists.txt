@@ -2,9 +2,9 @@ project(Preprocess)
 
 if (${LINSYSSOLVER} STREQUAL "Eigen")
     include_directories(SYSTEM ${EIGEN_PATH})
-    add_compile_definitions(-DUSE_EIGEN)
+    add_definitions(-DUSE_EIGEN)
 elseif(${LINSYSSOLVER} STREQUAL "MKL")
-    add_compile_definitions(-DUSE_MKL)
+    add_definitions(-DUSE_MKL)
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
@@ -25,4 +25,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     pa_frame
     CGALMeshInterface
     EfficientBijectiveParameterization
+    TriangleInterface
 )

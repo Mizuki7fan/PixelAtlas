@@ -1,9 +1,9 @@
 #根据Solver的选择进行编译
 if (${LINSYSSOLVER} STREQUAL "Eigen")
     include_directories(SYSTEM ${EIGEN_PATH})
-    add_compile_definitions(-DUSE_EIGEN)
+    add_definitions(-DUSE_EIGEN)
 elseif(${LINSYSSOLVER} STREQUAL "MKL")
-    add_compile_definitions(-DUSE_MKL)
+add_definitions(-DUSE_MKL)
 endif()
 
 file (GLOB SolverInterface_FILE

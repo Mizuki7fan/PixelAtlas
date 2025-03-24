@@ -4,11 +4,12 @@
 #elif defined(USE_EIGEN)
 #include "LinSysSolverInterface/EigenLinSolver.h"
 #endif
-#include <fstream>
+#include "frame/assert.hpp"
+#include <iostream>
 #include <numbers>
 
 // 使得cut成为有序点列
-void orderTheBoundary(std::vector<std::list<int>> &order_boundary,
+void OrderTheBoundary(std::vector<std::list<int>> &order_boundary,
                       const std::vector<int> &nextlocation) {
   int n_es = static_cast<int>(nextlocation.size()) / 2;
   std::set<int> isused;
@@ -24,8 +25,8 @@ void orderTheBoundary(std::vector<std::list<int>> &order_boundary,
     s_1 = *(isused.begin()) * 2;
     s_2 = s_1 + 1;
     std::list<int> list_1, list_2;
-    if (growFromP(s_1, isused, list_1, nextlocation)) {
-      growFromP(s_2, isused, list_2, nextlocation);
+    if (GrowFromP(s_1, isused, list_1, nextlocation)) {
+      GrowFromP(s_2, isused, list_2, nextlocation);
       for (auto it = list_2.begin(); it != list_2.end(); it++) {
         list_1.push_front(*it);
       }
@@ -33,9 +34,10 @@ void orderTheBoundary(std::vector<std::list<int>> &order_boundary,
     order_boundary.emplace_back(list_1);
   }
 }
+
 /*加入判断边界线是否闭合,return true means open curve; return false means closed
 curve. In closed case, the first and last item of order_boundary are same.*/
-bool growFromP(int p, std::set<int> &isused, std::list<int> &order_boundary,
+bool GrowFromP(int p, std::set<int> &isused, std::list<int> &order_boundary,
                const std::vector<int> &nextlocation) {
   int loc = nextlocation[p];
   isused.erase(p / 2);
@@ -81,21 +83,21 @@ bool growFromP(int p, std::set<int> &isused, std::list<int> &order_boundary,
 
 void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
            const Eigen::MatrixXd &bnd_uv, Eigen::MatrixXd &uv_init) {
-  std::size_t F_N = F.rows();
+  int F_N = static_cast<int>(F.rows());
 
   uv_init.resize(V_N, 2);
   std::set<int> bound_ids;
-  for (std::size_t i = 0; i < static_cast<std::size_t>(bnd.size()); i++) {
+  for (int i = 0; i < bnd.size(); i++) {
     bound_ids.insert(bnd(i));
     uv_init.row(bnd(i)) << bnd_uv(i, 0), bnd_uv(i, 1);
   }
 
   std::vector<std::set<int>> VV_tmp;
   VV_tmp.resize(V_N);
-  for (std::size_t i = 0; i < static_cast<std::size_t>(F_N); i++) {
+  for (int i = 0; i < F_N; i++) {
     int vid[3];
 
-    for (std::size_t j = 0; j < static_cast<std::size_t>(F.cols()); j++) {
+    for (int j = 0; j < F.cols(); j++) {
       vid[j] = F(i, j);
     }
     VV_tmp[vid[0]].insert(vid[1]);
@@ -108,12 +110,13 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
     VV_tmp[vid[2]].insert(vid[1]);
   }
 
-  std::unique_ptr<Solver> solver;
+  std::unique_ptr<Solver> solver = nullptr;
 #if defined(USE_MKL)
   solver = std::make_unique<MKLPardisoSolver>();
 #elif defined(USE_EIGEN)
   solver = std::make_unique<EigenLinSolver>();
 #endif
+  PA_ASSERT(solver != nullptr);
 
   std::vector<double> pardiso_tu;
   std::vector<double> pardiso_tv;
@@ -125,7 +128,7 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
   pardiso_tv.resize(V_N, 0.0);
 
   for (int i = 0; i < V_N; i++) {
-    solver->ia_.push_back(solver->ja_.size());
+    solver->ia_.push_back(static_cast<int>(solver->ja_.size()));
 
     if (bound_ids.count(i) > 0) {
       solver->ja_.push_back(i);
@@ -136,7 +139,7 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
 
     } else {
       solver->ja_.push_back(i);
-      solver->a_.push_back(static_cast<double>(VV_tmp[i].size()));
+      solver->a_.push_back(static_cast<int>(VV_tmp[i].size()));
       std::vector<int> row_id;
       row_id.reserve(VV_tmp[i].size());
       double bu = 0.0;
@@ -160,9 +163,9 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
       pardiso_tv[i] = bv;
     }
   }
-  solver->ia_.push_back(solver->ja_.size());
+  solver->ia_.push_back(static_cast<int>(solver->ja_.size()));
 
-  solver->nnz_ = solver->ja_.size();
+  solver->nnz_ = static_cast<int>(solver->ja_.size());
   solver->num_ = V_N;
 
   solver->pardiso_init();
@@ -182,10 +185,10 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
   }
 }
 
-void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
-                     std::unique_ptr<Solver> &solver) {
-  std::size_t V_N = V.rows();
-  std::size_t F_N = F.rows();
+void PreCalcPardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
+                    std::unique_ptr<Solver> &solver) {
+  int V_N = static_cast<int>(V.rows());
+  int F_N = static_cast<int>(F.rows());
   solver->ia_.clear();
   solver->ia_.reserve(2 * V_N + 1);
   solver->ja_.clear();
@@ -193,10 +196,10 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
 
   std::vector<std::set<int>> VV_tmp;
   VV_tmp.resize(V_N);
-  for (std::size_t i = 0; i < F_N; i++) {
+  for (int i = 0; i < F_N; i++) {
     int vid[3];
 
-    for (std::size_t j = 0; j < static_cast<std::size_t>(F.cols()); j++) {
+    for (int j = 0; j < F.cols(); j++) {
       vid[j] = F(i, j);
     }
     VV_tmp[vid[0]].insert(vid[1]);
@@ -209,8 +212,8 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
     VV_tmp[vid[2]].insert(vid[1]);
   }
 
-  for (std::size_t i = 0; i < V_N; i++) {
-    solver->ia_.push_back(solver->ja_.size());
+  for (int i = 0; i < V_N; i++) {
+    solver->ia_.push_back(static_cast<int>(solver->ja_.size()));
     VV_tmp[i].insert(i);
     std::vector<int> row_id;
     for (auto &var : VV_tmp[i]) {
@@ -221,13 +224,15 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
         std::find(row_id.begin(), row_id.end(), i);
 
     for (std::size_t k = std::distance(row_id.begin(), iter); k < row_id.size();
-         k++)
+         k++) {
       solver->ja_.push_back(row_id[k]);
-    for (std::size_t k = 0; k < row_id.size(); k++)
+    }
+    for (std::size_t k = 0; k < row_id.size(); k++) {
       solver->ja_.push_back(row_id[k] + V_N);
+    }
   }
-  for (std::size_t i = V_N; i < 2 * V_N; i++) {
-    solver->ia_.push_back(solver->ja_.size());
+  for (int i = V_N; i < 2 * V_N; i++) {
+    solver->ia_.push_back(static_cast<int>(solver->ja_.size()));
     std::vector<int> row_id;
     for (auto &var : VV_tmp[i - V_N]) {
       row_id.push_back(var);
@@ -240,79 +245,14 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
       solver->ja_.push_back(row_id[k] + V_N);
     }
   }
-  solver->ia_.push_back(solver->ja_.size());
+  solver->ia_.push_back(static_cast<int>(solver->ja_.size()));
 }
 
-void map_vertices_to_circle(const Eigen::MatrixXd &V,
-                            const Eigen::VectorXi &bnd, Eigen::MatrixXd &UV) {
-  // Get sorted list of boundary vertices
-  std::vector<int> interior, map_ij;
-  map_ij.resize(V.rows());
-
-  std::vector<bool> isOnBnd(V.rows(), false);
-  for (int i = 0; i < bnd.size(); i++) {
-    isOnBnd[bnd[i]] = true;
-    map_ij[bnd[i]] = i;
-  }
-
-  for (int i = 0; i < (int)isOnBnd.size(); i++) {
-    if (!isOnBnd[i]) {
-      map_ij[i] = interior.size();
-      interior.push_back(i);
-    }
-  }
-
-  // Map boundary to unit circle
-  std::vector<double> len(bnd.size());
-  len[0] = 0.;
-
-  for (int i = 1; i < bnd.size(); i++) {
-    len[i] = len[i - 1] + (V.row(bnd[i - 1]) - V.row(bnd[i])).norm();
-  }
-  double total_len =
-      len[len.size() - 1] + (V.row(bnd[0]) - V.row(bnd[bnd.size() - 1])).norm();
-
-  UV.resize(bnd.size(), 2);
-
-  for (int i = 0; i < bnd.size(); i++) {
-    double frac = len[i] * 2. * std::numbers::pi / total_len;
-    // double frac = i * 2. * M_PI / (bnd.size());
-    UV.row(map_ij[bnd[i]]) << cos(frac), sin(frac);
-  }
-}
-
-void writeObj(const Eigen::MatrixXd &V_in, const Eigen::MatrixXi &F_ref,
-              const std::string &outfile) {
-  printf("write mesh------------------------begining\n");
-  std::ofstream of_obj(outfile, std::ios::trunc);
-
-  if (V_in.cols() == 3) {
-    for (std::size_t vid = 0; vid < static_cast<std::size_t>(V_in.rows());
-         vid++) {
-      of_obj << "v " << V_in(vid, 0) << " " << V_in(vid, 1) << " "
-             << V_in(vid, 2) << std::endl;
-    }
-  } else if (V_in.cols() == 2) {
-    for (std::size_t vid = 0; vid < static_cast<std::size_t>(V_in.rows());
-         vid++) {
-      of_obj << "v " << V_in(vid, 0) << " " << V_in(vid, 1) << " " << 0.0
-             << std::endl;
-    }
-  }
-
-  for (std::size_t fi = 0; fi < static_cast<std::size_t>(F_ref.rows()); fi++) {
-    of_obj << "f " << F_ref(fi, 0) + 1 << " " << F_ref(fi, 1) + 1 << " "
-           << F_ref(fi, 2) + 1 << std::endl;
-  }
-  of_obj.close();
-  printf("write mesh------------------------finishing\n");
-}
-
-void boundary_loop(const Eigen::MatrixXi &F_ref,
-                   std::vector<std::vector<int>> &boundaryloop) {
+void BoundaryLoop(const Eigen::MatrixXi &F_ref,
+                  std::vector<std::vector<int>> &boundaryloop) {
   std::vector<std::vector<int>> boundaryEdges;
   std::vector<std::vector<int>> edges;
-  int n_fvs = F_ref.cols();
+  int n_fvs = static_cast<int>(F_ref.cols());
 
   for (int it = 0; it < F_ref.rows(); it++) {
     for (int i = 0; i < n_fvs; i++) {
@@ -356,16 +296,55 @@ void boundary_loop(const Eigen::MatrixXi &F_ref,
   std::vector<int> loop0;
   loop0.push_back(ev1);
   while (ev1 != ev0) {
-    for (std::size_t i = 1; i < boundaryEdges.size(); i++) {
-      if (visited[i] == 1)
+    for (std::size_t j = 1; j < boundaryEdges.size(); j++) {
+      if (visited[j] == 1)
         continue;
-      if (boundaryEdges[i][0] == ev1) {
-        visited[i] = 1;
-        ev1 = boundaryEdges[i][1];
+      if (boundaryEdges[j][0] == ev1) {
+        visited[j] = 1;
+        ev1 = boundaryEdges[j][1];
         loop0.push_back(ev1);
         break;
       }
     }
   }
   boundaryloop.emplace_back(loop0);
+}
+
+void MapVerticesToCircle(const Eigen::MatrixXd &V,   //
+                         const Eigen::VectorXi &bnd, //
+                         Eigen::MatrixXd &UV) {
+  // Get sorted list of boundary vertices
+  std::vector<int> interior, map_ij;
+  map_ij.resize(V.rows());
+
+  std::vector<bool> isOnBnd(V.rows(), false);
+  for (int i = 0; i < bnd.size(); i++) {
+    isOnBnd[bnd[i]] = true;
+    map_ij[bnd[i]] = i;
+  }
+
+  for (std::size_t i = 0; i < isOnBnd.size(); i++) {
+    if (!isOnBnd[i]) {
+      map_ij[i] = static_cast<int>(interior.size());
+      interior.push_back(static_cast<int>(i));
+    }
+  }
+
+  // Map boundary to unit circle
+  std::vector<double> len(bnd.size());
+  len[0] = 0.;
+
+  for (int i = 1; i < bnd.size(); i++) {
+    len[i] = len[i - 1] + (V.row(bnd[i - 1]) - V.row(bnd[i])).norm();
+  }
+  double total_len =
+      len[len.size() - 1] + (V.row(bnd[0]) - V.row(bnd[bnd.size() - 1])).norm();
+
+  UV.resize(bnd.size(), 2);
+
+  for (int i = 0; i < bnd.size(); i++) {
+    double frac = len[i] * 2. * std::numbers::pi / total_len;
+    // double frac = i * 2. * M_PI / (bnd.size());
+    UV.row(map_ij[bnd[i]]) << cos(frac), sin(frac);
+  }
 }

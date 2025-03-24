@@ -8,11 +8,12 @@
 void GenereateUVMeshByEfficientBiljectiveParameterization(
     const cgl::SurfaceMesh3 &tri_mesh, cgl::SurfaceMesh3 &uv_mesh) {
   std::cout << tri_mesh.num_edges() << uv_mesh.num_edges() << std::endl;
-  BiljectivePara *bi_para = new BiljectivePara(tri_mesh);
+  std::unique_ptr<BiljectivePara> bi_para =
+      std::make_unique<BiljectivePara>(tri_mesh);
 
-  bi_para->load();
-  bi_para->parameterization();
-  uv_mesh = bi_para->getResult();
+  bi_para->Load();
+  bi_para->Parameterization();
+  uv_mesh = bi_para->GetResult();
 }
 
 void MainProcess(std::string model_name) {

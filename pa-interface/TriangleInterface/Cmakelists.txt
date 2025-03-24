@@ -6,3 +6,8 @@ file (GLOB TriangleInterface_FILE
 )
 
 add_library(TriangleInterface ${TriangleInterface_FILE})
+
+target_link_libraries(TriangleInterface PRIVATE
+ optimized ${TRIANGLE_PATH}/build/Release/triangle.lib
+ debug ${TRIANGLE_PATH}/build/Debug/triangle.lib
+)

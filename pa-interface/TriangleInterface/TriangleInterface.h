@@ -1,8 +1,8 @@
 #pragma once
-#include<Eigen/Core>
-#include<triangle.h>
-void triangulate(const Eigen::MatrixXd &bnd_pts,const double& area_threshold,Eigen::MatrixXd & pts,Eigen::MatrixXi & FV);
-void triangulate(const Eigen::MatrixXd &bnd_pts, const Eigen::MatrixXi &E, const Eigen::MatrixXd &hole, Eigen::MatrixXd & pts, Eigen::MatrixXi & FV);
-
-void Delaunaytriangulate(const Eigen::MatrixXd& bnd_pts, const Eigen::MatrixXi& E, Eigen::MatrixXd& pts, Eigen::MatrixXi& FV);
-
+#include <Eigen/Core>
+#include <triangle.h>
+void triangulate(const Eigen::MatrixXd &bnd_pts, const double &area_threshold,
+                 Eigen::MatrixXd &pts, Eigen::MatrixXi &FV);
+void triangulate(const Eigen::MatrixXd &bnd_pts, const Eigen::MatrixXi &E,
+                 const Eigen::MatrixXd &hole, Eigen::MatrixXd &pts,
+                 Eigen::MatrixXi &FV);

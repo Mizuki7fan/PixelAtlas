@@ -75,7 +75,7 @@ void triangulate(const Eigen::MatrixXd &bnd_pts, const double &area_threshold,
     FV.row(i) << out.trianglelist[3 * i], out.trianglelist[3 * i + 1],
         out.trianglelist[3 * i + 2];
   }
-  return;
+  //  return;
   // Cleanup in
   free(in.pointlist);
   free(in.pointmarkerlist);
@@ -171,84 +171,6 @@ void triangulate(const Eigen::MatrixXd &bnd_pts, const Eigen::MatrixXi &E,
   free(in.segmentlist);
   free(in.segmentmarkerlist);
   free(in.holelist);
-  // Cleanup out
-  free(out.pointlist);
-  free(out.trianglelist);
-  free(out.segmentlist);
-  free(out.segmentmarkerlist);
-  free(out.pointmarkerlist);
-}
-
-void Delaunaytriangulate(const Eigen::MatrixXd &bnd_pts,
-                         const Eigen::MatrixXi &E, Eigen::MatrixXd &pts,
-                         Eigen::MatrixXi &FV) {
-  int p_num = static_cast<int>(bnd_pts.rows());
-  triangulateio in;
-
-  in.numberofpoints = p_num;
-  in.pointlist = (double *)calloc(bnd_pts.size(), sizeof(double));
-
-  for (int i = 0; i < p_num; i++) {
-    in.pointlist[2 * i] = bnd_pts(i, 0);
-    in.pointlist[2 * i + 1] = bnd_pts(i, 1);
-  }
-
-  in.numberofpointattributes = 0;
-  in.pointmarkerlist = (int *)calloc(p_num, sizeof(int));
-  for (int i = 0; i < p_num; ++i)
-    in.pointmarkerlist[i] = 1;
-
-  in.trianglelist = NULL;
-  in.numberoftriangles = 0;
-  in.numberofcorners = 0;
-  in.numberoftriangleattributes = 0;
-  in.triangleattributelist = NULL;
-
-  in.numberofsegments =
-      static_cast<int>(E.size()) ? static_cast<int>(E.rows()) : 0;
-  in.segmentlist = (int *)calloc(E.size(), sizeof(int));
-
-  for (std::size_t i = 0; i < static_cast<std::size_t>(E.rows()); i++) {
-    in.segmentlist[2 * i] = E(i, 0);
-    in.segmentlist[2 * i + 1] = E(i, 1);
-  }
-
-  in.segmentmarkerlist = (int *)calloc(E.rows(), sizeof(int));
-  for (unsigned i = 0; i < E.rows(); ++i)
-    in.segmentmarkerlist[i] = 1;
-
-  in.numberofholes = 0;
-
-  in.numberofregions = 0;
-
-  triangulateio out;
-  out.pointlist = NULL;
-  out.trianglelist = NULL;
-  out.segmentlist = NULL;
-  out.segmentmarkerlist = NULL;
-  out.pointmarkerlist = NULL;
-  std::string full_flags = "qYYQpz";
-  triangulate(const_cast<char *>(full_flags.c_str()), &in, &out, 0);
-
-  pts.resize(out.numberofpoints, 2);
-  FV.resize(out.numberoftriangles, 3);
-
-  for (std::size_t i = 0; i < static_cast<std::size_t>(out.numberofpoints);
-       i++) {
-    pts.row(i) << out.pointlist[2 * i], out.pointlist[2 * i + 1];
-  }
-
-  for (std::size_t i = 0; i < static_cast<std::size_t>(out.numberoftriangles);
-       i++) {
-    FV.row(i) << out.trianglelist[3 * i], out.trianglelist[3 * i + 1],
-        out.trianglelist[3 * i + 2];
-  }
-  // Cleanup in
-  free(in.pointlist);
-  free(in.pointmarkerlist);
-  free(in.segmentlist);
-  free(in.segmentmarkerlist);
-  //	free(in.holelist);
   // Cleanup out
   free(out.pointlist);
   free(out.trianglelist);
