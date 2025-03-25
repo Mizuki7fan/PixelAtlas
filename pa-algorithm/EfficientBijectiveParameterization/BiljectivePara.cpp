@@ -110,8 +110,6 @@ void BiljectivePara::Parameterization() {
   std::cout << parafun_solver_->time_1_ << " "
             << parafun_solver_->time_2_ / iteration_count << " "
             << parafun_solver_->time_3_ / iteration_count << std::endl;
-  std::cout << parafun_solver_->density_ << std::endl;
-  // write_obj();
 }
 
 cgl::SurfaceMesh3 BiljectivePara::GetResult() {

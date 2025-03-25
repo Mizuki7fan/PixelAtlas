@@ -5,6 +5,7 @@
 #include "LinSysSolverInterface/EigenLinSolver.h"
 #endif
 #include "Eigen/Sparse"
+#include <iostream>
 #include <set>
 
 Parafun::Parafun(const std::unique_ptr<ShellData> &data)
@@ -665,9 +666,6 @@ void Parafun::PreCalculate() {
                  find_id_in_rows.coeff(min12 + V_N_, max12 + V_N_);
     id_h55_[i] = pardiso_ia_[f5];
   }
-  int nnz = static_cast<int>(pardiso_ja_.size());
-  // std:cout << "density: " << double(nnz) << std::endl;
-  density_ += static_cast<double>(nnz) / 4 / V_N_ / V_N_;
 }
 
 void Parafun::LocalCoordinateInverse(int i, double &p00, double &p01,
@@ -920,7 +918,7 @@ void Parafun::CM(bool is_interp) {
   double h00, h01, h02, h03, h04, h05, h11, h12, h13, h14, h15, h22, h23, h24,
       h25, h33, h34, h35, h44, h45, h55;
   double *position = position_of_mesh_.data();
-  int nnz = static_cast<int>(pardiso_ja_.size());
+  int nnz = pardiso_ja_.size();
   pardiso_a_.clear();
   pardiso_b_.clear();
   pardiso_a_.resize(nnz, 0.0);
@@ -1138,7 +1136,7 @@ void Parafun::CM(bool is_interp) {
     pardiso_a_[id_h55_[i]] += h55;
   }
 
-  for (int i = static_cast<int>(shell_data_->m_T_.rows()); i < F_N_; i++) {
+  for (int i = shell_data_->m_T_.rows(); i < F_N_; i++) {
     area_now = area_[i];
     f0 = F_0_[i];
     f1 = F_1_[i];
@@ -1470,9 +1468,9 @@ void Parafun::CM(bool is_interp) {
 
   std::vector<double> result_d = solver_->result_;
   Eigen::VectorXd negative_grad(2 * V_N_), d(2 * V_N_);
-  for (int gard_idx = 0; gard_idx < 2 * V_N_; gard_idx++) {
-    negative_grad(gard_idx) = pardiso_b_[gard_idx];
-    d(gard_idx) = result_d[gard_idx];
+  for (int ii = 0; ii < 2 * V_N_; ii++) {
+    negative_grad(ii) = pardiso_b_[ii];
+    d(ii) = result_d[ii];
   }
   solver_->free_numerical_factorization_memory();
 
@@ -2335,6 +2333,10 @@ bool Parafun::CheckIntersection(const Eigen::VectorXd &pos) {
     id_before = boundary_vertex((i - 1 + BE_N_) % BE_N_);
 
     for (int j = 0; j < BE_N_; ++j) {
+
+      if (i == 69 && j == 75) {
+        std::cout << 123 << std::endl;
+      }
       if (id_before == boundary_vertex(j))
         continue;
       if (id_start == boundary_vertex(j))

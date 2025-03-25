@@ -15,7 +15,6 @@ public:
   double energy_mesh_, energy_barrier_, energy_shell_, energy_all_;
   int AV_F_N_H_;
   double time_1_ = 0, time_2_ = 0, time_3_ = 0;
-  double density_;
   std::vector<double> area_;
   double barrier_coef_;
 
