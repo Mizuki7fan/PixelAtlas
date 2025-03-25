@@ -1,4 +1,4 @@
-#include "CGALMeshInterface.h"
+#include "CGAL-Interface.h"
 
 #include <CGAL/Polygon_mesh_processing/bbox.h>
 #include <CGAL/Polygon_mesh_processing/compute_normal.h>

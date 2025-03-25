@@ -1,30 +1,35 @@
 #pragma once
 #include "Parafun.h"
 #include "ShellData.h"
-#include <CGALMeshInterface/CGALMeshInterface.h>
+
+#include "MeshDefinition.h"
+#include <OpenMesh/Core/IO/MeshIO.hh>
+
+
+using namespace Eigen;
+using namespace std;
 
 class BiljectivePara {
 public:
-  BiljectivePara(const cgl::SurfaceMesh3 &M);
-  ~BiljectivePara() {};
+  BiljectivePara(Mesh &m, string filename);
+  ~BiljectivePara();
 
-public:
-  void Parameterization();
-  void Load();
-  cgl::SurfaceMesh3 GetResult();
+  void parameterization();
+  void load();
+  void write_obj(std::string str);
+  void shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos, VectorXi &bnd);
+  double adjust_weight(double conv_mesh, double last_energy);
 
-private:
-  void ShellTri(Eigen::MatrixXi &tri, Eigen::MatrixXd &pre_pos,
-                Eigen::MatrixXd &pos, Eigen::VectorXi &bnd);
-  double AdjustWeight(double conv_mesh, double last_energy);
+protected:
+  string modelname;
+  Mesh &mesh;
+  ShellData shell_data;
+  std::shared_ptr<Parafun> parafun_solver = nullptr;
 
-  const cgl::SurfaceMesh3 &tri_mesh_;
-  cgl::SurfaceMesh3 uv_mesh_;
-  std::unique_ptr<ShellData> shell_data_ = nullptr;
-  std::unique_ptr<Parafun> parafun_solver_ = nullptr;
-  const double convgence_con_rate_ = 1e-5;
-  const int kMaxIterNum = 5000;
-  bool is_initialization_;
+  double convgence_con_rate = 1e-5;
+  int MAX_ITER_NUM = 5000;
+  bool is_initialization;
 
-  bool weight_1_, weight_2_;
+  bool weight1;
+  bool weight2;
 };

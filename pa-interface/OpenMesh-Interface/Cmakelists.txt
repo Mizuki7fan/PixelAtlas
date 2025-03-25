@@ -1,0 +1,20 @@
+include_directories(SYSTEM ${EIGEN_PATH})
+include_directories(SYSTEM ${OpenMesh_PATH}/include)
+include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
+
+add_definitions(/D_USE_MATH_DEFINES)
+#"You have to define _USE_MATH_DEFINES in the compiler settings!"
+
+file (GLOB OpenMesh-Interface_FILE
+    MeshDefinition.h
+    MeshDefinition.cpp
+)
+
+add_library(OpenMesh-Interface ${OpenMesh-Interface_FILE})
+
+target_link_libraries(OpenMesh-Interface PRIVATE
+    optimized ${OpenMesh_PATH}/lib/OpenMeshCore.lib
+    debug ${OpenMesh_PATH}/lib/OpenMeshCored.lib
+    optimized ${OpenMesh_PATH}/lib/OpenMeshTools.lib
+    debug ${OpenMesh_PATH}/lib/OpenMeshToolsd.lib
+)

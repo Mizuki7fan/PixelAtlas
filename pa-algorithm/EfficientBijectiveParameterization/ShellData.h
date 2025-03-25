@@ -1,41 +1,62 @@
-#pragma once
+#ifndef SHELLDATA_H
+#define SHELLDATA_H
 
 #include <Eigen/Dense>
+#include <map>
+#include"Common.h"
+#include"TriangleInterface.h"
+struct ShellData 
+{
+ public:
+  ShellData() 
+  {
+	  dim = 2;
+	  mv_num = 0;
+	  mf_num = 0;
+	  sf_num = 0;
+	  sv_num = 0;
+	  mesh_measure = 0;
+	  w_uv.resize(0, 0);
+  };
 
-class ShellData {
-public:
-  explicit ShellData();
-  void AddNewPatch(const Eigen::MatrixXd &V_in, const Eigen::MatrixXi &F_ref,
-                   const Eigen::RowVectorXd &center);
-  Eigen::MatrixXd w_uv_;     // whole domain uv: mesh + free vertices
-  Eigen::MatrixXd w_uv_pre_; // whole domain uv: mesh + free vertices
-  double mesh_measure_;      // area or volume
-  long v_num_, f_num_;
-  long sf_num_;
-  double energy_;       // mesh energy
-  Eigen::MatrixXi m_T_; // input initial mesh F/T
-  Eigen::MatrixXi s_T_; // shell domain tets: shell tets
-  Eigen::MatrixXd m_V_; // input initial mesh V
-  double shell_factor_ = 10;
-  void UpdateShell();
-  Eigen::VectorXd m_M_; // mesh area or volume
-  Eigen::VectorXd s_M_; // shell area or volume
-  Eigen::MatrixXi surface_F_;
-  Eigen::VectorXi frame_ids_;
-  Eigen::MatrixXd frame_V_;
-  std::vector<int> bnd_sizes_;
-  Eigen::VectorXi internal_bnd_;
+  void add_new_patch(const Eigen::MatrixXd&, const Eigen::MatrixXi&,const Eigen::RowVectorXd &center);
 
-private:
-  void MeshImprove();
+  void mesh_improve();
 
-  int mv_num_, mf_num_, sv_num_;
+  void update_shell();
 
-  //   Eigen::VectorXd w_M_; // area/volume weights for whole
+  double shell_factor = 10;
 
-  //   Eigen::VectorXi external_bnd_;
+  double energy;		// mesh energy
 
-  std::vector<int> component_sizes_; // multi-chart support
+  long mv_num, mf_num;
+  long sv_num, sf_num;
+  Eigen::MatrixXd m_V;	// input initial mesh V
+  Eigen::MatrixXi m_T;	// input initial mesh F/T
 
-  //   const int kDim_ = 2; // dimension for ambient space. Same for mesh/shell
-};
+  Eigen::MatrixXd w_uv_pre;	// whole domain uv: mesh + free vertices
+  Eigen::MatrixXd w_uv;	// whole domain uv: mesh + free vertices
+  Eigen::MatrixXi s_T;	// shell domain tets: shell tets
+  Eigen::MatrixXi w_T;
+
+  Eigen::VectorXd m_M;	// mesh area or volume
+  Eigen::VectorXd s_M;	// shell area or volume
+  Eigen::VectorXd w_M;	// area/volume weights for whole
+  Eigen::MatrixXi surface_F;
+  double mesh_measure;	// area or volume
+  long v_num;
+  long f_num;
+
+  Eigen::VectorXi frame_ids;
+  Eigen::MatrixXd frame_V;
+  Eigen::VectorXi internal_bnd;
+  Eigen::VectorXi external_bnd;
+ 
+  std::vector<int> component_sizes;	// multi-chart support
+  std::vector<int> bnd_sizes;
+
+  int dim=2;						// dimension for ambient space. Same for mesh/shell
+  };
+
+
+  #endif //SHELLDATA_H

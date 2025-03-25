@@ -6,10 +6,10 @@ elseif(${LINSYSSOLVER} STREQUAL "MKL")
 add_definitions(-DUSE_MKL)
 endif()
 
-file (GLOB SolverInterface_FILE
+file (GLOB Solver-Interface_FILE
     Solver.h
     ${LINSYSSOLVER}LinSolver.h
     ${LINSYSSOLVER}LinSolver.cpp
 )
 
-add_library(LinSysSolverInterface ${SolverInterface_FILE})
+add_library(LinSysSolver-Interface ${Solver-Interface_FILE})

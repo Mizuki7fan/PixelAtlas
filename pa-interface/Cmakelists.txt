@@ -1,3 +1,4 @@
-add_subdirectory(CGALMeshInterface)
-add_subdirectory(LinSysSolverInterface)
-add_subdirectory(TriangleInterface)
+add_subdirectory(CGAL-Interface)
+add_subdirectory(LinSysSolver-Interface)
+add_subdirectory(Triangle-Interface)
+add_subdirectory(OpenMesh-Interface)

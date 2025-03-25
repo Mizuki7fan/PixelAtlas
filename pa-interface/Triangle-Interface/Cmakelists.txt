@@ -1,13 +1,13 @@
 include_directories(SYSTEM ${TRIANGLE_PATH})
 include_directories(SYSTEM ${EIGEN_PATH})
-file (GLOB TriangleInterface_FILE
+file (GLOB Triangle-Interface_FILE
     TriangleInterface.h
     TriangleInterface.cpp
 )
 
-add_library(TriangleInterface ${TriangleInterface_FILE})
+add_library(Triangle-Interface ${Triangle-Interface_FILE})
 
-target_link_libraries(TriangleInterface PRIVATE
+target_link_libraries(Triangle-Interface PRIVATE
  optimized ${TRIANGLE_PATH}/build/Release/triangle.lib
  debug ${TRIANGLE_PATH}/build/Debug/triangle.lib
 )

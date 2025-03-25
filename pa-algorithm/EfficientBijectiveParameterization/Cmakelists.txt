@@ -1,6 +1,9 @@
 #Efficient Bijective Parameterization by Jianping Su
 project(EfficientBijectiveParameterization)
 
+add_definitions(/D_USE_MATH_DEFINES)
+#"You have to define _USE_MATH_DEFINES in the compiler settings!"
+
 if (${LINSYSSOLVER} STREQUAL "Eigen")
     include_directories(SYSTEM ${EIGEN_PATH})
     add_definitions(-DUSE_EIGEN)
@@ -9,27 +12,35 @@ add_definitions(-DUSE_MKL)
 endif()
 
 include_directories(${EIGEN_PATH})
-include_directories(${CMAKE_SOURCE_DIR}/pa-interface)
-include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
+include_directories(SYSTEM ${OpenMesh_PATH}/include)
 include_directories(SYSTEM ${TRIANGLE_PATH})
-include_directories(SYSTEM ${CGAL_PATH}/include)
-include_directories(${BOOST_PATH}/include/boost-1_87)
 
-file (GLOB all_files
-    BiljectivePara.h
-    BiljectivePara.cpp
-    Common.h
-    Common.cpp
-    Parafun.h
+file (GLOB SRCFILES
     Parafun.cpp
-    ShellData.h
+    Parafun.h
+    MeshDefinition.h
+    MeshDefinition.cpp
+    LinSysSolver/${PARDISO_SOLVER}.h
+    LinSysSolver/${PARDISO_SOLVER}.cpp
+    BiljectivePara.cpp
+    BiljectivePara.h
     ShellData.cpp
+    ShellData.h
+    Common.cpp
+    Common.h
+    TriangleInterface.cpp
+    TriangleInterface.h
 )
 
-add_library(EfficientBijectiveParameterization ${all_files} )
+add_library(EfficientBijectiveParameterization ${SRCFILES} )
 
 target_link_libraries(EfficientBijectiveParameterization PRIVATE
-    TriangleInterface
-    pa_frame
-    LinSysSolverInterface
+    Triangle-Interface
+    LinSysSolver-Interface
+    optimized ${OpenMesh_PATH}/lib/OpenMeshCore.lib
+    debug ${OpenMesh_PATH}/lib/OpenMeshCored.lib
+    optimized ${OpenMesh_PATH}/lib/OpenMeshTools.lib
+    debug ${OpenMesh_PATH}/lib/OpenMeshToolsd.lib
+    optimized ${TRIANGLE_PATH}/build/Release/triangle.lib
+    debug ${TRIANGLE_PATH}/build/Debug/triangle.lib
 )
