@@ -1,7 +1,10 @@
 #include "process.h"
 #include "EfficientBijectiveParameterization/BiljectivePara.h"
+#include "frame/io.h"
+#include <filesystem>
 #include <frame/global_defs.h>
-#include <iostream>
+
+namespace fs = std::filesystem;
 
 // 函数执行入口
 // void GenereateUVMeshByEfficientBiljectiveParameterization(
@@ -15,19 +18,19 @@
 //   uv_mesh = bi_para->GetResult();
 // }
 
-void MainProcess(std::string model_name) {
-
+void MainProcess() {
+  fs::path model_path = frm::global::CurrFile();
   Mesh mesh;
-  OpenMesh::IO::read_mesh(mesh, model_name);
-  BiljectivePara *bil_para = new BiljectivePara(mesh, model_name);
+  OpenMesh::IO::read_mesh(mesh, model_path.string());
+  std::unique_ptr<BiljectivePara> bil_para =
+      std::make_unique<BiljectivePara>(mesh, model_path.string());
 
   bil_para->load(); // 读入网格、完成shell的构建
   bil_para->parameterization();
-  bil_para->write_obj("uv_mesh.obj");
 
-  delete bil_para;
-  bil_para = NULL;
-
+  std::ofstream fout = frm::CreateResultFilestream("uv_mesh.obj");
+  bil_para->write_obj(fout);
+  fout.close();
   // system("pause");
 
   // cgl::SurfaceMesh3 tri_mesh, uv_mesh;

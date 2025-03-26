@@ -72,9 +72,7 @@ void BiljectivePara::parameterization() {
     last_mesh_energy = current_mesh_energy;
     last_all_energy = adjust_weight(conv_rate_mesh, last_mesh_energy);
 
-    if (conv_rate_all < convgence_con_rate)
-    //	if (current_mesh_energy < 4.0544)
-    {
+    if (conv_rate_all < convgence_con_rate) {
       break;
     }
   }
@@ -192,7 +190,7 @@ void BiljectivePara::load() {
   //   }
 }
 
-void BiljectivePara::write_obj(std::string outstr) {
+void BiljectivePara::write_obj(std::ofstream &of_obj) {
   Eigen::MatrixXd &V_in = shell_data.w_uv;
   int v_num = mesh.n_vertices();
   for (int i = 0; i < v_num; ++i) {
@@ -202,8 +200,6 @@ void BiljectivePara::write_obj(std::string outstr) {
   }
 
   Eigen::MatrixXi &F_ref = shell_data.m_T;
-
-  ofstream of_obj(outstr, ios::trunc);
 
   if (V_in.cols() == 3) {
     for (size_t vid = 0; vid < V_in.rows(); vid++) {
@@ -221,7 +217,6 @@ void BiljectivePara::write_obj(std::string outstr) {
     of_obj << "f " << F_ref(fi, 0) + 1 << " " << F_ref(fi, 1) + 1 << " "
            << F_ref(fi, 2) + 1 << endl;
   }
-  of_obj.close();
 }
 
 void BiljectivePara::shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos,

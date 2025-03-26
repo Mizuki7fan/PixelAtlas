@@ -3,9 +3,11 @@
 
 namespace frm::global {
 int DebugLevel() { return frm::GetDebugLevel(); }
-std::string DataSet() { return frm::GetDataset(); }
-int NumParallelCount() { return frm::GetNumParallelCnt(); }
-bool UseIndividualModelDir() { return frm::UseIndividualModelDir(); }
+
+fs::path CurrDebugDir() { return frm::GetCurrDebugDir(); }
+fs::path CurrResultDir() { return frm::GetCurrResultDir(); }
+fs::path CurrFile() { return frm::GetCurrFile(); }
+std::string DatasetStr() { return frm::GetDatasetStr(); }
 int MaxTimeElapsed() { return frm::GetMaxTimeElapsed(); }
-std::string ParallelLevel() { return frm::GetParallelLevel(); }
+bool UseIndividualModelDir() { return frm::GetUseIndividualModelDir(); }
 } // namespace frm::global

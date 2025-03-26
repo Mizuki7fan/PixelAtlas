@@ -12,7 +12,7 @@ namespace frm {
 class CommonProgram {
 public:
   CommonProgram(int argc, char *argv[]);
-  int Run(const std::function<void(std::string model_name)> &func) const;
+  int Run(const std::function<void()> &func) const;
 
 private:                          // functions
   bool PrepareWorkingDirectory(); // 准备work文件夹
@@ -28,15 +28,14 @@ private:
   fs::path curr_cmd_path;
 
   // 通过正则表达式筛选出来的例子
-  std::vector<std::string> run_targets;
+  std::vector<fs::path> run_targets;
 };
 
-fs::path GetGlobalWorkDir();
-fs::path GetGlobalCurrCmdDir();
 int GetDebugLevel();
-std::string GetDataset();
-int GetNumParallelCnt();
-bool UseIndividualModelDir();
+fs::path GetCurrDebugDir();
+fs::path GetCurrResultDir();
+fs::path GetCurrFile();
+std::string GetDatasetStr(); // 取dataset路径
 int GetMaxTimeElapsed();
-std::string GetParallelLevel();
+bool GetUseIndividualModelDir();
 } // namespace frm

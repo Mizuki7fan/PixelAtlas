@@ -1,11 +1,13 @@
 #pragma once
-#include <string>
-
+#include <filesystem>
+namespace fs = std::filesystem;
 namespace frm::global {
+
 int DebugLevel();
-std::string DataSet();
-int NumParallelCount();
-bool UseIndividualModelDir();
+fs::path CurrDebugDir();
+fs::path CurrResultDir();
+std::string DatasetStr();
+fs::path CurrFile();
 int MaxTimeElapsed();
-std::string ParallelLevel();
+bool UseIndividualModelDir();
 } // namespace frm::global

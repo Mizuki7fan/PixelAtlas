@@ -1968,10 +1968,6 @@ bool Parafun::check_intersection(const VectorXd &pos) {
     id_before = boundary_vertex((i - 1 + BE_N) % BE_N);
 
     for (int j = 0; j < BE_N; ++j) {
-
-      if (i == 69 && j == 75) {
-        std::cout << 123 << std::endl;
-      }
       if (id_before == boundary_vertex(j))
         continue;
       if (id_start == boundary_vertex(j))

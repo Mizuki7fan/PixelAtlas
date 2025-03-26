@@ -36,6 +36,21 @@
                 "-j",
                 "18"
             ]
-        }     
+        },
+        {
+            "label": "build-preprocess-release",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceRoot}/build",
+                "--config",
+                "Release",
+                "--target",
+                "Preprocess",
+                "-j",
+                "18"
+            ]
+        }    
     ]
 }

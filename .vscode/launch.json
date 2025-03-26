@@ -1,16 +1,6 @@
 {
     "version": "0.2.0",
     "configurations": [
-        // {
-        //     "name": "debug-launcher",
-        //     "type": "cppvsdbg",
-        //     "request": "launch",
-        //     "program": "${workspaceRoot}/run/bin_Debug/launcher.exe",//程序入口
-        //     "console": "integratedTerminal",//执行cout输出在哪个终端
-        //     "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
-        //     "args": ["-b","0","-e","2","-f",".*alien.obj.*","-s","PolyAtlas-Sample-30"],//参数
-        //     "preLaunchTask": "build-launcher-debug"//debug前先进行build
-        // },
         {
             "name": "debug-preprocess",
             "type": "cppvsdbg",
@@ -19,16 +9,37 @@
             "console": "integratedTerminal",//执行cout输出在哪个终端
             "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
             "args": [
-                "-d","2",
-                "-p","1",
+                "-d","1",
+                "-p","8",
                 "-t","1800",
-                "--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
-//                "--single","alien.obj",//单一执行模式, 只执行一个文件
+                //"--batch",".*.*",//批量执行模式, 根据给定的通配符并行执行多个文件
+                "--single","00019.obj",//单一执行模式, 只执行一个文件
                 "--dataset","PolyAtlas-Sample-30",
-                "--use_individual_model_dir",
-                "--parallel_level","process"
+                //"--use_individual_model_dir",
+                "--parallel_level","process",
+                "--clean"
                 ],//参数
             "preLaunchTask": "build-preprocess-debug"//debug前先进行build
+        },
+        {
+            "name": "release-preprocess",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/run/bin_Release/Preprocess.exe",//程序入口
+            "console": "integratedTerminal",//执行cout输出在哪个终端
+            "cwd": "${workspaceRoot}/run/bin_Release",//指定工作目录
+            "args": [
+                "-d","1",
+                "-p","8",
+                "-t","1800",
+                //"--batch",".*.*",//批量执行模式, 根据给定的通配符并行执行多个文件
+                "--single","00019.obj",//单一执行模式, 只执行一个文件
+                "--dataset","PolyAtlas-Sample-30",
+                //"--use_individual_model_dir",
+                "--parallel_level","process",
+                "--clean"
+                ],//参数
+            "preLaunchTask": "build-preprocess-release"//debug前先进行build
         }
     ]
 }

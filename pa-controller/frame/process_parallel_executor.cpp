@@ -7,9 +7,9 @@ namespace frm {
 namespace bp = boost::process;
 
 ProcessParallelExecutor::ProcessParallelExecutor(
-    const std::function<void(std::string)> &func, // 需要并行处理的函数
-    const std::vector<std::string> &run_targets,  // 需要并行处理的目标
-    const std::size_t num_parallel_cnt,           // 并行数
+    const std::function<void()> &func,        // 需要并行处理的函数
+    const std::vector<fs::path> &run_targets, // 需要并行处理的目标
+    const std::size_t num_parallel_cnt,       // 并行数
     const std::string exe_path)
     : m_func(func),                         //
       m_run_targets(run_targets),           //
@@ -23,20 +23,20 @@ bool ProcessParallelExecutor::Exec() {
   // 设置允许进程运行的最大时间
   const auto max_duration = std::chrono::seconds(global::MaxTimeElapsed());
 
-  while (1) {
-    if (curr_target_idx >= m_run_targets.size())
-      break;
+  while (curr_target_idx < m_run_targets.size() || !processes.empty()) {
     // 如果当前运行进程数小于并行数, 且当前例子idx小于总的例子数
     while (running_processes < m_num_parallel_cnt &&
            curr_target_idx < m_run_targets.size()) {
       // 启动一个新的进程
       try {
-        const std::string &target = m_run_targets[curr_target_idx];
+        const fs::path &target = m_run_targets[curr_target_idx];
         // 传递变量
         std::vector<std::string> args{"-d",                                 //
                                       std::to_string(global::DebugLevel()), //
-                                      "--single",                           //
-                                      target};
+                                      "--dataset",
+                                      global::DatasetStr(),
+                                      "--single", //
+                                      target.filename().string()};
         if (global::UseIndividualModelDir())
           args.emplace_back("--use_individual_model_dir");
 

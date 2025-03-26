@@ -4,8 +4,8 @@
 
 namespace frm {
 ThreadParallelExecutor::ThreadParallelExecutor(
-    const std::function<void(std::string)> &func, // 需要并行处理的函数
-    const std::vector<std::string> &run_targets,  // 需要并行处理的目标
+    const std::function<void(fs::path)> &func, // 需要并行处理的函数
+    const std::vector<fs::path> &run_targets,  // 需要并行处理的目标
     const std::size_t num_parallel_cnt)
     : m_func(func),                        //
       m_run_targets(run_targets),          //
@@ -15,8 +15,7 @@ ThreadParallelExecutor::ThreadParallelExecutor(
   std::cout << std::format("共{}个例子, 通过{}个线程并行执行:", m_num_targets,
                            m_num_parallel_cnt)
             << std::endl;
-  task_queue =
-      std::deque<std::string>(m_run_targets.begin(), m_run_targets.end());
+  task_queue = std::deque<fs::path>(m_run_targets.begin(), m_run_targets.end());
 }
 
 bool ThreadParallelExecutor::Exec() {
@@ -66,7 +65,7 @@ bool ThreadParallelExecutor::Exec() {
 
 void ThreadParallelExecutor::ThreadWorker() {
   while (true) {
-    std::string model_name;
+    fs::path model_name;
     {
       boost::unique_lock<boost::mutex> lock(queue_mutex);
       queue_cv.wait(lock, [&] { return !task_queue.empty() || stop_flag; });

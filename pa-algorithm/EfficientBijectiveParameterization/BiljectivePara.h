@@ -5,7 +5,6 @@
 #include "MeshDefinition.h"
 #include <OpenMesh/Core/IO/MeshIO.hh>
 
-
 using namespace Eigen;
 using namespace std;
 
@@ -16,7 +15,7 @@ public:
 
   void parameterization();
   void load();
-  void write_obj(std::string str);
+  void write_obj(std::ofstream &fout);
   void shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos, VectorXi &bnd);
   double adjust_weight(double conv_mesh, double last_energy);
 
