@@ -1,6 +1,7 @@
 #include "BiljectivePara.h"
 
-BiljectivePara::BiljectivePara(Mesh &m, string filename) : mesh(m) {
+BiljectivePara::BiljectivePara(const cgl::SurfaceMesh3 &m, string filename)
+    : mesh(m) {
   string file_str = filename;
   modelname = file_str.substr(file_str.find_last_of('/') + 1);
   modelname.replace(modelname.end() - 4, modelname.end(), "");
@@ -133,90 +134,48 @@ double BiljectivePara::adjust_weight(double conv_mesh,
 void BiljectivePara::load() {
   is_initialization = true;
 
-  int v_num = mesh.n_vertices();
-  int f_num = mesh.n_faces();
+  int v_num = mesh.num_vertices();
+  int f_num = mesh.num_faces();
   Eigen::MatrixXd V(v_num, 3);
   Eigen::MatrixXi F(f_num, 3);
 
-  for (int i = 0; i < v_num; ++i) {
-    auto vertex = mesh.vertex_handle(i);
-    Mesh::Point pos = mesh.point(vertex);
+  for (CGAL::SM_Vertex_index vertex : mesh.vertices()) {
+    cgl::Point3II pos = mesh.point(vertex);
     for (int j = 0; j < 3; ++j) {
-      V(i, j) = pos[j];
+      V(vertex.idx(), j) = pos[j];
     }
   }
 
-  for (int i = 0; i < f_num; ++i) {
-    auto face = mesh.face_handle(i);
-    int dd = 0;
-    for (Mesh::FaceVertexIter it2 = mesh.fv_begin(face);
-         it2 != mesh.fv_end(face); ++it2) {
-      auto vertex_ = it2.handle();
-      switch (dd) {
-      case 0:
-        F(i, 0) = vertex_.idx();
-        break;
-      case 1:
-        F(i, 1) = vertex_.idx();
-        break;
-      case 2:
-        F(i, 2) = vertex_.idx();
-        break;
-      default:
-        break;
-      }
-      dd++;
-    }
+  for (const CGAL::SM_Face_index &face : mesh.faces()) {
+    CGAL::SM_Vertex_index face_vertex[3];
+    CGAL::SM_Halfedge_index halfedge = mesh.halfedge(face);
+    face_vertex[0] = mesh.target(halfedge);
+    face_vertex[1] = mesh.target(mesh.next(halfedge));
+    face_vertex[2] = mesh.target(mesh.next(mesh.next(halfedge)));
+    F(face.idx(), 0) = face_vertex[0].idx();
+    F(face.idx(), 1) = face_vertex[1].idx();
+    F(face.idx(), 2) = face_vertex[2].idx();
   }
 
   shell_data = ShellData();
   shell_data.add_new_patch(V, F, Eigen::RowVector2d(0, 0));
   parafun_solver.reset(new Parafun(shell_data));
 
-  for (int i = 0; i < v_num; ++i) {
-    auto vertex = mesh.vertex_handle(i);
-    auto p = shell_data.w_uv.row(i);
-    Mesh::Point pos(p(0), p(1), 0.0);
-    mesh.set_point(vertex, pos);
+  uv_mesh_ = mesh;
+  for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {
+    auto p = shell_data.w_uv.row(vertex.idx());
+    cgl::Point3II pos(p(0), p(1), 0.0);
+    uv_mesh_.point(vertex) = pos;
   }
-  //   Mesh::VertexIter v_it = mesh.vertices_begin();
-  //   OpenMesh::Vec3d nor;
-  //   for (v_it; v_it != mesh.vertices_end(); ++v_it) {
-  //     mesh.set_normal(v_it, OpenMesh::Vec3d(0, 0, 0.95));
-  //   }
-  //   Mesh::ConstFaceIter fIt(mesh.faces_begin()), fEnd(mesh.faces_end());
-  //   for (; fIt != fEnd; ++fIt) {
-  //     mesh.set_normal(fIt, OpenMesh::Vec3d(0, 0, 0.95));
-  //   }
 }
 
-void BiljectivePara::write_obj(std::ofstream &of_obj) {
-  Eigen::MatrixXd &V_in = shell_data.w_uv;
-  int v_num = mesh.n_vertices();
-  for (int i = 0; i < v_num; ++i) {
-    auto vertex = mesh.vertex_handle(i);
-    Mesh::Point pos(V_in(i, 0), V_in(i, 1), 0.0);
-    mesh.set_point(vertex, pos);
+void BiljectivePara::WriteUVMesh(std::ofstream &of_obj) {
+  for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {
+    auto pos = shell_data.w_uv.row(vertex.idx());
+    uv_mesh_.point(vertex) = cgl::Point3II(pos[0], pos[1], 0.0);
   }
 
-  Eigen::MatrixXi &F_ref = shell_data.m_T;
-
-  if (V_in.cols() == 3) {
-    for (size_t vid = 0; vid < V_in.rows(); vid++) {
-      of_obj << "v " << V_in(vid, 0) << " " << V_in(vid, 1) << " "
-             << V_in(vid, 2) << endl;
-    }
-  } else if (V_in.cols() == 2) {
-    for (size_t vid = 0; vid < V_in.rows(); vid++) {
-      of_obj << "v " << V_in(vid, 0) << " " << V_in(vid, 1) << " " << 0.0
-             << endl;
-    }
-  }
-
-  for (size_t fi = 0; fi < F_ref.rows(); fi++) {
-    of_obj << "f " << F_ref(fi, 0) + 1 << " " << F_ref(fi, 1) + 1 << " "
-           << F_ref(fi, 2) + 1 << endl;
-  }
+  CGAL::IO::write_OBJ(of_obj, uv_mesh_);
 }
 
 void BiljectivePara::shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos,

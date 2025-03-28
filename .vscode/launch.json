@@ -32,14 +32,23 @@
                 "-d","1",
                 "-p","8",
                 "-t","1800",
-                //"--batch",".*.*",//批量执行模式, 根据给定的通配符并行执行多个文件
-                "--single","00019.obj",//单一执行模式, 只执行一个文件
+                "--batch",".*.*",//批量执行模式, 根据给定的通配符并行执行多个文件
+                //"--single","00019.obj",//单一执行模式, 只执行一个文件
                 "--dataset","PolyAtlas-Sample-30",
                 //"--use_individual_model_dir",
                 "--parallel_level","process",
                 "--clean"
                 ],//参数
             "preLaunchTask": "build-preprocess-release"//debug前先进行build
+        },
+        {
+            "name": "generate project",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pa-script/etc/generate.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

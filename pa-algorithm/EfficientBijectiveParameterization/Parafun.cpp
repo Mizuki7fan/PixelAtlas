@@ -1,10 +1,8 @@
 #include "Parafun.h"
-#ifdef USE_PARDISO
-#include "LinSysSolver/PardisoSolver.h"
-#elif defined(USE_MKL)
-#include "LinSysSolver/MKLPardisoSolver.h"
+#if defined(USE_MKL)
+#include <LinSysSolver-Interface/MKLPardisoSolver.h>
 #elif defined(USE_EIGEN)
-#include "LinSysSolver/EigenLinSolver.h"
+#include <LinSysSolver-Interface/EigenLinSolver.h>
 #endif
 void Parafun::after_mesh_improve() {
   total_num = d_.v_num;
@@ -73,18 +71,16 @@ void Parafun::init() {
     delete pardiso;
     pardiso = NULL;
   }
-#ifdef USE_PARDISO
-  pardiso = new PardisoSolver();
-#elif defined(USE_MKL)
+#if defined(USE_MKL)
   pardiso = new MKLPardisoSolver();
 #elif defined(USE_EIGEN)
   pardiso = new EigenLinSolver();
 #endif
-  pardiso->ia = pardiso_ia;
-  pardiso->ja = pardiso_ja;
-  pardiso->a.resize(pardiso_ja.size());
-  pardiso->nnz = pardiso_ja.size();
-  pardiso->num = 2 * V_N;
+  pardiso->ia_ = pardiso_ia;
+  pardiso->ja_ = pardiso_ja;
+  pardiso->a_.resize(pardiso_ja.size());
+  pardiso->nnz_ = pardiso_ja.size();
+  pardiso->num_ = 2 * V_N;
   long time_beg, time_end;
   time_beg = clock();
   pardiso->pardiso_init();
@@ -997,8 +993,8 @@ void Parafun::SLIM(bool is_interp) {
 
   pardiso_a[0] += 1.0;
   pardiso_a[pardiso_ia[V_N]] += 1.0;
-  pardiso->a = pardiso_a;
-  pardiso->rhs = pardiso_b;
+  pardiso->a_ = pardiso_a;
+  pardiso->rhs_ = pardiso_b;
   long time_beg, time_end;
   time_beg = clock();
   pardiso->factorize();
@@ -1012,7 +1008,7 @@ void Parafun::SLIM(bool is_interp) {
   time3 += time_consumption;
   // std::cout << "numerical factorize" << time_consumption << std::endl;
 
-  vector<double> result_d = pardiso->result;
+  vector<double> result_d = pardiso->result_;
   VectorXd negative_grad(2 * total_num), d(2 * total_num);
   for (int i = 0; i < V_N; i++) {
     negative_grad(i) = pardiso_b[i];
@@ -1585,8 +1581,8 @@ void Parafun::CM(bool is_interp) {
 
   pardiso_a[0] += 1.0;
   pardiso_a[pardiso_ia[V_N]] += 1.0;
-  pardiso->a = pardiso_a;
-  pardiso->rhs = pardiso_b;
+  pardiso->a_ = pardiso_a;
+  pardiso->rhs_ = pardiso_b;
   long time_beg, time_end;
   time_beg = clock();
   pardiso->factorize();
@@ -1600,7 +1596,7 @@ void Parafun::CM(bool is_interp) {
   time3 += time_consumption;
   // std::cout << "numerical factorize" << time_consumption << std::endl;
 
-  vector<double> result_d = pardiso->result;
+  vector<double> result_d = pardiso->result_;
   VectorXd negative_grad(2 * V_N), d(2 * V_N);
   for (int i = 0; i < 2 * V_N; i++) {
     negative_grad(i) = pardiso_b[i];

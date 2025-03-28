@@ -1,27 +1,26 @@
 #pragma once
 #include "Parafun.h"
 #include "ShellData.h"
-
-#include "MeshDefinition.h"
-#include <OpenMesh/Core/IO/MeshIO.hh>
+#include <CGAL-Interface/CGAL-Interface.h>
 
 using namespace Eigen;
 using namespace std;
 
 class BiljectivePara {
 public:
-  BiljectivePara(Mesh &m, string filename);
+  BiljectivePara(const cgl::SurfaceMesh3 &m, string filename);
   ~BiljectivePara();
 
   void parameterization();
   void load();
-  void write_obj(std::ofstream &fout);
+  void WriteUVMesh(std::ofstream &fout);
   void shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos, VectorXi &bnd);
   double adjust_weight(double conv_mesh, double last_energy);
 
 protected:
   string modelname;
-  Mesh &mesh;
+  const cgl::SurfaceMesh3 &mesh;
+  cgl::SurfaceMesh3 uv_mesh_;
   ShellData shell_data;
   std::shared_ptr<Parafun> parafun_solver = nullptr;
 

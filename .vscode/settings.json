@@ -10,6 +10,7 @@
     "cmake.configureSettings": {
     "CMAKE_BUILD_TYPE": "${buildType}"
     },
+    "cmake.generator": "Ninja",
     //"cmake.loggingLevel": "debug",//查看build的日志
     "C_Cpp.intelliSenseEngine": "disabled",
     "files.associations": {
@@ -18,6 +19,5 @@
     }, 
     "search.exclude": {//设置搜索排除范围
         "**/build": true,//排除build目录
-    }    
-//    "workbench.colorTheme": "Abyss",
+    }
 }

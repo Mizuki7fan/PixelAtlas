@@ -1,11 +1,10 @@
 ﻿#include "Common.h"
-#ifdef USE_PARDISO
-#include "LinSysSolver/PardisoSolver.h"
-#elif defined(USE_MKL)
-#include "LinSysSolver/MKLPardisoSolver.h"
+#if defined(USE_MKL)
+#include <LinSysSolver-Interface/MKLPardisoSolver.h>
 #elif defined(USE_EIGEN)
-#include "LinSysSolver/EigenLinSolver.h"
+#include <LinSysSolver-Interface/EigenLinSolver.h>
 #endif
+#include <numbers>
 // 使得cut成为有序点列
 void orderTheBoundary(vector<list<int>> &order_boundary,
                       const vector<int> &nextlocation) {
@@ -107,36 +106,35 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
     VV_tmp[vid[2]].insert(vid[1]);
   }
 
-  LinSysSolver *pardiso;
-#ifdef USE_PARDISO
-  pardiso = new PardisoSolver();
-#elif defined(USE_MKL)
+  Solver *pardiso;
+#if defined(USE_MKL)
   pardiso = new MKLPardisoSolver();
 #elif defined(USE_EIGEN)
   pardiso = new EigenLinSolver();
 #endif
+
   vector<double> pardiso_tu;
   vector<double> pardiso_tv;
 
-  pardiso->ia.reserve(V_N + 1);
-  pardiso->ja.reserve(8 * V_N);
-  pardiso->a.reserve(8 * V_N);
+  pardiso->ia_.reserve(V_N + 1);
+  pardiso->ja_.reserve(8 * V_N);
+  pardiso->a_.reserve(8 * V_N);
   pardiso_tu.resize(V_N, 0.0);
   pardiso_tv.resize(V_N, 0.0);
 
   for (size_t i = 0; i < V_N; i++) {
-    pardiso->ia.push_back(pardiso->ja.size());
+    pardiso->ia_.push_back(pardiso->ja_.size());
 
     if (bound_ids.count(i) > 0) {
-      pardiso->ja.push_back(i);
-      pardiso->a.push_back(1.0);
+      pardiso->ja_.push_back(i);
+      pardiso->a_.push_back(1.0);
 
       pardiso_tu[i] = uv_init(i, 0);
       pardiso_tv[i] = uv_init(i, 1);
 
     } else {
-      pardiso->ja.push_back(i);
-      pardiso->a.push_back(VV_tmp[i].size());
+      pardiso->ja_.push_back(i);
+      pardiso->a_.push_back(VV_tmp[i].size());
       vector<int> row_id;
       row_id.reserve(VV_tmp[i].size());
       double bu = 0.0;
@@ -153,44 +151,44 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
       }
       sort(row_id.begin(), row_id.end(), less<int>());
       for (size_t j = 0; j < row_id.size(); j++) {
-        pardiso->ja.push_back(row_id[j]);
-        pardiso->a.push_back(-1.0);
+        pardiso->ja_.push_back(row_id[j]);
+        pardiso->a_.push_back(-1.0);
       }
       pardiso_tu[i] = bu;
       pardiso_tv[i] = bv;
     }
   }
-  pardiso->ia.push_back(pardiso->ja.size());
+  pardiso->ia_.push_back(pardiso->ja_.size());
 
-  pardiso->nnz = pardiso->ja.size();
-  pardiso->num = V_N;
+  pardiso->nnz_ = pardiso->ja_.size();
+  pardiso->num_ = V_N;
 
   pardiso->pardiso_init();
-  pardiso->rhs = pardiso_tu;
+  pardiso->rhs_ = pardiso_tu;
 
   pardiso->factorize();
   pardiso->pardiso_solver();
 
   for (size_t i = 0; i < V_N; i++) {
-    uv_init(i, 0) = pardiso->result[i];
+    uv_init(i, 0) = pardiso->result_[i];
   }
 
-  pardiso->rhs = pardiso_tv;
+  pardiso->rhs_ = pardiso_tv;
   pardiso->pardiso_solver();
   for (size_t i = 0; i < V_N; i++) {
-    uv_init(i, 1) = pardiso->result[i];
+    uv_init(i, 1) = pardiso->result_[i];
   }
 }
 
 void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
-                     LinSysSolver &pardiso) {
+                     Solver &pardiso) {
 
   int V_N = V.rows();
   int F_N = F.rows();
-  pardiso.ia.clear();
-  pardiso.ia.reserve(2 * V_N + 1);
-  pardiso.ja.clear();
-  pardiso.ja.reserve(8 * V_N);
+  pardiso.ia_.clear();
+  pardiso.ia_.reserve(2 * V_N + 1);
+  pardiso.ja_.clear();
+  pardiso.ja_.reserve(8 * V_N);
 
   std::vector<std::set<int>> VV_tmp;
   VV_tmp.resize(V_N);
@@ -211,7 +209,7 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
   }
 
   for (int i = 0; i < V_N; i++) {
-    pardiso.ia.push_back(pardiso.ja.size());
+    pardiso.ia_.push_back(pardiso.ja_.size());
     VV_tmp[i].insert(i);
     vector<int> row_id;
     for (auto &var : VV_tmp[i]) {
@@ -222,16 +220,16 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
 
     int dd = 0;
     for (int k = std::distance(row_id.begin(), iter); k < row_id.size(); k++) {
-      pardiso.ja.push_back(row_id[k]);
+      pardiso.ja_.push_back(row_id[k]);
       ++dd;
     }
     for (int k = 0; k < row_id.size(); k++) {
-      pardiso.ja.push_back(row_id[k] + V_N);
+      pardiso.ja_.push_back(row_id[k] + V_N);
       ++dd;
     }
   }
   for (int i = V_N; i < 2 * V_N; i++) {
-    pardiso.ia.push_back(pardiso.ja.size());
+    pardiso.ia_.push_back(pardiso.ja_.size());
     vector<int> row_id;
     for (auto &var : VV_tmp[i - V_N]) {
       row_id.push_back(var);
@@ -241,11 +239,11 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
 
     int dd = 0;
     for (int k = std::distance(row_id.begin(), iter); k < row_id.size(); k++) {
-      pardiso.ja.push_back(row_id[k] + V_N);
+      pardiso.ja_.push_back(row_id[k] + V_N);
       ++dd;
     }
   }
-  pardiso.ia.push_back(pardiso.ja.size());
+  pardiso.ia_.push_back(pardiso.ja_.size());
 }
 
 void map_vertices_to_circle(const Eigen::MatrixXd &V,
@@ -280,7 +278,7 @@ void map_vertices_to_circle(const Eigen::MatrixXd &V,
   UV.resize(bnd.size(), 2);
 
   for (int i = 0; i < bnd.size(); i++) {
-    double frac = len[i] * 2. * M_PI / total_len;
+    double frac = len[i] * 2. * std::numbers::pi / total_len;
     // double frac = i * 2. * M_PI / (bnd.size());
     UV.row(map_ij[bnd[i]]) << cos(frac), sin(frac);
   }
