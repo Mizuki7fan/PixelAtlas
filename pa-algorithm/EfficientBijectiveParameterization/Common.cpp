@@ -5,142 +5,72 @@
 #include <LinSysSolver-Interface/EigenLinSolver.h>
 #endif
 #include <numbers>
-// 使得cut成为有序点列
-void orderTheBoundary(vector<list<int>> &order_boundary,
-                      const vector<int> &nextlocation) {
-  int n_es = nextlocation.size() / 2;
-  set<int> isused;
-  for (int i = 0; i < n_es; i++) {
-    isused.insert(i);
-  }
+#include <set>
 
-  int s_1 = 0;
-  int s_2 = 1;
-
-  // bool flag = true;
-  while (!isused.empty()) {
-    s_1 = *(isused.begin()) * 2;
-    s_2 = s_1 + 1;
-    list<int> list_1, list_2;
-    if (growFromP(s_1, isused, list_1, nextlocation)) {
-      growFromP(s_2, isused, list_2, nextlocation);
-      for (auto it = list_2.begin(); it != list_2.end(); it++) {
-        list_1.push_front(*it);
-      }
-    }
-    order_boundary.emplace_back(list_1);
-  }
-}
 /*加入判断边界线是否闭合,return true means open curve; return false means closed
 curve. In closed case, the first and last item of order_boundary are same.*/
-bool growFromP(int p, set<int> &isused, list<int> &order_boundary,
-               const vector<int> &nextlocation) {
-  int loc = nextlocation[p];
-  isused.erase(p / 2);
-  if (loc == -1) {
-    order_boundary.push_back(p);
-    return true;
-  } else {
-    order_boundary.push_back(loc);
-  }
+void Tutte(const int &num_vertices,              //
+           const Eigen::MatrixXi &face_vertices, //
+           const Eigen::VectorXi &bnd,           //
+           const Eigen::MatrixXd &bnd_uv,        //
+           Eigen::MatrixXd &uv_init) {
+  int num_faces = static_cast<int>(face_vertices.rows());
+  uv_init.resize(num_vertices, 2);
 
-  while (true) {
-    isused.erase(loc / 2);
-    if (loc % 2 == 1) {
-      if ((loc - 1) == p) {
-        order_boundary.push_back(nextlocation[p]);
-        return false;
-      }
-
-      if (nextlocation[loc - 1] != -1) {
-        order_boundary.push_back(nextlocation[loc - 1]);
-        loc = nextlocation[loc - 1];
-      } else {
-        order_boundary.push_back(loc - 1);
-        break;
-      }
-    } else {
-      if ((loc + 1) == p) {
-        order_boundary.push_back(nextlocation[p]);
-        return false;
-      }
-      if (nextlocation[loc + 1] != -1) {
-        order_boundary.push_back(nextlocation[loc + 1]);
-        loc = nextlocation[loc + 1];
-      } else {
-        order_boundary.push_back(loc + 1);
-        break;
-      }
-    }
-  }
-
-  return true;
-}
-
-void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
-           const Eigen::MatrixXd &bnd_uv, Eigen::MatrixXd &uv_init) {
-  int F_N = F.rows();
-
-  uv_init.resize(V_N, 2);
-  std::set<int> bound_ids;
-  for (size_t i = 0; i < bnd.size(); i++) {
-    bound_ids.insert(bnd(i));
+  std::set<int> bound_idxes;
+  for (std::size_t i = 0; i < static_cast<std::size_t>(bnd.size()); i++) {
+    bound_idxes.insert(bnd(i));
     uv_init.row(bnd(i)) << bnd_uv(i, 0), bnd_uv(i, 1);
   }
 
-  std::vector<std::set<int>> VV_tmp;
-  VV_tmp.resize(V_N);
-  for (size_t i = 0; i < F_N; i++) {
-    int vid[3];
+  std::vector<std::set<int>> VV_tmp(num_vertices);
+  for (std::size_t i = 0; i < num_faces; i++) {
+    VV_tmp[face_vertices[0]].insert(face_vertices[1]);
+    VV_tmp[face_vertices[0]].insert(face_vertices[2]);
 
-    for (size_t j = 0; j < F.cols(); j++) {
-      vid[j] = F(i, j);
-    }
-    VV_tmp[vid[0]].insert(vid[1]);
-    VV_tmp[vid[0]].insert(vid[2]);
+    VV_tmp[face_vertices[1]].insert(face_vertices[0]);
+    VV_tmp[face_vertices[1]].insert(face_vertices[2]);
 
-    VV_tmp[vid[1]].insert(vid[0]);
-    VV_tmp[vid[1]].insert(vid[2]);
-
-    VV_tmp[vid[2]].insert(vid[0]);
-    VV_tmp[vid[2]].insert(vid[1]);
+    VV_tmp[face_vertices[2]].insert(face_vertices[0]);
+    VV_tmp[face_vertices[2]].insert(face_vertices[1]);
   }
 
-  Solver *pardiso;
+  std::unique_ptr<Solver> solver = nullptr;
+
 #if defined(USE_MKL)
-  pardiso = new MKLPardisoSolver();
+  solver = std::unique_ptr<MKLPardisoSolver>();
 #elif defined(USE_EIGEN)
-  pardiso = new EigenLinSolver();
+  solver = std::make_unique<EigenLinSolver>();
 #endif
 
-  vector<double> pardiso_tu;
-  vector<double> pardiso_tv;
+  std::vector<double> solver_tu;
+  std::vector<double> solver_tv;
 
-  pardiso->ia_.reserve(V_N + 1);
-  pardiso->ja_.reserve(8 * V_N);
-  pardiso->a_.reserve(8 * V_N);
-  pardiso_tu.resize(V_N, 0.0);
-  pardiso_tv.resize(V_N, 0.0);
+  solver->ia_.reserve(num_vertices + 1);
+  solver->ja_.reserve(8 * num_vertices);
+  solver->a_.reserve(8 * num_vertices);
+  solver_tu.resize(num_vertices, 0.0);
+  solver_tv.resize(num_vertices, 0.0);
 
-  for (size_t i = 0; i < V_N; i++) {
-    pardiso->ia_.push_back(pardiso->ja_.size());
+  for (size_t i = 0; i < num_vertices; i++) {
+    solver->ia_.push_back(solver->ja_.size());
 
-    if (bound_ids.count(i) > 0) {
-      pardiso->ja_.push_back(i);
-      pardiso->a_.push_back(1.0);
+    if (bound_idxes.count(i) > 0) {
+      solver->ja_.push_back(i);
+      solver->a_.push_back(1.0);
 
-      pardiso_tu[i] = uv_init(i, 0);
-      pardiso_tv[i] = uv_init(i, 1);
+      solver_tu[i] = uv_init(i, 0);
+      solver_tv[i] = uv_init(i, 1);
 
     } else {
-      pardiso->ja_.push_back(i);
-      pardiso->a_.push_back(VV_tmp[i].size());
-      vector<int> row_id;
+      solver->ja_.push_back(i);
+      solver->a_.push_back(VV_tmp[i].size());
+      std::vector<int> row_id;
       row_id.reserve(VV_tmp[i].size());
       double bu = 0.0;
       double bv = 0.0;
       for (auto &vv_id : VV_tmp[i]) {
-        if (bound_ids.count(vv_id) > 0) {
+        if (bound_idxes.count(vv_id) > 0) {
           bu += uv_init(vv_id, 0);
           bv += uv_init(vv_id, 1);
         } else {
@@ -149,35 +79,33 @@ void Tutte(int V_N, const Eigen::MatrixXi &F, const Eigen::VectorXi &bnd,
           }
         }
       }
-      sort(row_id.begin(), row_id.end(), less<int>());
+      std::sort(row_id.begin(), row_id.end(), std::less<int>());
       for (size_t j = 0; j < row_id.size(); j++) {
-        pardiso->ja_.push_back(row_id[j]);
-        pardiso->a_.push_back(-1.0);
+        solver->ja_.push_back(row_id[j]);
+        solver->a_.push_back(-1.0);
       }
-      pardiso_tu[i] = bu;
-      pardiso_tv[i] = bv;
+      solver_tu[i] = bu;
+      solver_tv[i] = bv;
     }
   }
-  pardiso->ia_.push_back(pardiso->ja_.size());
+  solver->ia_.push_back(solver->ja_.size());
 
-  pardiso->nnz_ = pardiso->ja_.size();
-  pardiso->num_ = V_N;
+  solver->nnz_ = solver->ja_.size();
+  solver->num_ = num_vertices;
 
-  pardiso->pardiso_init();
-  pardiso->rhs_ = pardiso_tu;
+  solver->pardiso_init();
+  solver->rhs_ = solver_tu;
 
-  pardiso->factorize();
-  pardiso->pardiso_solver();
+  solver->factorize();
+  solver->pardiso_solver();
 
-  for (size_t i = 0; i < V_N; i++) {
-    uv_init(i, 0) = pardiso->result_[i];
-  }
+  for (std::size_t i = 0; i < num_vertices; i++)
+    uv_init(i, 0) = solver->result_[i];
 
-  pardiso->rhs_ = pardiso_tv;
-  pardiso->pardiso_solver();
-  for (size_t i = 0; i < V_N; i++) {
-    uv_init(i, 1) = pardiso->result_[i];
-  }
+  solver->rhs_ = solver_tv;
+  solver->pardiso_solver();
+  for (std::size_t i = 0; i < num_vertices; i++)
+    uv_init(i, 1) = solver->result_[i];
 }
 
 void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
@@ -282,31 +210,6 @@ void map_vertices_to_circle(const Eigen::MatrixXd &V,
     // double frac = i * 2. * M_PI / (bnd.size());
     UV.row(map_ij[bnd[i]]) << cos(frac), sin(frac);
   }
-}
-
-void writeObj(const Eigen::MatrixXd &V_in, const Eigen::MatrixXi &F_ref,
-              const string &outfile) {
-  printf("write mesh------------------------begining\n");
-  ofstream of_obj(outfile, ios::trunc);
-
-  if (V_in.cols() == 3) {
-    for (size_t vid = 0; vid < V_in.rows(); vid++) {
-      of_obj << "v " << V_in(vid, 0) << " " << V_in(vid, 1) << " "
-             << V_in(vid, 2) << endl;
-    }
-  } else if (V_in.cols() == 2) {
-    for (size_t vid = 0; vid < V_in.rows(); vid++) {
-      of_obj << "v " << V_in(vid, 0) << " " << V_in(vid, 1) << " " << 0.0
-             << endl;
-    }
-  }
-
-  for (size_t fi = 0; fi < F_ref.rows(); fi++) {
-    of_obj << "f " << F_ref(fi, 0) + 1 << " " << F_ref(fi, 1) + 1 << " "
-           << F_ref(fi, 2) + 1 << endl;
-  }
-  of_obj.close();
-  printf("write mesh------------------------finishing\n");
 }
 
 void boundary_loop(const Eigen::MatrixXi &F_ref,

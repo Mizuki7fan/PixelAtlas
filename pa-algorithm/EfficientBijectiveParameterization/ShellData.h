@@ -1,6 +1,4 @@
-#ifndef SHELLDATA_H
-#define SHELLDATA_H
-
+#pragma once
 #include "Common.h"
 #include <Eigen/Dense>
 #include <Triangle-Interface/TriangleInterface.h>
@@ -57,5 +55,3 @@ public:
 
   int dim = 2; // dimension for ambient space. Same for mesh/shell
 };
-
-#endif // SHELLDATA_H
