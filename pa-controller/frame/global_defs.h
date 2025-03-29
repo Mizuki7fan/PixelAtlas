@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include <string>
 namespace fs = std::filesystem;
 
 namespace frm::global {
@@ -11,4 +12,5 @@ std::string DatasetStr();
 fs::path CurrFile();
 int MaxTimeElapsed();
 bool UseIndividualModelDir();
+std::string RunName();
 } // namespace frm::global

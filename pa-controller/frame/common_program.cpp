@@ -46,6 +46,9 @@ int GetMaxTimeElapsed() { return g_max_time_elapsed; };
 static std::string g_parallel_level = "process";
 static bool g_clean_cache = false;
 
+static std::string g_run_name = "";
+std::string GetRunName() { return g_run_name; }
+
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
   g_working_dir = fs::current_path() / "../work";

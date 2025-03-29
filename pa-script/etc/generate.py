@@ -87,8 +87,14 @@ if __name__ == "__main__":
     project_root = get_project_root(__file__)
     build_dir="build"
     generator="Ninja"  # 可选 "Visual Studio 17 2022"（需手动修复路径）
-    vs_tools_path=r"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\Auxiliary\\Build\\vcvars64.bat"
-    
+    vs_tools_path_1=r"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\Auxiliary\\Build\\vcvars64.bat"
+    vs_tools_path_2=r"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
+
+    if (os.path.exists(vs_tools_path_1)):
+        vs_tools_path=vs_tools_path_1
+    elif (os.path.exists(vs_tools_path_2)):
+        vs_tools_path=vs_tools_path_2
+
     generate_compile_commands(
         project_root,
         build_dir,

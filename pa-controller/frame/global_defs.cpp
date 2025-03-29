@@ -10,4 +10,5 @@ fs::path CurrFile() { return frm::GetCurrFile(); }
 std::string DatasetStr() { return frm::GetDatasetStr(); }
 int MaxTimeElapsed() { return frm::GetMaxTimeElapsed(); }
 bool UseIndividualModelDir() { return frm::GetUseIndividualModelDir(); }
+std::string RunName() { return frm::GetRunName(); }
 } // namespace frm::global

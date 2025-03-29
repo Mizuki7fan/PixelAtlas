@@ -17,6 +17,7 @@ fs::path GetCurrFile();
 std::string GetDatasetStr(); // 取dataset路径
 int GetMaxTimeElapsed();
 bool GetUseIndividualModelDir();
+std::string GetRunName();
 
 class CommonProgram {
 public:
@@ -28,7 +29,6 @@ private:                          // functions
 
   bool
   SelectRunTargets(); // 根据依赖的前置工具和文件通配符, 确定本次运行所有的目标
-
 private:
   std::vector<StepArguments> all_step_list;
   std::unordered_map<std::string, std::size_t> map_step_name_to_step_idx;

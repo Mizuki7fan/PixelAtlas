@@ -1,0 +1,7 @@
+CompileFlags:
+  # 强制添加 C++23 标准
+  Add: [-std=gnu++23]
+  # 移除所有可能冲突的旧标准参数（如 -std=c++20）
+  Remove: [-std=.*, /std:.*]
+  # 隐式忽略原始编译器路径，通过标志覆盖兼容性
+  Compiler: D:\LLVM\bin\clang++.exe  # 声明 clangd 内部使用的编译器（仅影响解析）
