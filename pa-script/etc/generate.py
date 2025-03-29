@@ -1,6 +1,35 @@
 import os
 import subprocess
 import shutil
+import json
+
+def fix_compile_commands(build_dir: str):
+    """
+    修复 compile_commands.json 中的 MSVC 参数，使其兼容 clangd
+    """
+    compile_commands_path = os.path.join(build_dir, "compile_commands.json")
+    
+    if not os.path.exists(compile_commands_path):
+        print(f"Error: {compile_commands_path} not found")
+        return
+
+    # 读取并修复 JSON 内容
+    with open(compile_commands_path, "r", encoding="utf-8") as f:
+        entries = json.load(f)
+
+    for entry in entries:
+        cmd = entry["command"]
+        # 替换 /external:I 为 -isystem
+        cmd = cmd.replace("/external:I", "-isystem")
+        # 替换路径分隔符（Windows 反斜杠 → 正斜杠）
+        cmd = cmd.replace("\\", "/")
+        entry["command"] = cmd
+
+    # 写回文件
+    with open(compile_commands_path, "w", encoding="utf-8") as f:
+        json.dump(entries, f, indent=2, ensure_ascii=False)
+    
+    print(f"Fixed: {compile_commands_path}")
 
 def get_project_root(current_file: str) -> str:
     """根据脚本路径动态推导项目根目录（脚本位于 /pa-script/etc/）"""
@@ -50,6 +79,7 @@ def generate_compile_commands(
     compile_commands = os.path.join(build_path, "compile_commands.json")
     if os.path.exists(compile_commands):
         print(f"Success: {compile_commands}")
+        #fix_compile_commands(build_path)
     else:
         print("Error: Failed to generate compile_commands.json")
 

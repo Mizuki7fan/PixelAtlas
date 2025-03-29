@@ -3,11 +3,20 @@
 #include <filesystem>
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-namespace fs = std::filesystem;
+namespace fs = std::filesystem; // 确保命名空间别名在全局或正确作用域
 namespace frm {
 // 全局变量
+
+int GetDebugLevel();
+fs::path GetCurrDebugDir();
+fs::path GetCurrResultDir();
+fs::path GetCurrFile();
+std::string GetDatasetStr(); // 取dataset路径
+int GetMaxTimeElapsed();
+bool GetUseIndividualModelDir();
 
 class CommonProgram {
 public:
@@ -30,12 +39,4 @@ private:
   // 通过正则表达式筛选出来的例子
   std::vector<fs::path> run_targets;
 };
-
-int GetDebugLevel();
-fs::path GetCurrDebugDir();
-fs::path GetCurrResultDir();
-fs::path GetCurrFile();
-std::string GetDatasetStr(); // 取dataset路径
-int GetMaxTimeElapsed();
-bool GetUseIndividualModelDir();
 } // namespace frm

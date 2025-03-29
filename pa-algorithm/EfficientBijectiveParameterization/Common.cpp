@@ -25,14 +25,14 @@ void Tutte(const int &num_vertices,              //
 
   std::vector<std::set<int>> VV_tmp(num_vertices);
   for (std::size_t i = 0; i < num_faces; i++) {
-    VV_tmp[face_vertices[0]].insert(face_vertices[1]);
-    VV_tmp[face_vertices[0]].insert(face_vertices[2]);
+    VV_tmp[face_vertices(i, 0)].insert(face_vertices(i, 1));
+    VV_tmp[face_vertices(i, 0)].insert(face_vertices(i, 2));
 
-    VV_tmp[face_vertices[1]].insert(face_vertices[0]);
-    VV_tmp[face_vertices[1]].insert(face_vertices[2]);
+    VV_tmp[face_vertices(i, 1)].insert(face_vertices(i, 0));
+    VV_tmp[face_vertices(i, 1)].insert(face_vertices(i, 2));
 
-    VV_tmp[face_vertices[2]].insert(face_vertices[0]);
-    VV_tmp[face_vertices[2]].insert(face_vertices[1]);
+    VV_tmp[face_vertices(i, 2)].insert(face_vertices(i, 0));
+    VV_tmp[face_vertices(i, 2)].insert(face_vertices(i, 1));
   }
 
   std::unique_ptr<Solver> solver = nullptr;

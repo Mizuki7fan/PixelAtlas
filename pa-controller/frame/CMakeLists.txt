@@ -15,8 +15,6 @@ file (GLOB FRAME_FILES
     common_program.h
     process_parallel_executor.cpp
     process_parallel_executor.h
-    thread_parallel_executor.cpp
-    thread_parallel_executor.h
 )
 
 add_library(${SUBPROJ_NAME} STATIC ${FRAME_FILES})

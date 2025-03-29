@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 namespace fs = std::filesystem;
+
 namespace frm::global {
 
 int DebugLevel();

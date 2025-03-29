@@ -3,7 +3,7 @@
     "clang-format.executable": "D:\\LLVM\\bin\\clang-format.exe",
     "clangd.path": "D:\\LLVM\\bin\\clangd.exe",
     "clangd.arguments": [
-        "--header-insertion=never"
+        "--header-insertion=never",
     ],
     //vscode内置output窗口不输出汉字乱码
     "cmake.outputLogEncoding": "utf-8",

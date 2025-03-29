@@ -1,9 +1,7 @@
 #include "common_program.h"
 #include "assert.hpp"
-#include "global_defs.h"
 #include "parse.h"
 #include "process_parallel_executor.h"
-#include "thread_parallel_executor.h"
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <regex>
