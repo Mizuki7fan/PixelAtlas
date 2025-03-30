@@ -20,4 +20,10 @@ void MainProcess() {
   std::ofstream fout = frm::CreateResultFilestream("uv_mesh.obj");
   bil_para->WriteUVMesh(fout);
   fout.close();
+
+  // 写入metrics
+  fout = frm::CreateMetricsFilestreamBegin();
+  frm::WriteMetrics(fout, "distortion", 4.01);
+  frm::WriteMetricsFilestreamEnd(fout);
+  fout.close();
 }

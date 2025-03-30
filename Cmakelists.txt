@@ -3,6 +3,7 @@ project(PixelAtlas)
 
 #设置不生成MinSizeRel;RelWithDebInfo
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
+# 强制禁用生成 compile_commands.json
 
 if(CMAKE_BUILD_TYPE STREQUAL "")
     message(FATAL_ERROR CMAKE_BUILD_TYPE的值为空)
@@ -11,6 +12,7 @@ endif()
 # 设置编译器标志, 对整个项目都生效
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     add_compile_options("/source-charset:utf-8")#避免报错: 该文件包含不能在当前代码页(936)中表示的字符
+    set(CMAKE_EXPORT_COMPILE_COMMANDS OFF CACHE BOOL "Disable export of compile commands" FORCE)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-Wall -Wextra -Werror)
 endif()
@@ -33,6 +35,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if( ${CMAKE_CXX_STANDARD} EQUAL "23")
     add_definitions(-D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING)
 endif()
+
+message(STATUS "DCMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 
 #添加各个子步骤
 add_subdirectory(pa-controller)

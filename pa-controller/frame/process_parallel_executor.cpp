@@ -36,7 +36,9 @@ bool ProcessParallelExecutor::Exec() {
                                       "--dataset",
                                       global::DatasetStr(),
                                       "--single", //
-                                      target.filename().string()};
+                                      target.filename().string(),
+                                      "--run_name",
+                                      global::RunName()};
         if (global::UseIndividualModelDir())
           args.emplace_back("--use_individual_model_dir");
 

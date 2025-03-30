@@ -5,8 +5,10 @@
             "input_files":[
             ],
             "output_files":[
-                "a.obj",
-                "b.txt"    
+                "uv_mesh.obj"
+            ],
+            "metrics"    : [
+                "distortion"
             ]
         }
     ],
