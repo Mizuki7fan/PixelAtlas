@@ -51,7 +51,7 @@ std::string GetRunName() { return g_run_name; }
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
-  g_working_dir = fs::current_path() / "../work";
+  g_working_dir = fs::current_path() / std::format("../work_{}", g_run_name);
   // 如果没有work文件夹则新建
   if (!fs::exists(g_working_dir))
     fs::create_directories(g_working_dir);
@@ -158,24 +158,6 @@ int CommonProgram::Run(const std::function<void()> &func) const {
     process_parallel_executor.Exec();
     return 0;
   }
-
-  // else if (g_num_parallel_cnt == 1) { // 如果并行数为1, 则依次执行
-  //   for (auto run_file : run_targets)
-  //     func(run_file);
-  // }
-  // if (g_parallel_level == "thread") {
-  //   ThreadParallelExecutor thread_parallel_executor(func, run_targets,
-  //                                                   g_num_parallel_cnt);
-  //   thread_parallel_executor.Exec();
-  //   return 0;
-  // } else if (g_parallel_level == "process") {
-  //   // 执行进程级并行
-  //   ProcessParallelExecutor process_parallel_executor(
-  //       func, run_targets, g_num_parallel_cnt, curr_cmd_path.string());
-  //   process_parallel_executor.Exec();
-  //   return 0;
-  // }
-
   return 1;
 }
 
@@ -210,7 +192,9 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
       ("max_time_elapsed,t",
        po::value<int>(&g_max_time_elapsed)->default_value(1800), "最大耗时") //
       ("clean", po::bool_switch(&g_clean_cache)->default_value(false),
-       "是否清理单步缓存");
+       "是否清理单步缓存")(
+          "run_name", po::value<std::string>(&g_run_name)->default_value(""),
+          "设置运行批次名");
 
   po::variables_map vm;
   try {

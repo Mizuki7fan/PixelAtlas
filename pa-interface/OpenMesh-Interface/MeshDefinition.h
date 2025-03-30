@@ -1,5 +1,4 @@
-#ifndef MESHDEFINITION_H
-#define MESHDEFINITION_H
+#pragma once
 
 #include <OpenMesh/Core/Geometry/VectorT.hh>
 // #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
@@ -53,5 +52,3 @@ bool flip_openmesh(Mesh::EdgeHandle &eh, Mesh &mesh_);
 
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d> &tri,
                             const OpenMesh::Vec3d &p);
-
-#endif

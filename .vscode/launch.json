@@ -20,7 +20,7 @@
                 "--run_name","test",
                 "--clean"
                 ],//参数
-            "preLaunchTask": "build-preprocess-debug"//debug前先进行build
+                // "preLaunchTask": "build-preprocess-debug"//debug前先进行build
         },
         {
             "name": "release-preprocess",
@@ -40,7 +40,7 @@
                 "--parallel_level","process",
                 "--clean"
                 ],//参数
-            "preLaunchTask": "build-preprocess-release"//debug前先进行build
+            //"preLaunchTask": "build-preprocess-release"//debug前先进行build
         },
         {
             "name": "generate project",

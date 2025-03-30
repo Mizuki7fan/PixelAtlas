@@ -8,21 +8,6 @@
             "problemMatcher": [],
         },
         {
-            "label": "build-launcher-debug",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "--build",
-                "${workspaceRoot}/build",
-                "--config",
-                "Debug",
-                "--target",
-                "launcher",
-                "-j",
-                "18"
-            ]
-        },
-        {
             "label": "build-preprocess-debug",
             "type": "shell",
             "command": "cmake",
@@ -32,9 +17,7 @@
                 "--config",
                 "Debug",
                 "--target",
-                "Preprocess",
-                "-j",
-                "18"
+                "Preprocess"
             ]
         },
         {
