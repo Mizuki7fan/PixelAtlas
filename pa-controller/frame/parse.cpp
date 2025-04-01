@@ -1,8 +1,12 @@
 #include "parse.h"
+#include "global_defs.h"
 #include <boost/json.hpp>
+#include <filesystem>
 #include <fstream>
-#include <sstream>
+#include <iostream>
 #include <string>
+
+namespace fs = std::filesystem;
 
 namespace frm {
 // 该函数应该放到parse.h中
@@ -23,7 +27,15 @@ std::vector<std::string> SplitString(const std::string &full_string,
 std::vector<StepArguments> LoadAllStepList() {
   // 使用boost/json解析json文件
   std::vector<StepArguments> all_step_list;
-  std::ifstream file(STEPLIST_FILE);
+
+  fs::path steplist_file_path =
+      fs::current_path() / ".." / ".." / STEPLIST_FILE;
+
+  if (global::DebugLevel() > 0) {
+    std::cout << "steplist_file: " << steplist_file_path.string() << std::endl;
+  }
+
+  std::ifstream file(steplist_file_path);
 
   PA_ASSERT_WITH_MSG(file.is_open(), "没有找到all_step_list.json文件");
   // 使用std::istreambuf_iterator将整个文件流转换为字符串
@@ -61,6 +73,10 @@ std::vector<StepArguments> LoadAllStepList() {
             step_obj.at("output_files").get_array();
         for (auto value : step_output_files)
           curr_step.output_files.insert(value.as_string().c_str());
+        const boost::json::array &step_metrics =
+            step_obj.at("metrics").get_array();
+        for (auto value : step_metrics)
+          curr_step.metrics.push_back(value.as_string().c_str());
       }
     }
   }

@@ -8,4 +8,5 @@ struct StepArguments { // 表示步骤的各种参数
   std::string step_name = "";
   std::unordered_set<std::string> input_files;  //
   std::unordered_set<std::string> output_files; //
+  std::vector<std::string> metrics;
 };

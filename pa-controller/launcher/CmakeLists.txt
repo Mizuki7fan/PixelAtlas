@@ -10,12 +10,6 @@ target_link_libraries(${SUBPROJ_NAME} PRIVATE
 )
 
 #复制all-steps.json文件
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    copy_file(${SUBPROJ_NAME} ${STEPLIST_FILE} ${CMAKE_SOURCE_DIR} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG})
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    copy_file(${SUBPROJ_NAME} ${STEPLIST_FILE} ${CMAKE_SOURCE_DIR} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE})
-endif()
-
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 target_link_libraries(${SUBPROJ_NAME} PRIVATE 
     debug   ${BOOST_PATH}/lib/libboost_filesystem-vc143-mt-gd-x64-1_87.lib

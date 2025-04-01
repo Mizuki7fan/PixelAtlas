@@ -1,14 +1,14 @@
 {
     "Preprocess":[
         {
-            "step_idx"  : 0,
+            "step_idx": 0,
             "input_files":[
             ],
             "output_files":[
                 "uv_mesh.obj"
             ],
-            "metrics"    : [
-                "distortion"
+            "metrics": [
+                "DOUBLE, distortion"
             ]
         }
     ],
@@ -22,6 +22,9 @@
             "output_files":[
                 "a.obj",
                 "b.txt"    
+            ],
+            "metrics": [
+                "DOUBLE, distortion"
             ]
         }
     ],
@@ -35,6 +38,9 @@
             "output_files":[
                 "a.obj",
                 "b.txt"    
+            ],
+            "metrics": [
+                "DOUBLE, distortion"
             ]
         }
     ],
@@ -48,6 +54,9 @@
             "output_files":[
                 "a.obj",
                 "b.txt"    
+            ],
+            "metrics": [
+                "DOUBLE, distortion"
             ]
         }
     ]
