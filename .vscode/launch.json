@@ -49,6 +49,33 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "release-evaluator",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/run/bin_Release/evaluator.exe",//程序入口
+            "console": "integratedTerminal",//执行cout输出在哪个终端
+            "cwd": "${workspaceRoot}/run/bin_Release",//指定工作目录
+            "args": [
+                "-d","1",
+                "work1","base",
+                "work2","test"
+                ],//参数
+        },
+        {
+            "name": "debug-evaluator",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/run/bin_Debug/evaluator.exe",//程序入口
+            "console": "integratedTerminal",//执行cout输出在哪个终端
+            "cwd": "${workspaceRoot}/run/bin_Debug",//指定工作目录
+            "args": [
+                "-d","1",
+                "cmd_idx","1",
+                "work1","base",
+                "work2","test",
+                ],//参数
         }
     ]
 }

@@ -22,5 +22,23 @@ public:
     static bool loadOBJ(const char *filename, SurfaceMesh3 &Mesh);
     static bool loadVTK(const char *filename, SurfaceMesh3 &Mesh);
   };
+
+  std::array<CGAL::SM_Vertex_index, 3>
+  GetFaceVertices(const cgl::SurfaceMesh3 &mesh,
+                  const CGAL::SM_Face_index &face);
+
+  std::array<CGAL::SM_Face_index, 3>
+  GetNeighbourFaces(const cgl::SurfaceMesh3 &mesh,
+                    const CGAL::SM_Face_index &face);
+
+  CGAL::SM_Edge_index GetEdgeByTwoVertex(const cgl::SurfaceMesh3 &mesh,
+                                         const CGAL::SM_Vertex_index vertex_0,
+                                         const CGAL::SM_Vertex_index vertex_1);
+
+  CGAL::SM_Face_index
+  GetFaceByThreeVertex(const cgl::SurfaceMesh3 &mesh,
+                       const CGAL::SM_Vertex_index vertex_0,
+                       const CGAL::SM_Vertex_index vertex_1,
+                       const CGAL::SM_Vertex_index vertex_2);
 };
 }; // namespace cgl
