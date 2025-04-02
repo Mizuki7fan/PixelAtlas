@@ -8,7 +8,7 @@
                 "uv_mesh.obj"
             ],
             "metrics": [
-                "DOUBLE, distortion"
+                {"type": "DOUBLE", "name": "distortion"}
             ]
         }
     ],
@@ -22,9 +22,6 @@
             "output_files":[
                 "a.obj",
                 "b.txt"    
-            ],
-            "metrics": [
-                "DOUBLE, distortion"
             ]
         }
     ],
@@ -38,11 +35,8 @@
             "output_files":[
                 "a.obj",
                 "b.txt"    
-            ],
-            "metrics": [
-                "DOUBLE, distortion"
             ]
-        }
+                }
     ],
     "GutterGeneration":[
         {
@@ -54,9 +48,6 @@
             "output_files":[
                 "a.obj",
                 "b.txt"    
-            ],
-            "metrics": [
-                "DOUBLE, distortion"
             ]
         }
     ]

@@ -31,9 +31,7 @@ std::vector<StepArguments> LoadAllStepList() {
   fs::path steplist_file_path =
       fs::current_path() / ".." / ".." / STEPLIST_FILE;
 
-  if (global::DebugLevel() > 0) {
-    std::cout << "steplist_file: " << steplist_file_path.string() << std::endl;
-  }
+  std::cout << "steplist_file: " << steplist_file_path.string() << std::endl;
 
   std::ifstream file(steplist_file_path);
 
@@ -63,20 +61,31 @@ std::vector<StepArguments> LoadAllStepList() {
         curr_step.step_name = step_name;
 
         // 读输入文件名
-        const boost::json::array &step_input_files =
-            step_obj.at("input_files").get_array();
-        for (auto value : step_input_files)
-          curr_step.input_files.insert(value.as_string().c_str());
+        if (step_obj.contains("input_files")) {
+          const boost::json::array &step_input_files =
+              step_obj.at("input_files").get_array();
+          for (auto value : step_input_files)
+            curr_step.input_files.insert(value.as_string().c_str());
+        }
 
         // 读输出文件名
-        const boost::json::array &step_output_files =
-            step_obj.at("output_files").get_array();
-        for (auto value : step_output_files)
-          curr_step.output_files.insert(value.as_string().c_str());
-        const boost::json::array &step_metrics =
-            step_obj.at("metrics").get_array();
-        for (auto value : step_metrics)
-          curr_step.metrics.push_back(value.as_string().c_str());
+        if (step_obj.contains("output_files")) {
+          const boost::json::array &step_output_files =
+              step_obj.at("output_files").get_array();
+          for (auto value : step_output_files)
+            curr_step.output_files.insert(value.as_string().c_str());
+        }
+
+        if (step_obj.contains("metrics")) {
+          const boost::json::array &step_metrics =
+              step_obj.at("metrics").get_array();
+          for (auto value : step_metrics) {
+            const boost::json::object &metric_obj = value.get_object();
+            std::string metric_type = metric_obj.at("type").as_string().c_str();
+            std::string metric_name = metric_obj.at("name").as_string().c_str();
+            curr_step.metrics[metric_name] = metric_type;
+          }
+        }
       }
     }
   }

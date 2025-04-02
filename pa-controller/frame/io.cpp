@@ -52,7 +52,7 @@ std::ofstream CreateMetricsFilestreamBegin() {
 }
 
 void WriteMetrics(std::ofstream &fout, const std::string &name, double value) {
-  fout << "  \"" << name << "\": " << value << ",\n";
+  fout << "  \"" << name << "\": " << value << "\n";
 }
 
 void WriteMetricsFilestreamEnd(std::ofstream &fout) {

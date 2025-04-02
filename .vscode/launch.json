@@ -37,7 +37,7 @@
                 "--dataset","PolyAtlas-Sample-30",
                 //"--use_individual_model_dir",
                 "--parallel_level","process",
-                "--run_name","base",
+                "--run_name","test",
                 "--clean"
                 ],//参数
         },

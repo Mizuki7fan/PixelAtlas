@@ -22,7 +22,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         set(LIB_BUILD_TYPE mt)
     endif()
     set (LIB_SUFFIX "x64-1_87")
-    foreach(LIB_NAME program_options)
+    foreach(LIB_NAME json program_options)
         message(STATUS ${BOOST_PATH}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)
         target_link_libraries(${SUBPROJ_NAME} PRIVATE 
         ${BOOST_PATH}/lib/libboost_${LIB_NAME}-${VC_SUFFIX}-${LIB_BUILD_TYPE}-${LIB_SUFFIX}.lib)

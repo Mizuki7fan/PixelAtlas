@@ -1,71 +1,54 @@
 #include "evaluator.h"
-#include <boost/program_options.hpp>
+#include <boost/json.hpp>
+
 #include <filesystem>
 #include <frame/assert.hpp>
 #include <frame/command_structures.h>
+#include <frame/global_defs.h>
 #include <frame/parse.h>
+#include <fstream>
 #include <iostream>
 
-namespace po = boost::program_options;
-namespace fs = std::filesystem;
+static int debug_level_arg = 0;
+int DebugLevel() { return debug_level_arg; }
 
-// 结果评估模块
-// 功能: 输入两次work的名称A,B和工具名称, 在run/evaluate_A_B文件夹下生成评估结果
-int main(int argc, char *argv[]) {
-  int debug_level_arg = 0;
-  std::string work_name[2];
-  int cmd_idx = -1;
+void SampleMetric::FromJson(
+    const std::string &json_file,                                //
+    const std::unordered_map<std::string, std::string> &metrics, //
+    int work_idx) {
 
-  po::options_description desc("Allowed options");
-  desc.add_options()("help,h", "帮助信息")(
-      "debug,d", po::value<int>(&debug_level_arg)->default_value(0),
-      "调试等级") //
-      ("cmd_idx", po::value<int>(&cmd_idx)->default_value(-1),
-       "工具名") //
-      ("work1", po::value<std::string>(&work_name[0])->default_value("base"),
-       "work_1_name") //
-      ("work2", po::value<std::string>(&work_name[1])->default_value("curr"),
-       "work_2_name"); //
-  po::variables_map vm;
-  try {
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    if (vm.count("help")) {
-      std::cout << desc << std::endl;
-      exit(0);
-    }
-    po::notify(vm);
-  } catch (const po::error &e) {
-    std::cerr << "error: " << e.what() << std::endl;
-    std::cerr << desc << std::endl;
-    PA_ASSERT_WITH_MSG(0, "输入异常");
+  std::unordered_map<MetricName, MetricValue> &sample_metrics =
+      work_idx == 0 ? sample_metrics_work_0 : sample_metrics_work_1;
+  std::ifstream file(json_file);
+  if (!file.is_open()) {
+    throw std::runtime_error("");
   }
 
-  std::vector<StepArguments> all_step_list = frm::LoadAllStepList();
-  PA_ASSERT_WITH_MSG(cmd_idx < all_step_list.size(), "输入cmd_idx无效");
-
-  fs::path project_root_dir = fs::current_path() / ".." / "..";
-  fs::path project_run_dir = project_root_dir / "run";
-
-  for (std::size_t work_idx = 0; work_idx < 2; ++work_idx) {
-    fs::path curr_work_dir =
-        project_run_dir / std::format("work_{}", work_name[work_idx]);
-    fs::path curr_cmd_result_dir =
-        curr_work_dir /
-        std::format("{}_{}", cmd_idx, all_step_list[cmd_idx].step_name) /
-        "result";
-    // 需要区分是否use_individual_model_dir
-    // 要么全是文件夹, 要么不包含文件夹
-    std::size_t num_directories = 0, num_files = 0;
-    for (const auto &entry : fs::directory_iterator(curr_cmd_result_dir)) {
-      if (entry.is_directory()) {
-        ++num_directories;
-      } else if (entry.is_regular_file()) {
-        ++num_files;
-      }
-    }
-    PA_ASSERT_WITH_MSG(num_directories * num_files == 0,
-                       "文件夹和文件个数不能同时不为0");
+  std::string json_file_str((std::istreambuf_iterator<char>(file)),
+                            (std::istreambuf_iterator<char>()));
+  if (debug_level_arg > 0) {
+    std::cout << json_file << std::endl;
+    std::cout << json_file_str << std::endl;
   }
-
-  return 0;
+  // boost:json::parse的输入是一个字符串, 该字符串是文件内容;
+  auto jv = boost::json::parse(json_file_str);
+  if (!jv.is_object()) {
+    throw std::runtime_error("Parsed value is not a JSON object.");
+  }
+  const boost::json::object &json_root = jv.as_object();
+  for (const auto &[key, val] : json_root) {
+    std::cout << key << std::endl;
+    // 识别读入的key, 从而确定val的类型
+    if (debug_level_arg > 0) {
+      std::cout << metrics.count(key) << " " << metrics.at(key) << std::endl;
+    }
+    if (metrics.count(key) == 0)
+      continue;
+    if (metrics.at(key) == "double" || metrics.at(key) == "DOUBLE")
+      sample_metrics[key] = val.as_double();
+    else if (metrics.at(key) == "int" || metrics.at(key) == "INT")
+      sample_metrics[key] = static_cast<int>(val.as_int64());
+    else if (metrics.at(key) == "string" || metrics.at(key) == "STRING")
+      sample_metrics[key] = static_cast<std::string>(val.as_string());
+  }
 }
