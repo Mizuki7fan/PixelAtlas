@@ -30,7 +30,7 @@ std::ofstream CreateDebugFilestream(const std::string &path) {
   return std::ofstream(global::CurrDebugDir() / path);
 }
 
-std::ofstream CreateMetricsFilestreamBegin() {
+std::ofstream CreateMetricsFilestream() {
   // 生成输出的路径
   std::string path_str;
   if (global::UseIndividualModelDir()) {
@@ -46,17 +46,6 @@ std::ofstream CreateMetricsFilestreamBegin() {
   }
 
   std::ofstream fout(path_str);
-  fout << "{\n";
-
   return fout;
-}
-
-void WriteMetrics(std::ofstream &fout, const std::string &name, double value) {
-  fout << "  \"" << name << "\": " << value << "\n";
-}
-
-void WriteMetricsFilestreamEnd(std::ofstream &fout) {
-  fout << "}\n";
-  fout.close();
 }
 } // namespace frm
