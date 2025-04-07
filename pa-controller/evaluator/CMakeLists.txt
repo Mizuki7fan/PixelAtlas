@@ -1,4 +1,4 @@
-set(SUBPROJ_NAME metric_evaluator)
+set(SUBPROJ_NAME evaluator)
 include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
 include_directories(${BOOST_PATH}/include/boost-1_87)
 
@@ -6,8 +6,6 @@ file (GLOB EVALUATOR_FILES
     evaluator.cpp
     evaluator.h
     main.cpp
-    metric_io.h
-    metric_io.cpp
 )
 
 add_executable(${SUBPROJ_NAME} ${EVALUATOR_FILES})

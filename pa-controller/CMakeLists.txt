@@ -1,3 +1,3 @@
-add_subdirectory(metric_evaluator)
+add_subdirectory(evaluator)
 add_subdirectory(launcher)
 add_subdirectory(frame)

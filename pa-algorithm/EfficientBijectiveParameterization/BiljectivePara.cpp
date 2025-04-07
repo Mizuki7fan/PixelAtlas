@@ -8,6 +8,7 @@ BiljectivePara::BiljectivePara(const cgl::SurfaceMesh3 &m, string filename)
   is_initialization = false;
   weight1 = true;
   weight2 = true;
+  last_mesh_energy_ = std::numeric_limits<double>::max();
 }
 
 BiljectivePara::~BiljectivePara() {}
@@ -25,11 +26,10 @@ void BiljectivePara::parameterization() {
   bool is_second = true;
 
   parafun_solver->after_mesh_improve();
-  double last_mesh_energy =
-      parafun_solver->compute_energy(shell_data.w_uv, false) /
-      shell_data.mesh_measure;
+  last_mesh_energy_ = parafun_solver->compute_energy(shell_data.w_uv, false) /
+                      shell_data.mesh_measure;
   parafun_solver->adjust_shell_weight(
-      (last_mesh_energy)*shell_data.mesh_measure / (shell_data.sf_num) /
+      (last_mesh_energy_)*shell_data.mesh_measure / (shell_data.sf_num) /
       1000.0);
   // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure
   // / (shell_data.sf_num) / 10.0);
@@ -44,7 +44,7 @@ void BiljectivePara::parameterization() {
   time_beg = clock();
   time_end = clock();
   double time = (time_end - time_beg) / 1000.0;
-  std::cout << time << " " << last_mesh_energy << endl;
+  std::cout << time << " " << last_mesh_energy_ << endl;
   for (int i = 0; i < MAX_ITER_NUM; i++) {
     iteration_count++;
 
@@ -59,7 +59,7 @@ void BiljectivePara::parameterization() {
     double current_mesh_energy =
         parafun_solver->energy_mesh / shell_data.mesh_measure;
     double current_all_energy = shell_data.energy;
-    double mesh_energy_decrease = last_mesh_energy - current_mesh_energy;
+    double mesh_energy_decrease = last_mesh_energy_ - current_mesh_energy;
     double all_energy_decrease = last_all_energy - current_all_energy;
     time_end = clock();
     double time = (time_end - time_beg) / 1000.0;
@@ -68,10 +68,10 @@ void BiljectivePara::parameterization() {
     // cout << "Mesh Energy: " << current_mesh_energy << "\tEnergy Decrease: "
     // << mesh_energy_decrease << endl; cout << "All Energy:" <<
     // current_all_energy << "\tEnergy Decrease" << all_energy_decrease << endl;
-    conv_rate_mesh = abs(mesh_energy_decrease) / last_mesh_energy;
+    conv_rate_mesh = abs(mesh_energy_decrease) / last_mesh_energy_;
     conv_rate_all = abs(all_energy_decrease) / last_all_energy;
-    last_mesh_energy = current_mesh_energy;
-    last_all_energy = adjust_weight(conv_rate_mesh, last_mesh_energy);
+    last_mesh_energy_ = current_mesh_energy;
+    last_all_energy = adjust_weight(conv_rate_mesh, last_mesh_energy_);
 
     if (conv_rate_all < convgence_con_rate) {
       break;
@@ -82,7 +82,7 @@ void BiljectivePara::parameterization() {
   double time_consumption = (time_end - time_beg) / 1000.0;
   std::cout << "iter: " << iteration_count << std::endl;
   std::cout << "time: " << time_consumption << std::endl;
-  std::cout << "energy:" << last_mesh_energy << std::endl;
+  std::cout << "energy:" << last_mesh_energy_ << std::endl;
   std::cout << "per time:" << time_consumption / iteration_count << std::endl;
   cout << parafun_solver->time1 << " " << parafun_solver->time2 << " "
        << parafun_solver->time3 << endl;

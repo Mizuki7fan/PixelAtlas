@@ -4,7 +4,7 @@
 #include <CGAL-Interface/CGAL-Interface.h>
 #include <filesystem>
 #include <frame/global_defs.h>
-#include <metric_evaluator/metric_io.h>
+#include <frame/metric.h>
 
 namespace fs = std::filesystem;
 
@@ -25,12 +25,12 @@ void MainProcess() {
   // 写入metrics
   std::unordered_map<std::string, std::string> metrics;
   metrics["distortion"] = "double";
-  std::unordered_map<std::string, MetricValue> metric_values;
-  metric_values["distortion"] = 4.01;
+  std::unordered_map<std::string, frm::MetricValue> metric_values;
+  metric_values["distortion"] = bil_para->GetDistortion();
 
   fout = frm::CreateMetricsFilestream();
 
-  WriteMetricJsonFile(fout, metrics, metric_values);
+  frm::WriteMetricJsonFile(fout, metrics, metric_values);
 
   fout.close();
 }

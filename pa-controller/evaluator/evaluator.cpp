@@ -1,5 +1,4 @@
 #include "evaluator.h"
-#include "metric_io.h"
 #include <boost/json.hpp>
 #include <boost/program_options.hpp>
 #include <frame/assert.hpp>
@@ -8,23 +7,6 @@
 #include <iostream>
 
 namespace po = boost::program_options;
-
-void SampleMetric::FromJson(
-    const std::string &json_file,                                //
-    const std::unordered_map<std::string, std::string> &metrics, //
-    int work_idx) {
-
-  std::unordered_map<std::string, MetricValue> &sample_metrics =
-      work_idx == 0 ? sample_metrics_work_0 : sample_metrics_work_1;
-
-  std::ifstream file(json_file);
-  if (!file.is_open()) {
-    throw std::runtime_error("");
-  }
-  LoadMetricJsonFile(file, metrics, sample_metrics);
-  file.close();
-}
-
 Evaluator::Evaluator(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   desc.add_options()("help,h", "帮助信息")(
@@ -88,6 +70,10 @@ void Evaluator::LoadData() {
 
 void Evaluator::LoadDataFromNoIndividualModelDir(
     const std::vector<fs::path> &all_files, int curr_work_idx) {
+  // 读入信息放入metric_data_中
+  std::unordered_map<std::string, frm::Metric> &metric_data =
+      sample_metric_data_[curr_work_idx];
+
   for (const fs::path &file_name : all_files) {
     std::cout << "file_name: " << file_name << std::endl;
     std::string model_name = file_name.filename().string();
@@ -96,8 +82,10 @@ void Evaluator::LoadDataFromNoIndividualModelDir(
       continue;
     model_name = model_name.substr(0, pos);
     std::cout << "model_name: " << model_name << std::endl;
-    metric_data_[model_name].FromJson(
-        file_name.string(), all_step_list_[cmd_idx_].metrics, curr_work_idx);
+    std::ifstream ifs(file_name);
+    frm::LoadMetricJsonFile(ifs, all_step_list_[cmd_idx_].metrics,
+                            metric_data[model_name]);
+    ifs.close();
   }
 }
 
@@ -110,18 +98,21 @@ void Evaluator::PrintData() {
                              metric_name.first);
   std::cout << std::endl;
 
-  for (auto data : metric_data_) {
-    std::cout << data.first << "\t";
-    const std::unordered_map<std::string, MetricValue> &sample_metrics_work_0 =
-        data.second.sample_metrics_work_0;
-    const std::unordered_map<std::string, MetricValue> &sample_metrics_work_1 =
-        data.second.sample_metrics_work_1;
-    for (auto [name, value] : sample_metrics_work_0) {
-      std::visit(PrintMetricValue{}, value);
+  std::set<std::string> all_samples;
+  for (std::size_t i = 0; i < 2; ++i)
+    for (auto data : sample_metric_data_[i])
+      all_samples.insert(data.first);
+
+  for (auto sample : all_samples) {
+    std::cout << sample << "\t";
+    const frm::Metric &metric_data_0 = sample_metric_data_[0][sample];
+    const frm::Metric &metric_data_1 = sample_metric_data_[1][sample];
+    for (auto [name, value] : metric_data_0) {
+      std::visit(frm::PrintMetricValue{}, value);
       std::cout << "\t";
     }
-    for (auto [name, value] : sample_metrics_work_1) {
-      std::visit(PrintMetricValue{}, value);
+    for (auto [name, value] : metric_data_1) {
+      std::visit(frm::PrintMetricValue{}, value);
       std::cout << "\t";
     }
     std::cout << std::endl;

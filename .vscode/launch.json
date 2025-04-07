@@ -37,7 +37,7 @@
                 "--dataset","PolyAtlas-Sample-30",
                 //"--use_individual_model_dir",
                 "--parallel_level","process",
-                "--run_name","test",
+                "--run_name","base",
                 "--clean"
                 ],//参数
         },
@@ -61,7 +61,7 @@
                 "-d","1",
                 "--cmd_idx","0",
                 "--work1","base",
-                "--work2","test"
+                "--work2","base"
                 ],//参数
         },
         {
@@ -75,7 +75,7 @@
                 "-d","1",
                 "--cmd_idx","0",
                 "--work1","base",
-                "--work2","test",
+                "--work2","base",
                 ],//参数
             "preLaunchTask": "build-preprocess-debug"
         }

@@ -1,7 +1,7 @@
-#include "metric_io.h"
+#include "metric.h"
 #include <boost/json.hpp>
 #include <fstream>
-
+namespace frm {
 void LoadMetricJsonFile(
     std::ifstream &json_str,                                     //
     const std::unordered_map<std::string, std::string> &metrics, //
@@ -26,28 +26,31 @@ void LoadMetricJsonFile(
 }
 
 void WriteMetricJsonFile(
-    std::ofstream &json_file,                                     //
+    std::ofstream &json_file,                                    //
     const std::unordered_map<std::string, std::string> &metrics, //
     const std::unordered_map<std::string, MetricValue> &metric_values) {
-  //
   boost::json::object obj;
   for (auto [metric_name, metric_value] : metric_values) {
+    std::cout << metric_name << std::endl;
+    std::cout << metrics.at(metric_name) << std::endl;
     if (metrics.count(metric_name) == 0)
       continue;
     if (metrics.at(metric_name) == "double" ||
-        metrics.at(metric_name) == "DOUBLE")
-      obj[metric_name] =
-          boost::json::value(std::holds_alternative<double>(metric_value));
-    else if (metrics.at(metric_name) == "int" ||
-             metrics.at(metric_name) == "INT")
-      obj[metric_name] =
-          boost::json::value(std::holds_alternative<int>(metric_value));
-    else if (metrics.at(metric_name) == "string" ||
-             metrics.at(metric_name) == "STRING")
-      obj[metric_name] =
-          boost::json::value(std::holds_alternative<std::string>(metric_value));
+        metrics.at(metric_name) == "DOUBLE") {
+      if (std::holds_alternative<double>(metric_value))
+        obj[metric_name] = std::get<double>(metric_value);
+    } else if (metrics.at(metric_name) == "int" ||
+               metrics.at(metric_name) == "INT") {
+      if (std::holds_alternative<int>(metric_value))
+        obj[metric_name] = std::get<int>(metric_value);
+    } else if (metrics.at(metric_name) == "string" ||
+               metrics.at(metric_name) == "STRING") {
+      if (std::holds_alternative<std::string>(metric_value))
+        obj[metric_name] = std::get<std::string>(metric_value);
+    }
   }
 
   std::string json_str = boost::json::serialize(obj);
-  json_file<<json_str;
+  json_file << json_str;
 }
+}; // namespace frm
