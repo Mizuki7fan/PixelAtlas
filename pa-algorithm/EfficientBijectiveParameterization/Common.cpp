@@ -24,8 +24,6 @@ void Tutte(const int &num_vertices,              //
     uv_init.row(bnd(i)) << bnd_uv(i, 0), bnd_uv(i, 1);
   }
 
-  std::cout << 123;
-
   std::vector<std::unordered_set<int>> VV_tmp(num_vertices);
   for (std::size_t i = 0; i < num_faces; i++) {
     VV_tmp[face_vertices(i, 0)].insert(face_vertices(i, 1));
