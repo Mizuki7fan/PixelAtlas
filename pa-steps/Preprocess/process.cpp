@@ -1,10 +1,11 @@
 #include "process.h"
 #include "EfficientBijectiveParameterization/BiljectivePara.h"
-#include "frame/io.h"
 #include <CGAL-Interface/CGAL-Interface.h>
 #include <filesystem>
 #include <frame/global_defs.h>
+#include <frame/io.h>
 #include <frame/metric.h>
+
 
 namespace fs = std::filesystem;
 
@@ -29,8 +30,6 @@ void MainProcess() {
   metric_values["distortion"] = bil_para->GetDistortion();
 
   fout = frm::CreateMetricsFilestream();
-
   frm::WriteMetricJsonFile(fout, metrics, metric_values);
-
   fout.close();
 }

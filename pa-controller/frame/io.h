@@ -4,11 +4,5 @@
 namespace frm {
 std::ofstream CreateResultFilestream(const std::string &path);
 std::ofstream CreateDebugFilestream(const std::string &path);
-
 std::ofstream CreateMetricsFilestream();
-
-namespace metrics {
-//
-} // namespace metrics
-
 } // namespace frm

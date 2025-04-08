@@ -61,7 +61,7 @@
                 "-d","1",
                 "--cmd_idx","0",
                 "--work1","base",
-                "--work2","base"
+                "--work2","reference"
                 ],//参数
         },
         {
@@ -75,7 +75,7 @@
                 "-d","1",
                 "--cmd_idx","0",
                 "--work1","base",
-                "--work2","base",
+                "--work2","reference",
                 ],//参数
             "preLaunchTask": "build-preprocess-debug"
         }

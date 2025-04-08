@@ -6,24 +6,25 @@
 #endif
 #include <numbers>
 #include <set>
+#include <unordered_set>
 
 /*加入判断边界线是否闭合,return true means open curve; return false means closed
 curve. In closed case, the first and last item of order_boundary are same.*/
 void Tutte(const int &num_vertices,              //
-           const Eigen::MatrixXi &face_vertices, //
-           const Eigen::VectorXi &bnd,           //
-           const Eigen::MatrixXd &bnd_uv,        //
-           Eigen::MatrixXd &uv_init) {
-  int num_faces = static_cast<int>(face_vertices.rows());
+           const Eigen::MatrixXi &face_vertices, // 三角面片顶点索引
+           const Eigen::VectorXi &bnd,           // 边界顶点索引
+           const Eigen::MatrixXd &bnd_uv,        // 边界顶点预设UV坐标
+           Eigen::MatrixXd &uv_init) {           // 输出：所有顶点UV坐标
+  std::size_t num_faces = static_cast<std::size_t>(face_vertices.rows());
   uv_init.resize(num_vertices, 2);
 
-  std::set<int> bound_idxes;
-  for (std::size_t i = 0; i < static_cast<std::size_t>(bnd.size()); i++) {
+  std::unordered_set<int> bound_idxes;
+  for (int i = 0; i < bnd.size(); i++) {
     bound_idxes.insert(bnd(i));
     uv_init.row(bnd(i)) << bnd_uv(i, 0), bnd_uv(i, 1);
   }
 
-  std::vector<std::set<int>> VV_tmp(num_vertices);
+  std::vector<std::unordered_set<int>> VV_tmp(num_vertices);
   for (std::size_t i = 0; i < num_faces; i++) {
     VV_tmp[face_vertices(i, 0)].insert(face_vertices(i, 1));
     VV_tmp[face_vertices(i, 0)].insert(face_vertices(i, 2));
@@ -43,6 +44,10 @@ void Tutte(const int &num_vertices,              //
   solver = std::make_unique<EigenLinSolver>();
 #endif
 
+  if (solver == nullptr) {
+    throw std::runtime_error("未设置USE_MKL或者USE_EIGEN");
+  }
+
   std::vector<double> solver_tu;
   std::vector<double> solver_tv;
 
@@ -52,8 +57,8 @@ void Tutte(const int &num_vertices,              //
   solver_tu.resize(num_vertices, 0.0);
   solver_tv.resize(num_vertices, 0.0);
 
-  for (size_t i = 0; i < num_vertices; i++) {
-    solver->ia_.push_back(solver->ja_.size());
+  for (int i = 0; i < num_vertices; i++) {
+    solver->ia_.push_back(static_cast<int>(solver->ja_.size()));
 
     if (bound_idxes.count(i) > 0) {
       solver->ja_.push_back(i);
@@ -64,7 +69,7 @@ void Tutte(const int &num_vertices,              //
 
     } else {
       solver->ja_.push_back(i);
-      solver->a_.push_back(VV_tmp[i].size());
+      solver->a_.push_back(static_cast<double>(VV_tmp[i].size()));
       std::vector<int> row_id;
       row_id.reserve(VV_tmp[i].size());
       double bu = 0.0;
@@ -88,24 +93,68 @@ void Tutte(const int &num_vertices,              //
       solver_tv[i] = bv;
     }
   }
-  solver->ia_.push_back(solver->ja_.size());
+  solver->ia_.push_back(static_cast<int>(solver->ja_.size()));
 
-  solver->nnz_ = solver->ja_.size();
+  solver->nnz_ = static_cast<int>(solver->ja_.size());
   solver->num_ = num_vertices;
 
-  solver->pardiso_init();
+  solver->PardisoInit();
   solver->rhs_ = solver_tu;
 
-  solver->factorize();
-  solver->pardiso_solver();
+  solver->Factorize();
+  solver->PardisoSolver();
 
-  for (std::size_t i = 0; i < num_vertices; i++)
+  for (int i = 0; i < num_vertices; i++)
     uv_init(i, 0) = solver->result_[i];
 
   solver->rhs_ = solver_tv;
-  solver->pardiso_solver();
-  for (std::size_t i = 0; i < num_vertices; i++)
+  solver->PardisoSolver();
+  for (int i = 0; i < num_vertices; i++)
     uv_init(i, 1) = solver->result_[i];
+}
+
+void MapVerticesToCircle(const Eigen::MatrixXd &V,   //
+                         const Eigen::VectorXi &bnd, //
+                         Eigen::MatrixXd &UV) {
+  // 检查输入有效性
+  if (V.rows() == 0 || bnd.size() == 0) {
+    throw std::invalid_argument("输入顶点或边界顶点不能为空");
+  }
+
+  // 预处理边界顶点映射
+  std::vector<int> interior;
+  std::vector<int> map_ij(V.rows());
+  std::vector<bool> vertex_is_on_bnd(V.rows(), false);
+
+  for (int i = 0; i < bnd.size(); i++) {
+    vertex_is_on_bnd[bnd[i]] = true;
+    map_ij[bnd[i]] = i;
+  }
+
+  for (int i = 0; i < (int)vertex_is_on_bnd.size(); i++) {
+    if (!vertex_is_on_bnd[i]) {
+      map_ij[i] = interior.size();
+      interior.push_back(i);
+    }
+  }
+
+  // Map boundary to unit circle
+  std::vector<double> len(bnd.size());
+  len[0] = 0.;
+
+  for (int i = 1; i < bnd.size(); i++) {
+    len[i] = len[i - 1] + (V.row(bnd[i - 1]) - V.row(bnd[i])).norm();
+  }
+  double total_len =
+      len[len.size() - 1] + (V.row(bnd[0]) - V.row(bnd[bnd.size() - 1])).norm();
+
+  UV.resize(bnd.size(), 2);
+
+  for (int i = 0; i < bnd.size(); i++) {
+    double frac = len[i] * 2. * std::numbers::pi / total_len;
+    // double frac = i * 2. * M_PI / (bnd.size());
+    UV.row(map_ij[bnd[i]]) << cos(frac), sin(frac);
+  }
 }
 
 void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
@@ -172,44 +221,6 @@ void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
     }
   }
   pardiso.ia_.push_back(pardiso.ja_.size());
-}
-
-void map_vertices_to_circle(const Eigen::MatrixXd &V,
-                            const Eigen::VectorXi &bnd, Eigen::MatrixXd &UV) {
-  // Get sorted list of boundary vertices
-  std::vector<int> interior, map_ij;
-  map_ij.resize(V.rows());
-
-  std::vector<bool> isOnBnd(V.rows(), false);
-  for (int i = 0; i < bnd.size(); i++) {
-    isOnBnd[bnd[i]] = true;
-    map_ij[bnd[i]] = i;
-  }
-
-  for (int i = 0; i < (int)isOnBnd.size(); i++) {
-    if (!isOnBnd[i]) {
-      map_ij[i] = interior.size();
-      interior.push_back(i);
-    }
-  }
-
-  // Map boundary to unit circle
-  std::vector<double> len(bnd.size());
-  len[0] = 0.;
-
-  for (int i = 1; i < bnd.size(); i++) {
-    len[i] = len[i - 1] + (V.row(bnd[i - 1]) - V.row(bnd[i])).norm();
-  }
-  double total_len =
-      len[len.size() - 1] + (V.row(bnd[0]) - V.row(bnd[bnd.size() - 1])).norm();
-
-  UV.resize(bnd.size(), 2);
-
-  for (int i = 0; i < bnd.size(); i++) {
-    double frac = len[i] * 2. * std::numbers::pi / total_len;
-    // double frac = i * 2. * M_PI / (bnd.size());
-    UV.row(map_ij[bnd[i]]) << cos(frac), sin(frac);
-  }
 }
 
 void boundary_loop(const Eigen::MatrixXi &F_ref,

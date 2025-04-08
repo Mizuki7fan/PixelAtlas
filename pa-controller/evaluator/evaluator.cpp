@@ -92,29 +92,123 @@ void Evaluator::LoadDataFromNoIndividualModelDir(
 void Evaluator::LoadDataFromIndividualModelDir() {}
 
 void Evaluator::PrintData() {
-  std::cout << "model_name\t";
-  for (auto metric_name : all_step_list_[cmd_idx_].metrics)
-    std::cout << std::format("work_0_{}\twork_1_{}\t", metric_name.first,
-                             metric_name.first);
-  std::cout << std::endl;
+  // 表头格式化
+  constexpr int kColWidth = 20; // 增加列宽到20字符
+  constexpr int kPairSpace = 4; // 组间额外间距
+
+  std::cout << std::format("{:<{}}", "model_name", kColWidth);
+
+  for (auto metric_name : all_step_list_[cmd_idx_].metrics) {
+    // 使用复合格式字符串实现双左对齐
+    std::cout << std::format(
+        "{:<{}}",
+        std::format("\"{}\"-{}  \"{}\"-{}", // 添加两个空格分隔
+                    work_name_[0], metric_name.first, work_name_[1],
+                    metric_name.first),
+        kColWidth * 2 + kPairSpace); // 双倍列宽+间距
+  }
+  std::cout << "\n";
 
   std::set<std::string> all_samples;
   for (std::size_t i = 0; i < 2; ++i)
     for (auto data : sample_metric_data_[i])
       all_samples.insert(data.first);
 
+  // 数据行格式化
   for (auto sample : all_samples) {
-    std::cout << sample << "\t";
+    std::cout << std::format("{:<{}}", sample, kColWidth);
     const frm::Metric &metric_data_0 = sample_metric_data_[0][sample];
     const frm::Metric &metric_data_1 = sample_metric_data_[1][sample];
+
+    // 使用visitor模式统一数值格式
+    auto print_value = [](const auto &value) {
+      return std::visit(
+          [](auto &&arg) -> std::string {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_floating_point_v<T>) {
+              return std::format("{:.10f}", arg); // 统一保留5位小数
+            } else if constexpr (std::is_integral_v<T>) {
+              return std::format("{}", arg);
+            }
+            return "";
+          },
+          value);
+    };
+
     for (auto [name, value] : metric_data_0) {
-      std::visit(frm::PrintMetricValue{}, value);
-      std::cout << "\t";
+      std::cout << std::format("{:>{}}", print_value(value), kColWidth);
     }
     for (auto [name, value] : metric_data_1) {
-      std::visit(frm::PrintMetricValue{}, value);
-      std::cout << "\t";
+      std::cout << std::format("{:>{}}", print_value(value), kColWidth);
     }
-    std::cout << std::endl;
+    std::cout << "\n";
+  }
+}
+
+void Evaluator::PrintDataAvgSquaredDifference() {
+
+  const std::unordered_map<std::string, std::string> &metrics =
+      all_step_list_[cmd_idx_].metrics;
+
+  std::set<std::string> all_samples;
+  for (std::size_t i = 0; i < 2; ++i)
+    for (auto data : sample_metric_data_[i])
+      all_samples.insert(data.first);
+
+  std::unordered_map<std::string, std::pair<std::size_t, std::size_t>>
+      map_property_to_num_valid_data;
+  std::unordered_map<std::string, std::pair<int, double>>
+      map_property_to_squared_difference;
+
+  for (auto sample : all_samples) {
+    const frm::Metric &metric_data_0 = sample_metric_data_[0][sample];
+    const frm::Metric &metric_data_1 = sample_metric_data_[1][sample];
+    // 使用try_emplace优化 - 只在键不存在时插入
+    for (auto [name, value] : metric_data_0) {
+      map_property_to_num_valid_data.try_emplace(name, 0, 0);
+      map_property_to_squared_difference.try_emplace(name, 0, 0.0);
+    }
+    for (auto [name, value] : metric_data_1) {
+      map_property_to_num_valid_data.try_emplace(name, 0, 0);
+      map_property_to_squared_difference.try_emplace(name, 0, 0.0);
+    }
+  }
+  for (auto sample : all_samples) {
+    const frm::Metric &metric_data_0 = sample_metric_data_[0][sample];
+    const frm::Metric &metric_data_1 = sample_metric_data_[1][sample];
+    for (auto property_info : map_property_to_squared_difference) {
+      // 只计算double或者int类型的数值差异
+      if (metrics.at(property_info.first) != "DOUBLE" &&
+          metrics.at(property_info.first) != "INT")
+        continue;
+      // 如果该属性不齐全, 则记录为无效数值
+      if (metric_data_0.count(property_info.first) == 0 ||
+          metric_data_1.count(property_info.first) == 0) {
+        map_property_to_num_valid_data.at(property_info.first).second++;
+        continue;
+      }
+      // 否则记录该属性的差异
+      map_property_to_num_valid_data.at(property_info.first).first++;
+      const frm::MetricValue &value_0 = metric_data_0.at(property_info.first);
+      const frm::MetricValue &value_1 = metric_data_0.at(property_info.first);
+      if (std::holds_alternative<double>(value_0) &&
+          std::holds_alternative<double>(value_1)) {
+        map_property_to_squared_difference.at(property_info.first).second +=
+            std::pow(std::get<double>(value_0) - std::get<double>(value_1), 2);
+      } else if (std::holds_alternative<int>(value_0) &&
+                 std::holds_alternative<int>(value_1)) {
+        map_property_to_squared_difference.at(property_info.first).second +=
+            std::pow(std::get<int>(value_0) - std::get<int>(value_1), 2);
+      }
+    }
+  }
+
+  for (auto property_info : map_property_to_squared_difference) {
+    double squared_difference = std::sqrt(
+        map_property_to_squared_difference.at(property_info.first).second /
+        map_property_to_num_valid_data.at(property_info.first).first);
+    std::cout << std::format("squared difference of \"{}\": {}",
+                             property_info.first, squared_difference)
+              << std::endl;
   }
 }

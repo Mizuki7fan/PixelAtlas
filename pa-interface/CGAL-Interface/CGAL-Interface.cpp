@@ -5,8 +5,6 @@
 #include <CGAL/centroid.h>
 
 #include <frame/assert.hpp>
-namespace PMP = CGAL::Polygon_mesh_processing;
-
 namespace cgl {
 std::array<CGAL::SM_Vertex_index, 3>
 MeshOperation::GetFaceVertices(const cgl::SurfaceMesh3 &mesh, //

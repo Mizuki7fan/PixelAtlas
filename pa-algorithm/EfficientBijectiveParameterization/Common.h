@@ -11,8 +11,9 @@ void Tutte(const int &V_N,                //
            const Eigen::MatrixXd &bnd_uv, //
            Eigen::MatrixXd &uv_init);
 
-void map_vertices_to_circle(const Eigen::MatrixXd &V,
-                            const Eigen::VectorXi &bnd, Eigen::MatrixXd &UV);
+void MapVerticesToCircle(const Eigen::MatrixXd &V,   //
+                         const Eigen::VectorXi &bnd, //
+                         Eigen::MatrixXd &UV);
 
 void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
                      Solver &pardiso);

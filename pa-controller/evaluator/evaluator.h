@@ -13,6 +13,7 @@ public:
   Evaluator(int argc, char *argv[]);
   void LoadData();
   void PrintData();
+  void PrintDataAvgSquaredDifference();
 
 private:
   void

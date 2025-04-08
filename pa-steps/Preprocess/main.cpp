@@ -8,8 +8,6 @@ int main(int argc, char *argv[]) {
     std::cout << argv[i] << " ";
   std::cout << std::endl;
   frm::CommonProgram common_program(argc, argv);
-
   common_program.Run(MainProcess);
-
   return 0;
 }

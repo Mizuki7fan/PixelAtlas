@@ -4,8 +4,9 @@
    2，area_threshold生成三角形的最大面积约束，
         pts生成的所有网格顶点坐标，注意前n个依然和bnd_pts保持一致，后面是新加入的点，
         FV存储的是每个面的三个顶点id，nf X 3*/
-void triangulate(const Eigen::MatrixXd &bnd_pts, const double &area_threshold,
-                 Eigen::MatrixXd &pts, Eigen::MatrixXi &FV) {
+void GenerateTriangulate(const Eigen::MatrixXd &bnd_pts,
+                         const double &area_threshold, Eigen::MatrixXd &pts,
+                         Eigen::MatrixXi &FV) {
   int p_num = static_cast<int>(bnd_pts.rows());
   Eigen::MatrixXi E;
   E.resize(p_num, 2);
@@ -97,9 +98,9 @@ void triangulate(const Eigen::MatrixXd &bnd_pts, const double &area_threshold,
         pts生成的所有网格顶点坐标，注意前n个依然和bnd_pts保持一致，后面是新加入的点，
         FV存储的是每个面的三个顶点id，nf X 3*/
 
-void triangulate(const Eigen::MatrixXd &bnd_pts, const Eigen::MatrixXi &E,
-                 const Eigen::MatrixXd &hole, Eigen::MatrixXd &pts,
-                 Eigen::MatrixXi &FV) {
+void GenerateTriangulate(const Eigen::MatrixXd &bnd_pts,
+                         const Eigen::MatrixXi &E, const Eigen::MatrixXd &hole,
+                         Eigen::MatrixXd &pts, Eigen::MatrixXi &FV) {
   int p_num = static_cast<int>(bnd_pts.rows());
   triangulateio in;
 

@@ -7,13 +7,13 @@ public:
   EigenLinSolver();
   ~EigenLinSolver();
 
-  void pardiso_init();
-  bool factorize();
-  void pardiso_solver();
-  void free_numerical_factorization_memory();
+  void PardisoInit();
+  bool Factorize();
+  void PardisoSolver();
+  void FreeNumericalFactorizationMemory();
 
 private:
-  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> simplicialLDLT;
-  Eigen::SparseMatrix<double> coefMtr;
-  void update_coef();
+  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> simplicial_LDLT_;
+  Eigen::SparseMatrix<double> coef_matrix_;
+  void UpdateCoef();
 };

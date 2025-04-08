@@ -90,7 +90,7 @@ void ShellData::mesh_improve() {
   H /= 3.;
 
   MatrixXd uv2;
-  triangulate(V, E, H, uv2, s_T);
+  GenerateTriangulate(V, E, H, uv2, s_T);
   auto bnd_n = internal_bnd.size();
 
   for (auto i = 0; i < s_T.rows(); i++) {
@@ -152,7 +152,7 @@ void ShellData::add_new_patch(const Eigen::MatrixXd &V_in,
 
   bnd = Map<Eigen::VectorXi>(all_bnds[0].data(), all_bnds[0].size());
 
-  map_vertices_to_circle(V_ref, bnd, bnd_uv);
+  MapVerticesToCircle(V_ref, bnd, bnd_uv);
   bnd_uv *= sqrt(M.sum() / std::numbers::pi);
   bnd_uv.rowwise() += center;
 

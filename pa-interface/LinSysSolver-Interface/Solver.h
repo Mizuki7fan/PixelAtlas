@@ -6,10 +6,10 @@ private:
   /* data */
 public:
   virtual ~Solver() {};
-  virtual void pardiso_init() = 0;
-  virtual bool factorize() = 0;
-  virtual void pardiso_solver() {};
-  virtual void free_numerical_factorization_memory() {};
+  virtual void PardisoInit() = 0;
+  virtual bool Factorize() = 0;
+  virtual void PardisoSolver() {};
+  virtual void FreeNumericalFactorizationMemory() {};
 
   std::vector<double> result_;
 

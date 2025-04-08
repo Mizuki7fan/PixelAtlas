@@ -83,7 +83,7 @@ void Parafun::init() {
   pardiso->num_ = 2 * V_N;
   long time_beg, time_end;
   time_beg = clock();
-  pardiso->pardiso_init();
+  pardiso->PardisoInit();
   time_end = clock();
   double time_consumption = (time_end - time_beg) / 1000.0;
   time1 += time_consumption;
@@ -997,12 +997,12 @@ void Parafun::SLIM(bool is_interp) {
   pardiso->rhs_ = pardiso_b;
   long time_beg, time_end;
   time_beg = clock();
-  pardiso->factorize();
+  pardiso->Factorize();
   time_end = clock();
   double time_consumption = (time_end - time_beg) / 1000.0;
   time2 += time_consumption;
   time_beg = clock();
-  pardiso->pardiso_solver();
+  pardiso->PardisoSolver();
   time_end = clock();
   time_consumption = (time_end - time_beg) / 1000.0;
   time3 += time_consumption;
@@ -1016,7 +1016,7 @@ void Parafun::SLIM(bool is_interp) {
     d(i) = result_d[i];
     d(i + total_num) = result_d[i + V_N];
   }
-  pardiso->free_numerical_factorization_memory();
+  pardiso->FreeNumericalFactorizationMemory();
 
   double temp_t;
   max_step(position_of_mesh, d, temp_t);
@@ -1585,12 +1585,12 @@ void Parafun::CM(bool is_interp) {
   pardiso->rhs_ = pardiso_b;
   long time_beg, time_end;
   time_beg = clock();
-  pardiso->factorize();
+  pardiso->Factorize();
   time_end = clock();
   double time_consumption = (time_end - time_beg) / 1000.0;
   time2 += time_consumption;
   time_beg = clock();
-  pardiso->pardiso_solver();
+  pardiso->PardisoSolver();
   time_end = clock();
   time_consumption = (time_end - time_beg) / 1000.0;
   time3 += time_consumption;
@@ -1602,7 +1602,7 @@ void Parafun::CM(bool is_interp) {
     negative_grad(i) = pardiso_b[i];
     d(i) = result_d[i];
   }
-  pardiso->free_numerical_factorization_memory();
+  pardiso->FreeNumericalFactorizationMemory();
 
   double temp_t;
   max_step(position_of_mesh, d, temp_t);

@@ -8,10 +8,10 @@ public:
   MKLPardisoSolver();
   ~MKLPardisoSolver();
 
-  void pardiso_init();
-  bool factorize();
-  void pardiso_solver();
-  void free_numerical_factorization_memory();
+  void PardisoInit();
+  bool Factorize();
+  void PardisoSolver();
+  void FreeNumericalFactorizationMemory();
 
 protected:
   // pardiso stuff
