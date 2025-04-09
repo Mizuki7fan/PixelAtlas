@@ -1,11 +1,10 @@
-﻿#include "Common.h"
+﻿#include "Utility.h"
 #if defined(USE_MKL)
 #include <LinSysSolver-Interface/MKLPardisoSolver.h>
 #elif defined(USE_EIGEN)
 #include <LinSysSolver-Interface/EigenLinSolver.h>
 #endif
 #include <numbers>
-#include <set>
 #include <unordered_set>
 
 /*加入判断边界线是否闭合,return true means open curve; return false means closed
@@ -116,25 +115,19 @@ void Tutte(const int &num_vertices,              //
 void MapVerticesToCircle(const Eigen::MatrixXd &V,   //
                          const Eigen::VectorXi &bnd, //
                          Eigen::MatrixXd &UV) {
-  // 检查输入有效性
-  if (V.rows() == 0 || bnd.size() == 0) {
-    throw std::invalid_argument("输入顶点或边界顶点不能为空");
-  }
+  // Get sorted list of boundary vertices
+  std::vector<int> interior, map_ij(V.rows());
 
-  // 预处理边界顶点映射
-  std::vector<int> interior;
-  std::vector<int> map_ij(V.rows());
-  std::vector<bool> vertex_is_on_bnd(V.rows(), false);
-
+  std::vector<bool> is_on_bnd(V.rows(), false);
   for (int i = 0; i < bnd.size(); i++) {
-    vertex_is_on_bnd[bnd[i]] = true;
+    is_on_bnd[bnd[i]] = true;
     map_ij[bnd[i]] = i;
   }
 
-  for (int i = 0; i < (int)vertex_is_on_bnd.size(); i++) {
-    if (!vertex_is_on_bnd[i]) {
-      map_ij[i] = interior.size();
-      interior.push_back(i);
+  for (std::size_t i = 0; i < is_on_bnd.size(); i++) {
+    if (!is_on_bnd[i]) {
+      map_ij[i] = static_cast<int>(interior.size());
+      interior.push_back(static_cast<int>(i));
     }
   }
 
@@ -142,9 +135,9 @@ void MapVerticesToCircle(const Eigen::MatrixXd &V,   //
   std::vector<double> len(bnd.size());
   len[0] = 0.;
 
-  for (int i = 1; i < bnd.size(); i++) {
+  for (int i = 1; i < bnd.size(); i++)
     len[i] = len[i - 1] + (V.row(bnd[i - 1]) - V.row(bnd[i])).norm();
-  }
+
   double total_len =
       len[len.size() - 1] + (V.row(bnd[0]) - V.row(bnd[bnd.size() - 1])).norm();
 
@@ -152,135 +145,68 @@ void MapVerticesToCircle(const Eigen::MatrixXd &V,   //
 
   for (int i = 0; i < bnd.size(); i++) {
     double frac = len[i] * 2. * std::numbers::pi / total_len;
-    // double frac = i * 2. * M_PI / (bnd.size());
     UV.row(map_ij[bnd[i]]) << cos(frac), sin(frac);
   }
 }
 
-void preCalc_pardiso(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
-                     Solver &pardiso) {
+void GetBoundaryLoop(const Eigen::MatrixXi &face_vertices, //
+                     std::vector<std::vector<int>> &boundary_loop) {
+  std::vector<std::vector<int>> boundary_edges;
+  std::vector<std::vector<int>> all_edges;
+  // 每个面含有几个顶点
+  constexpr int kNumFaceVertices = 3;
 
-  int V_N = V.rows();
-  int F_N = F.rows();
-  pardiso.ia_.clear();
-  pardiso.ia_.reserve(2 * V_N + 1);
-  pardiso.ja_.clear();
-  pardiso.ja_.reserve(8 * V_N);
-
-  std::vector<std::set<int>> VV_tmp;
-  VV_tmp.resize(V_N);
-  for (size_t i = 0; i < F_N; i++) {
-    int vid[3];
-
-    for (size_t j = 0; j < F.cols(); j++) {
-      vid[j] = F(i, j);
-    }
-    VV_tmp[vid[0]].insert(vid[1]);
-    VV_tmp[vid[0]].insert(vid[2]);
-
-    VV_tmp[vid[1]].insert(vid[0]);
-    VV_tmp[vid[1]].insert(vid[2]);
-
-    VV_tmp[vid[2]].insert(vid[0]);
-    VV_tmp[vid[2]].insert(vid[1]);
-  }
-
-  for (int i = 0; i < V_N; i++) {
-    pardiso.ia_.push_back(pardiso.ja_.size());
-    VV_tmp[i].insert(i);
-    vector<int> row_id;
-    for (auto &var : VV_tmp[i]) {
-      row_id.push_back(var);
-    }
-
-    vector<int>::iterator iter = std::find(row_id.begin(), row_id.end(), i);
-
-    int dd = 0;
-    for (int k = std::distance(row_id.begin(), iter); k < row_id.size(); k++) {
-      pardiso.ja_.push_back(row_id[k]);
-      ++dd;
-    }
-    for (int k = 0; k < row_id.size(); k++) {
-      pardiso.ja_.push_back(row_id[k] + V_N);
-      ++dd;
-    }
-  }
-  for (int i = V_N; i < 2 * V_N; i++) {
-    pardiso.ia_.push_back(pardiso.ja_.size());
-    vector<int> row_id;
-    for (auto &var : VV_tmp[i - V_N]) {
-      row_id.push_back(var);
-    }
-    vector<int>::iterator iter =
-        std::find(row_id.begin(), row_id.end(), i - V_N);
-
-    int dd = 0;
-    for (int k = std::distance(row_id.begin(), iter); k < row_id.size(); k++) {
-      pardiso.ja_.push_back(row_id[k] + V_N);
-      ++dd;
-    }
-  }
-  pardiso.ia_.push_back(pardiso.ja_.size());
-}
-
-void boundary_loop(const Eigen::MatrixXi &F_ref,
-                   std::vector<std::vector<int>> &boundaryloop) {
-  std::vector<std::vector<int>> boundaryEdges;
-  std::vector<std::vector<int>> edges;
-  int n_fvs = F_ref.cols();
-
-  for (int it = 0; it < F_ref.rows(); it++) {
-    for (int i = 0; i < n_fvs; i++) {
-      int var = F_ref(it, i);
-      int var_n = F_ref(it, (i + 1) % n_fvs);
-      if (var > var_n)
-        std::swap(var, var_n);
+  for (int face_idx = 0; face_idx < face_vertices.rows(); face_idx++) {
+    for (int i = 0; i < kNumFaceVertices; i++) {
+      int vertex_idx = face_vertices(face_idx, i);
+      int next_vertex_idx = face_vertices(face_idx, (i + 1) % kNumFaceVertices);
+      if (vertex_idx > next_vertex_idx)
+        std::swap(vertex_idx, next_vertex_idx);
       std::vector<int> edge(4);
-      edge[0] = var;
-      edge[1] = var_n;
-      edge[2] = it;
+      edge[0] = vertex_idx;
+      edge[1] = next_vertex_idx;
+      edge[2] = face_idx;
       edge[3] = i;
-      edges.emplace_back(edge);
+      all_edges.emplace_back(edge);
     }
   }
-  std::sort(edges.begin(), edges.end());
-  int i = 1;
-  for (; i < edges.size();) {
-    auto &r1 = edges[i - 1];
-    auto &r2 = edges[i];
+  std::sort(all_edges.begin(), all_edges.end());
+  int edge_idx = 1;
+  for (; edge_idx < static_cast<int>(all_edges.size());) {
+    auto &r1 = all_edges[edge_idx - 1];
+    auto &r2 = all_edges[edge_idx];
     if ((r1[0] == r2[0]) && (r1[1] == r2[1])) {
-      i += 2;
+      edge_idx += 2;
     } else {
-      boundaryEdges.emplace_back(edges[i - 1]);
-      i++;
+      boundary_edges.emplace_back(all_edges[edge_idx - 1]);
+      edge_idx++;
     }
   }
-  if (i == edges.size())
-    boundaryEdges.emplace_back(edges.back());
+  if (edge_idx == static_cast<int>(all_edges.size()))
+    boundary_edges.emplace_back(all_edges.back());
 
-  for (auto &var : boundaryEdges) {
-    var[0] = F_ref(var[2], var[3]);
-    var[1] = F_ref(var[2], (var[3] + 1) % n_fvs);
+  for (auto &var : boundary_edges) {
+    var[0] = face_vertices(var[2], var[3]);
+    var[1] = face_vertices(var[2], (var[3] + 1) % kNumFaceVertices);
   }
-  int ev0 = boundaryEdges.front()[0];
-  int ev1 = boundaryEdges.front()[1];
+  int ev0 = boundary_edges.front()[0];
+  int ev1 = boundary_edges.front()[1];
 
-  vector<int> visited;
-  visited.resize(boundaryEdges.size(), 0);
+  std::vector<int> visited(boundary_edges.size(), 0);
   visited[0] = 1;
-  vector<int> loop0;
+  std::vector<int> loop0;
   loop0.push_back(ev1);
   while (ev1 != ev0) {
-    for (int i = 1; i < boundaryEdges.size(); i++) {
+    for (std::size_t i = 1; i < boundary_edges.size(); i++) {
       if (visited[i] == 1)
         continue;
-      if (boundaryEdges[i][0] == ev1) {
+      if (boundary_edges[i][0] == ev1) {
         visited[i] = 1;
-        ev1 = boundaryEdges[i][1];
+        ev1 = boundary_edges[i][1];
         loop0.push_back(ev1);
         break;
       }
     }
   }
-  boundaryloop.emplace_back(loop0);
+  boundary_loop.emplace_back(loop0);
 }

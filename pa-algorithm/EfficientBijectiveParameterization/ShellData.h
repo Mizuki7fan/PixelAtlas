@@ -1,10 +1,7 @@
 #pragma once
-#include "Common.h"
 #include <Eigen/Dense>
-#include <Triangle-Interface/TriangleInterface.h>
-#include <map>
 
-struct ShellData {
+class ShellData {
 public:
   ShellData() {
     dim = 2;
@@ -16,12 +13,12 @@ public:
     w_uv.resize(0, 0);
   };
 
-  void add_new_patch(const Eigen::MatrixXd &, const Eigen::MatrixXi &,
-                     const Eigen::RowVectorXd &center);
+  void AddNewPatch(const Eigen::MatrixXd &, const Eigen::MatrixXi &,
+                   const Eigen::RowVectorXd &center);
 
-  void mesh_improve();
+  void MeshImprove();
 
-  void update_shell();
+  void UpdateShell();
 
   double shell_factor = 10;
 

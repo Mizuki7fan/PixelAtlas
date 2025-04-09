@@ -1,4 +1,4 @@
-#include "Parafun.h"
+#include "ParaFun.h"
 #if defined(USE_MKL)
 #include <LinSysSolver-Interface/MKLPardisoSolver.h>
 #elif defined(USE_EIGEN)
@@ -2415,7 +2415,7 @@ double Parafun::newton_equation(const double &a, const double &b,
 }
 void Parafun::adjust_shell_weight(double new_weight) {
   d_.shell_factor = new_weight;
-  d_.update_shell();
+  d_.UpdateShell();
   init_area();
 }
 

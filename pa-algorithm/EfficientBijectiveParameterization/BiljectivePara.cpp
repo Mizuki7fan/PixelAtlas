@@ -158,7 +158,7 @@ void BiljectivePara::load() {
   }
 
   shell_data = ShellData();
-  shell_data.add_new_patch(V, F, Eigen::RowVector2d(0, 0));
+  shell_data.AddNewPatch(V, F, Eigen::RowVector2d(0, 0));
   parafun_solver.reset(new Parafun(shell_data));
 
   uv_mesh_ = mesh;

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Eigen/Dense"
-#include "Eigen/Sparse"
 #include "ShellData.h"
 #include <CGAL-Interface/CGAL-Interface.h>
 #include <Eigen/Core>
+#include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include <Eigen/Sparse>
 #include <LinSysSolver-Interface/Solver.h>
 #include <fstream>
 #include <iostream>

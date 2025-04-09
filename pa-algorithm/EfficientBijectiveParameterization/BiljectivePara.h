@@ -1,5 +1,5 @@
 #pragma once
-#include "Parafun.h"
+#include "ParaFun.h"
 #include "ShellData.h"
 #include <CGAL-Interface/CGAL-Interface.h>
 

@@ -18,16 +18,14 @@ include_directories(${BOOST_PATH}/include/boost-1_87)
 
 
 file (GLOB SRCFILES
-    Parafun.cpp
-    Parafun.h
+    ParaFun.cpp
+    ParaFun.h
     BiljectivePara.cpp
     BiljectivePara.h
     ShellData.cpp
     ShellData.h
-    Common.cpp
-    Common.h
-    TriangleInterface.cpp
-    TriangleInterface.h
+    Utility.cpp
+    Utility.h
 )
 
 add_library(EfficientBijectiveParameterization ${SRCFILES} )

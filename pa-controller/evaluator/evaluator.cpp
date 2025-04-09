@@ -117,8 +117,13 @@ void Evaluator::PrintData() {
   // 数据行格式化
   for (auto sample : all_samples) {
     std::cout << std::format("{:<{}}", sample, kColWidth);
-    const frm::Metric &metric_data_0 = sample_metric_data_[0][sample];
-    const frm::Metric &metric_data_1 = sample_metric_data_[1][sample];
+
+    const frm::Metric &metric_data_0 = sample_metric_data_[0].count(sample) != 0
+                                           ? sample_metric_data_[0][sample]
+                                           : frm::Metric();
+    const frm::Metric &metric_data_1 = sample_metric_data_[1].count(sample) != 0
+                                           ? sample_metric_data_[1][sample]
+                                           : frm::Metric();
 
     // 使用visitor模式统一数值格式
     auto print_value = [](const auto &value) {
@@ -157,25 +162,32 @@ void Evaluator::PrintDataAvgSquaredDifference() {
 
   std::unordered_map<std::string, std::pair<std::size_t, std::size_t>>
       map_property_to_num_valid_data;
-  std::unordered_map<std::string, std::pair<int, double>>
-      map_property_to_squared_difference;
+  std::unordered_map<std::string, double> map_property_to_squared_difference;
 
   for (auto sample : all_samples) {
-    const frm::Metric &metric_data_0 = sample_metric_data_[0][sample];
-    const frm::Metric &metric_data_1 = sample_metric_data_[1][sample];
+    const frm::Metric &metric_data_0 = sample_metric_data_[0].count(sample) != 0
+                                           ? sample_metric_data_[0][sample]
+                                           : frm::Metric();
+    const frm::Metric &metric_data_1 = sample_metric_data_[1].count(sample) != 0
+                                           ? sample_metric_data_[1][sample]
+                                           : frm::Metric();
     // 使用try_emplace优化 - 只在键不存在时插入
     for (auto [name, value] : metric_data_0) {
       map_property_to_num_valid_data.try_emplace(name, 0, 0);
-      map_property_to_squared_difference.try_emplace(name, 0, 0.0);
+      map_property_to_squared_difference.try_emplace(name, 0.0);
     }
     for (auto [name, value] : metric_data_1) {
       map_property_to_num_valid_data.try_emplace(name, 0, 0);
-      map_property_to_squared_difference.try_emplace(name, 0, 0.0);
+      map_property_to_squared_difference.try_emplace(name, 0.0);
     }
   }
   for (auto sample : all_samples) {
-    const frm::Metric &metric_data_0 = sample_metric_data_[0][sample];
-    const frm::Metric &metric_data_1 = sample_metric_data_[1][sample];
+    const frm::Metric &metric_data_0 = sample_metric_data_[0].count(sample) != 0
+                                           ? sample_metric_data_[0][sample]
+                                           : frm::Metric();
+    const frm::Metric &metric_data_1 = sample_metric_data_[1].count(sample) != 0
+                                           ? sample_metric_data_[1][sample]
+                                           : frm::Metric();
     for (auto property_info : map_property_to_squared_difference) {
       // 只计算double或者int类型的数值差异
       if (metrics.at(property_info.first) != "DOUBLE" &&
@@ -193,22 +205,28 @@ void Evaluator::PrintDataAvgSquaredDifference() {
       const frm::MetricValue &value_1 = metric_data_0.at(property_info.first);
       if (std::holds_alternative<double>(value_0) &&
           std::holds_alternative<double>(value_1)) {
-        map_property_to_squared_difference.at(property_info.first).second +=
+        map_property_to_squared_difference.at(property_info.first) +=
             std::pow(std::get<double>(value_0) - std::get<double>(value_1), 2);
       } else if (std::holds_alternative<int>(value_0) &&
                  std::holds_alternative<int>(value_1)) {
-        map_property_to_squared_difference.at(property_info.first).second +=
+        map_property_to_squared_difference.at(property_info.first) +=
             std::pow(std::get<int>(value_0) - std::get<int>(value_1), 2);
       }
     }
   }
 
   for (auto property_info : map_property_to_squared_difference) {
-    double squared_difference = std::sqrt(
-        map_property_to_squared_difference.at(property_info.first).second /
-        map_property_to_num_valid_data.at(property_info.first).first);
-    std::cout << std::format("squared difference of \"{}\": {}",
-                             property_info.first, squared_difference)
-              << std::endl;
+    double squared_difference =
+        std::sqrt(map_property_to_squared_difference.at(property_info.first) /
+                  map_property_to_num_valid_data.at(property_info.first).first);
+
+    std::cout
+        << std::format(
+               "度量: {}, 有效数据{}个, 无效数据{}个\nsquared difference: {}",
+               property_info.first,
+               map_property_to_num_valid_data.at(property_info.first).first,
+               map_property_to_num_valid_data.at(property_info.first).second,
+               squared_difference)
+        << std::endl;
   }
 }

@@ -1,11 +1,13 @@
 #include "ShellData.h"
+#include "Utility.h"
+#include <Triangle-Interface/TriangleInterface.h>
 #include <iostream>
 #include <numbers>
 
 using namespace std;
 using namespace Eigen;
 
-void ShellData::update_shell() {
+void ShellData::UpdateShell() {
   mv_num = m_V.rows();
   mf_num = m_T.rows();
 
@@ -18,7 +20,7 @@ void ShellData::update_shell() {
   s_M = Eigen::VectorXd::Constant(sf_num, shell_factor);
 }
 
-void ShellData::mesh_improve() {
+void ShellData::MeshImprove() {
   MatrixXd m_uv = w_uv.topRows(mv_num);
   MatrixXd V_bnd;
   V_bnd.resize(internal_bnd.size(), 2);
@@ -109,12 +111,12 @@ void ShellData::mesh_improve() {
   w_uv.conservativeResize(m_uv.rows() - bnd_n + uv2.rows(), 2);
   w_uv.bottomRows(uv2.rows() - bnd_n) = uv2.bottomRows(-bnd_n + uv2.rows());
 
-  update_shell();
+  UpdateShell();
 }
 
-void ShellData::add_new_patch(const Eigen::MatrixXd &V_in,
-                              const Eigen::MatrixXi &F_ref,
-                              const Eigen::RowVectorXd &center) {
+void ShellData::AddNewPatch(const Eigen::MatrixXd &V_in,
+                            const Eigen::MatrixXi &F_ref,
+                            const Eigen::RowVectorXd &center) {
   using namespace std;
   using namespace Eigen;
 
@@ -144,7 +146,7 @@ void ShellData::add_new_patch(const Eigen::MatrixXd &V_in,
   Eigen::VectorXi bnd;
   Eigen::MatrixXd bnd_uv;
   std::vector<std::vector<int>> all_bnds;
-  boundary_loop(F_ref, all_bnds);
+  GetBoundaryLoop(F_ref, all_bnds);
   int num_holes = all_bnds.size() - 1;
 
   std::sort(all_bnds.begin(), all_bnds.end(),
@@ -233,5 +235,5 @@ void ShellData::add_new_patch(const Eigen::MatrixXd &V_in,
 
   frame_V.resize(0, 0);
 
-  mesh_improve();
+  MeshImprove();
 }
