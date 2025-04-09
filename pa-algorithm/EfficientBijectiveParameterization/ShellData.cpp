@@ -7,21 +7,32 @@
 using namespace std;
 using namespace Eigen;
 
+ShellData::ShellData()
+    : mesh_measure_(0),    //
+      num_shell_faces_(0), //
+      dim(2),              //
+      mv_num(0),           //
+      mf_num(0),           //
+      sv_num(0)            //
+{
+  w_uv_.resize(0, 0);
+};
+
 void ShellData::UpdateShell() {
   mv_num = m_V.rows();
   mf_num = m_T.rows();
 
-  v_num = w_uv.rows();
-  sf_num = s_T.rows();
+  num_vertices_ = w_uv_.rows();
+  num_shell_faces_ = shell_faces_.rows();
 
-  sv_num = v_num - mv_num;
-  f_num = sf_num + mf_num;
+  sv_num = num_vertices_ - mv_num;
+  num_faces_ = num_shell_faces_ + mf_num;
 
-  s_M = Eigen::VectorXd::Constant(sf_num, shell_factor);
+  s_M = Eigen::VectorXd::Constant(num_shell_faces_, shell_factor);
 }
 
 void ShellData::MeshImprove() {
-  MatrixXd m_uv = w_uv.topRows(mv_num);
+  MatrixXd m_uv = w_uv_.topRows(mv_num);
   MatrixXd V_bnd;
   V_bnd.resize(internal_bnd.size(), 2);
   for (int i = 0; i < internal_bnd.size(); i++) {
@@ -56,7 +67,7 @@ void ShellData::MeshImprove() {
                                            mv_num + frame_V.rows() - 1);
   } else {
     for (int i = 0; i < frame_V.rows(); ++i) {
-      frame_V.row(i) = w_uv.row(frame_ids(i));
+      frame_V.row(i) = w_uv_.row(frame_ids(i));
     }
   }
 
@@ -92,12 +103,12 @@ void ShellData::MeshImprove() {
   H /= 3.;
 
   MatrixXd uv2;
-  GenerateTriangulate(V, E, H, uv2, s_T);
+  GenerateTriangulate(V, E, H, uv2, shell_faces_);
   auto bnd_n = internal_bnd.size();
 
-  for (auto i = 0; i < s_T.rows(); i++) {
-    for (auto j = 0; j < s_T.cols(); j++) {
-      auto &x = s_T(i, j);
+  for (auto i = 0; i < shell_faces_.rows(); i++) {
+    for (auto j = 0; j < shell_faces_.cols(); j++) {
+      auto &x = shell_faces_(i, j);
       if (x < bnd_n)
         x = internal_bnd(x);
       else
@@ -105,11 +116,11 @@ void ShellData::MeshImprove() {
     }
   }
 
-  surface_F.resize(m_T.rows() + s_T.rows(), 3);
-  surface_F << m_T, s_T;
+  whole_triangles_.resize(m_T.rows() + shell_faces_.rows(), 3);
+  whole_triangles_ << m_T, shell_faces_;
 
-  w_uv.conservativeResize(m_uv.rows() - bnd_n + uv2.rows(), 2);
-  w_uv.bottomRows(uv2.rows() - bnd_n) = uv2.bottomRows(-bnd_n + uv2.rows());
+  w_uv_.conservativeResize(m_uv.rows() - bnd_n + uv2.rows(), 2);
+  w_uv_.bottomRows(uv2.rows() - bnd_n) = uv2.bottomRows(-bnd_n + uv2.rows());
 
   UpdateShell();
 }
@@ -139,7 +150,7 @@ void ShellData::AddNewPatch(const Eigen::MatrixXd &V_in,
 
   m_M.conservativeResize(mf_num + M.size());
   m_M.bottomRows(M.size()) = M;
-  mesh_measure += M.sum();
+  mesh_measure_ += M.sum();
 
   const Eigen::MatrixXd &V_ref = V_in;
   Eigen::MatrixXd uv_init;
@@ -210,11 +221,11 @@ void ShellData::AddNewPatch(const Eigen::MatrixXd &V_in,
   component_sizes.push_back(F_ref.rows());
 
   if (mv_num == 0) {
-    w_uv = uv_init;
+    w_uv_ = uv_init;
   } else {
-    MatrixXd m_uv = w_uv.topRows(mv_num);
-    w_uv.resize(m_uv.rows() + uv_init.rows(), 2);
-    w_uv << m_uv, uv_init;
+    MatrixXd m_uv = w_uv_.topRows(mv_num);
+    w_uv_.resize(m_uv.rows() + uv_init.rows(), 2);
+    w_uv_ << m_uv, uv_init;
   }
 
   std::cout << "size: " << all_bnds.size() << std::endl;

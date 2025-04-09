@@ -26,17 +26,17 @@ void BiljectivePara::parameterization() {
   bool is_second = true;
 
   parafun_solver->after_mesh_improve();
-  last_mesh_energy_ = parafun_solver->compute_energy(shell_data.w_uv, false) /
-                      shell_data.mesh_measure;
+  last_mesh_energy_ = parafun_solver->compute_energy(shell_data.w_uv_, false) /
+                      shell_data.mesh_measure_;
   parafun_solver->adjust_shell_weight(
-      (last_mesh_energy_)*shell_data.mesh_measure / (shell_data.sf_num) /
-      1000.0);
-  // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure
+      (last_mesh_energy_)*shell_data.mesh_measure_ /
+      (shell_data.num_shell_faces_) / 1000.0);
+  // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
   // / (shell_data.sf_num) / 10.0);
-  // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure
+  // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
   // / (shell_data.sf_num) / 100000.0);
   double last_all_energy =
-      parafun_solver->compute_energy(shell_data.w_uv, true);
+      parafun_solver->compute_energy(shell_data.w_uv_, true);
 
   // std::cout << "last_mesh_energy:" << last_mesh_energy << endl;
   // std::cout << "last_all_energy:" << last_all_energy << endl;
@@ -55,10 +55,11 @@ void BiljectivePara::parameterization() {
     if (conv_rate_mesh > 0.1)
       is_slim_convrate = true;
 
-    shell_data.energy = parafun_solver->BPE(is_ip_convrate, is_slim_convrate);
+    shell_data.mesh_energy_ =
+        parafun_solver->BPE(is_ip_convrate, is_slim_convrate);
     double current_mesh_energy =
-        parafun_solver->energy_mesh / shell_data.mesh_measure;
-    double current_all_energy = shell_data.energy;
+        parafun_solver->energy_mesh / shell_data.mesh_measure_;
+    double current_all_energy = shell_data.mesh_energy_;
     double mesh_energy_decrease = last_mesh_energy_ - current_mesh_energy;
     double all_energy_decrease = last_all_energy - current_all_energy;
     time_end = clock();
@@ -95,27 +96,29 @@ void BiljectivePara::parameterization() {
 double BiljectivePara::adjust_weight(double conv_mesh,
                                      double last_mesh_energy) {
   if (conv_mesh > 1e-3 && weight1) {
-    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure
+    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
     // / (shell_data.sf_num) / 10.0);
     parafun_solver->adjust_shell_weight(
-        (last_mesh_energy)*shell_data.mesh_measure / (shell_data.sf_num) /
-        1000.0);
-    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure /
+        (last_mesh_energy)*shell_data.mesh_measure_ /
+        (shell_data.num_shell_faces_) / 1000.0);
+    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure_ /
     // (shell_data.sf_num) / 100000.0);
   } else if (conv_mesh > 1e-5 && weight2) {
-    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure
+    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
     // / (shell_data.sf_num) / 10.0);
-    parafun_solver->adjust_shell_weight(4.0 * shell_data.mesh_measure /
-                                        (shell_data.sf_num) / 100000.0);
-    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure /
+    parafun_solver->adjust_shell_weight(4.0 * shell_data.mesh_measure_ /
+                                        (shell_data.num_shell_faces_) /
+                                        100000.0);
+    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure_ /
     // (shell_data.sf_num) / 1000.0);
     weight1 = false;
   } else {
-    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure
+    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
     // / (shell_data.sf_num) / 10.0);
-    parafun_solver->adjust_shell_weight(4.0 * shell_data.mesh_measure /
-                                        shell_data.sf_num / 100000000.0);
-    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure /
+    parafun_solver->adjust_shell_weight(4.0 * shell_data.mesh_measure_ /
+                                        shell_data.num_shell_faces_ /
+                                        100000000.0);
+    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure_ /
     // (shell_data.sf_num) / 1000.0);
     weight2 = false;
   }
@@ -163,7 +166,7 @@ void BiljectivePara::load() {
 
   uv_mesh_ = mesh;
   for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {
-    auto p = shell_data.w_uv.row(vertex.idx());
+    auto p = shell_data.w_uv_.row(vertex.idx());
     cgl::Point3II pos(p(0), p(1), 0.0);
     uv_mesh_.point(vertex) = pos;
   }
@@ -171,7 +174,7 @@ void BiljectivePara::load() {
 
 void BiljectivePara::WriteUVMesh(std::ofstream &of_obj) {
   for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {
-    auto pos = shell_data.w_uv.row(vertex.idx());
+    auto pos = shell_data.w_uv_.row(vertex.idx());
     uv_mesh_.point(vertex) = cgl::Point3II(pos[0], pos[1], 0.0);
   }
 
@@ -180,8 +183,8 @@ void BiljectivePara::WriteUVMesh(std::ofstream &of_obj) {
 
 void BiljectivePara::shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos,
                               VectorXi &bnd) {
-  tri = shell_data.s_T;
-  pre_pos = shell_data.w_uv_pre;
-  pos = shell_data.w_uv;
+  tri = shell_data.shell_faces_;
+  pre_pos = shell_data.w_uv_pre_;
+  pos = shell_data.w_uv_;
   bnd = shell_data.frame_ids;
 }

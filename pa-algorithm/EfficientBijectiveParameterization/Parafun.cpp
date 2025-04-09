@@ -5,9 +5,9 @@
 #include <LinSysSolver-Interface/EigenLinSolver.h>
 #endif
 void Parafun::after_mesh_improve() {
-  total_num = d_.v_num;
-  F_N = d_.f_num;
-  V_N = d_.v_num;
+  total_num = d_.num_vertices_;
+  F_N = d_.num_faces_;
+  V_N = d_.num_vertices_;
   F0.resize(F_N);
   F1.resize(F_N);
   F2.resize(F_N);
@@ -15,16 +15,16 @@ void Parafun::after_mesh_improve() {
   position_of_mesh.resize(2 * total_num);
 
   for (size_t i = 0; i < dim; i++) {
-    position_of_mesh.block(i * total_num, 0, total_num, 1) = d_.w_uv.col(i);
+    position_of_mesh.block(i * total_num, 0, total_num, 1) = d_.w_uv_.col(i);
   }
 
   init();
 }
 void Parafun::init() {
   for (int i = 0; i < F_N; ++i) {
-    F0[i] = d_.surface_F(i, 0);
-    F1[i] = d_.surface_F(i, 1);
-    F2[i] = d_.surface_F(i, 2);
+    F0[i] = d_.whole_triangles_(i, 0);
+    F1[i] = d_.whole_triangles_(i, 1);
+    F2[i] = d_.whole_triangles_(i, 2);
   }
 
   handle_mintri();
@@ -224,10 +224,10 @@ void Parafun::Pre_calculate() {
   }
 
   vector<int> s_vid;
-  for (size_t i = 0; i < d_.s_T.rows(); i++) {
+  for (size_t i = 0; i < d_.shell_faces_.rows(); i++) {
     s_vid.clear();
-    for (size_t j = 0; j < d_.s_T.cols(); j++) {
-      int s_id = d_.s_T(i, j);
+    for (size_t j = 0; j < d_.shell_faces_.cols(); j++) {
+      int s_id = d_.shell_faces_(i, j);
       s_vid.push_back(s_id);
     }
     VV_tmp[s_vid[0]].insert(s_vid[1]);
@@ -399,14 +399,14 @@ void Parafun::handle_mintri() {
 
     for (int e = acc_bnd; e < acc_bnd + current_size - 1; e++) {
       min_bnd_edge_len =
-          (std::min)(min_bnd_edge_len, (d_.w_uv.row(d_.internal_bnd(e)) -
-                                        d_.w_uv.row(d_.internal_bnd(e + 1)))
+          (std::min)(min_bnd_edge_len, (d_.w_uv_.row(d_.internal_bnd(e)) -
+                                        d_.w_uv_.row(d_.internal_bnd(e + 1)))
                                            .squaredNorm());
     }
     min_bnd_edge_len =
         (std::min)(min_bnd_edge_len,
-                   (d_.w_uv.row(d_.internal_bnd(acc_bnd)) -
-                    d_.w_uv.row(d_.internal_bnd(acc_bnd + current_size - 1)))
+                   (d_.w_uv_.row(d_.internal_bnd(acc_bnd)) -
+                    d_.w_uv_.row(d_.internal_bnd(acc_bnd + current_size - 1)))
                        .squaredNorm());
     acc_bnd += current_size;
   }
@@ -415,7 +415,7 @@ void Parafun::handle_mintri() {
 }
 
 double Parafun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
-  d_.w_uv_pre = d_.w_uv;
+  d_.w_uv_pre_ = d_.w_uv_;
   if (is_ip_convrate) {
     Update_source_same_t();
   }
@@ -428,7 +428,7 @@ double Parafun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
   } else {
     CM(is_interp);
   }
-  d_.w_uv = Map<Matrix<double, -1, -1, Eigen::ColMajor>>(
+  d_.w_uv_ = Map<Matrix<double, -1, -1, Eigen::ColMajor>>(
       position_of_mesh.data(), total_num, dim);
 
   energy_all =
@@ -2303,7 +2303,7 @@ double Parafun::compute_energy(const Eigen::MatrixXd &x, bool whole) {
   }
   // cout << "compute energy with scaf "<<whole<<" "<< end_e_area << endl;
   // cout << "compute energy with scaf/area " << whole << " " <<
-  // end_e_area/d_.mesh_measure << endl;
+  // end_e_area/d_.mesh_measure_ << endl;
 
   return end_e_area;
 }
@@ -2372,8 +2372,10 @@ void Parafun::local_coordinate_inverse_scaf(int i, double &p00, double &p01,
   int f1 = F1[i];
   int f2 = F2[i];
 
-  Vector2d x_(d_.w_uv(f1, 0) - d_.w_uv(f0, 0), d_.w_uv(f1, 1) - d_.w_uv(f0, 1));
-  Vector2d l_(d_.w_uv(f2, 0) - d_.w_uv(f0, 0), d_.w_uv(f2, 1) - d_.w_uv(f0, 1));
+  Vector2d x_(d_.w_uv_(f1, 0) - d_.w_uv_(f0, 0),
+              d_.w_uv_(f1, 1) - d_.w_uv_(f0, 1));
+  Vector2d l_(d_.w_uv_(f2, 0) - d_.w_uv_(f0, 0),
+              d_.w_uv_(f2, 1) - d_.w_uv_(f0, 1));
 
   double area_tri = abs(x_(0) * l_(1) - x_(1) * l_(0));
   double x1_0, x2_0, y2_0;

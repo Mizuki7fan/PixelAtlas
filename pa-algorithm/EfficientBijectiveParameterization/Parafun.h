@@ -25,7 +25,7 @@ public:
     pardiso = NULL;
     is_first = true;
     bound_distortion_K = 250;
-    barrer_coef = d_.mesh_measure * 1e-8;
+    barrer_coef = d_.mesh_measure_ * 1e-8;
     std::cout << barrer_coef << std::endl;
   };
   ~Parafun();
