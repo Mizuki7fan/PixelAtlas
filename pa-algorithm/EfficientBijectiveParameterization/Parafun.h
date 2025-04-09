@@ -72,7 +72,7 @@ public:
   int total_num;
   int F_N;
   int V_N;
-  int dim = 2;
+  int kDim = 2;
   vector<int> F0;
   vector<int> F1;
   vector<int> F2;

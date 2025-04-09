@@ -14,17 +14,18 @@ void Parafun::after_mesh_improve() {
 
   position_of_mesh.resize(2 * total_num);
 
-  for (size_t i = 0; i < dim; i++) {
-    position_of_mesh.block(i * total_num, 0, total_num, 1) = d_.w_uv_.col(i);
+  for (size_t i = 0; i < kDim; i++) {
+    position_of_mesh.block(i * total_num, 0, total_num, 1) =
+        d_.whole_uv_.col(i);
   }
 
   init();
 }
 void Parafun::init() {
   for (int i = 0; i < F_N; ++i) {
-    F0[i] = d_.whole_triangles_(i, 0);
-    F1[i] = d_.whole_triangles_(i, 1);
-    F2[i] = d_.whole_triangles_(i, 2);
+    F0[i] = d_.whole_faces_(i, 0);
+    F1[i] = d_.whole_faces_(i, 1);
+    F2[i] = d_.whole_faces_(i, 2);
   }
 
   handle_mintri();
@@ -52,12 +53,15 @@ void Parafun::init() {
     }
   }
 
-  int frame_num = d_.frame_ids.size();
+  int frame_num = d_.frame_ids_.size();
   average_length = 0;
   for (int j = 0; j < frame_num - 1; ++j) {
-    average_length += (d_.frame_V.row(j) - d_.frame_V.row(j + 1)).norm();
+    average_length +=
+        (d_.frame_vertices_.row(j) - d_.frame_vertices_.row(j + 1)).norm();
   }
-  average_length += (d_.frame_V.row(frame_num - 1) - d_.frame_V.row(0)).norm();
+  average_length +=
+      (d_.frame_vertices_.row(frame_num - 1) - d_.frame_vertices_.row(0))
+          .norm();
   average_length = average_length / frame_num;
   threhold = average_length / 8.0;
   threhold = 2 * threhold; // dis * 2
@@ -120,24 +124,24 @@ void Parafun::init() {
 }
 void Parafun::init_area() {
   area.resize(F_N);
-  int src_t_num = d_.m_T.rows();
+  int src_t_num = d_.mesh_faces_.rows();
   area_src.resize(src_t_num);
   for (int i = 0; i < src_t_num; ++i) {
-    area_src[i] = d_.m_M(i);
-    area[i] = d_.m_M(i);
+    area_src[i] = d_.mesh_face_area_(i);
+    area[i] = d_.mesh_face_area_(i);
     if (area[i] < 1e-15) {
       std::cout << "error" << std::endl;
     }
   }
   for (int i = src_t_num; i < F_N; ++i) {
-    area[i] = d_.s_M(i - src_t_num);
+    area[i] = d_.shell_face_area_(i - src_t_num);
     if (area[i] < 1e-15) {
       std::cout << "error" << std::endl;
     }
   }
 }
 void Parafun::setvirtualtri() {
-  VectorXi boundary_vertex = d_.frame_ids;
+  VectorXi boundary_vertex = d_.frame_ids_;
   BE_N = boundary_vertex.size();
 
   V_F_N = BE_N * (BE_N - 2);
@@ -179,7 +183,7 @@ void Parafun::Pre_calculate() {
   source_p10.resize(F_N);
   source_p11.resize(F_N);
   if (is_first) {
-    for (int i = 0; i < d_.m_T.rows(); ++i) {
+    for (int i = 0; i < d_.mesh_faces_.rows(); ++i) {
       double p00, p01, p10, p11;
       local_coordinate_inverse(i, p00, p01, p10, p11);
       source_p00[i] = p00;
@@ -189,7 +193,7 @@ void Parafun::Pre_calculate() {
     }
   }
 
-  for (int i = d_.m_T.rows(); i < F_N; ++i) {
+  for (int i = d_.mesh_faces_.rows(); i < F_N; ++i) {
     double p00, p01, p10, p11;
     local_coordinate_inverse_scaf(i, p00, p01, p10, p11);
     source_p00[i] = p00;
@@ -210,10 +214,10 @@ void Parafun::Pre_calculate() {
   std::vector<T> tripletlist;
   std::vector<std::set<int>> VV_tmp;
   VV_tmp.resize(V_N);
-  for (size_t i = 0; i < d_.m_T.rows(); i++) {
+  for (size_t i = 0; i < d_.mesh_faces_.rows(); i++) {
     int vid[3];
-    for (size_t j = 0; j < d_.m_T.cols(); j++) {
-      vid[j] = d_.m_T(i, j);
+    for (size_t j = 0; j < d_.mesh_faces_.cols(); j++) {
+      vid[j] = d_.mesh_faces_(i, j);
     }
     VV_tmp[vid[0]].insert(vid[1]);
     VV_tmp[vid[0]].insert(vid[2]);
@@ -239,12 +243,12 @@ void Parafun::Pre_calculate() {
   }
 
   vector<int> v_vid;
-  for (int i = 0; i < d_.frame_ids.size(); ++i) {
-    for (int j = 0; j < d_.frame_ids.size(); ++j) {
+  for (int i = 0; i < d_.frame_ids_.size(); ++i) {
+    for (int j = 0; j < d_.frame_ids_.size(); ++j) {
       if (j == i) {
         continue;
       }
-      VV_tmp[d_.frame_ids(i)].insert(d_.frame_ids(j));
+      VV_tmp[d_.frame_ids_(i)].insert(d_.frame_ids_(j));
     }
   }
 
@@ -394,20 +398,20 @@ void Parafun::Pre_calculate() {
 void Parafun::handle_mintri() {
   double min_bnd_edge_len = numeric_limits<double>::infinity();
   int acc_bnd = 0;
-  for (int i = 0; i < d_.bnd_sizes.size(); i++) {
-    int current_size = d_.bnd_sizes[i];
+  for (int i = 0; i < d_.bnd_sizes_.size(); i++) {
+    int current_size = d_.bnd_sizes_[i];
 
     for (int e = acc_bnd; e < acc_bnd + current_size - 1; e++) {
-      min_bnd_edge_len =
-          (std::min)(min_bnd_edge_len, (d_.w_uv_.row(d_.internal_bnd(e)) -
-                                        d_.w_uv_.row(d_.internal_bnd(e + 1)))
-                                           .squaredNorm());
+      min_bnd_edge_len = (std::min)(min_bnd_edge_len,
+                                    (d_.whole_uv_.row(d_.internal_bnd_(e)) -
+                                     d_.whole_uv_.row(d_.internal_bnd_(e + 1)))
+                                        .squaredNorm());
     }
-    min_bnd_edge_len =
-        (std::min)(min_bnd_edge_len,
-                   (d_.w_uv_.row(d_.internal_bnd(acc_bnd)) -
-                    d_.w_uv_.row(d_.internal_bnd(acc_bnd + current_size - 1)))
-                       .squaredNorm());
+    min_bnd_edge_len = (std::min)(
+        min_bnd_edge_len,
+        (d_.whole_uv_.row(d_.internal_bnd_(acc_bnd)) -
+         d_.whole_uv_.row(d_.internal_bnd_(acc_bnd + current_size - 1)))
+            .squaredNorm());
     acc_bnd += current_size;
   }
 
@@ -415,7 +419,7 @@ void Parafun::handle_mintri() {
 }
 
 double Parafun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
-  d_.w_uv_pre_ = d_.w_uv_;
+  d_.whole_uv_pre_ = d_.whole_uv_;
   if (is_ip_convrate) {
     Update_source_same_t();
   }
@@ -428,8 +432,8 @@ double Parafun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
   } else {
     CM(is_interp);
   }
-  d_.w_uv_ = Map<Matrix<double, -1, -1, Eigen::ColMajor>>(
-      position_of_mesh.data(), total_num, dim);
+  d_.whole_uv_ = Map<Matrix<double, -1, -1, Eigen::ColMajor>>(
+      position_of_mesh.data(), total_num, kDim);
 
   energy_all =
       energy_mesh + area.back() * energy_shell + barrer_coef * energy_barrier;
@@ -438,7 +442,7 @@ double Parafun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
 void Parafun::Update_source_same_t() {
   double t_min = 1;
   int geqK = 0;
-  int update_fn = d_.m_T.rows();
+  int update_fn = d_.mesh_faces_.rows();
   vector<double> all_s0;
   all_s0.resize(update_fn);
   vector<double> all_s1;
@@ -610,7 +614,7 @@ void Parafun::SLIM(bool is_interp) {
     tmp_p11 = source_p11.data();
   }
 
-  int src_t_num = d_.m_T.rows();
+  int src_t_num = d_.mesh_faces_.rows();
   for (int i = 0; i < src_t_num; ++i) {
     area_now = area[i];
     f0 = F0[i];
@@ -1070,7 +1074,7 @@ void Parafun::CM(bool is_interp) {
     tmp_p11 = source_p11.data();
   }
 
-  for (int i = 0; i < d_.m_T.rows(); ++i) {
+  for (int i = 0; i < d_.mesh_faces_.rows(); ++i) {
     area_now = area[i];
     f0 = F0[i];
     f1 = F1[i];
@@ -1266,7 +1270,7 @@ void Parafun::CM(bool is_interp) {
     pardiso_a[id_h55[i]] += h55;
   }
 
-  for (int i = d_.m_T.rows(); i < F_N; i++) {
+  for (int i = d_.mesh_faces_.rows(); i < F_N; i++) {
     area_now = area[i];
     f0 = F0[i];
     f1 = F1[i];
@@ -1785,7 +1789,7 @@ void Parafun::tmaxdetect(const VectorXd &x, const VectorXd &d, double &tmax) {
     cell_points[j].clear();
   }
 
-  VectorXi boundary_vertex = d_.frame_ids;
+  VectorXi boundary_vertex = d_.frame_ids_;
   int id, id_x_min, id_x_max, id_y_min, id_y_max;
   double s0, s1, e0, e1, p0, p1, s0_, s1_, e0_, e1_;
   double l_x_min, l_x_max, l_y_min, l_y_max;
@@ -1954,7 +1958,7 @@ double Parafun::get_smallest_pos_quad_zero(double a, double b, double c) {
   }
 }
 bool Parafun::check_intersection(const VectorXd &pos) {
-  VectorXi boundary_vertex = d_.frame_ids;
+  VectorXi boundary_vertex = d_.frame_ids_;
   BE_N = boundary_vertex.size();
 
   int id_start, id_end, id_before, id_mid1, id_mid2;
@@ -2122,7 +2126,7 @@ void Parafun::Energysource() {
   double q00, q01, q10, q11;
 
   const double *pos = position_of_mesh.data();
-  for (int i = 0; i < d_.m_T.rows(); ++i) {
+  for (int i = 0; i < d_.mesh_faces_.rows(); ++i) {
     f0 = F0[i];
     f1 = F1[i];
     f2 = F2[i];
@@ -2167,7 +2171,7 @@ void Parafun::Energysource() {
   energy_mesh = end_e_area;
 
   end_e_area = 0;
-  for (int i = d_.m_T.rows(); i < F_N; ++i) {
+  for (int i = d_.mesh_faces_.rows(); i < F_N; ++i) {
     f0 = F0[i];
     f1 = F1[i];
     f2 = F2[i];
@@ -2218,7 +2222,7 @@ double Parafun::compute_energy(const Eigen::MatrixXd &x, bool whole) {
   double q00, q01, q10, q11;
 
   const double *pos = x.data();
-  int src_t_num = d_.m_T.rows();
+  int src_t_num = d_.mesh_faces_.rows();
 
   for (int i = 0; i < src_t_num; ++i) {
     f0 = F0[i];
@@ -2314,10 +2318,12 @@ void Parafun::local_coordinate_inverse(int i, double &p00, double &p01,
   int f1 = F1[i];
   int f2 = F2[i];
 
-  Vector3d x_(d_.m_V(f1, 0) - d_.m_V(f0, 0), d_.m_V(f1, 1) - d_.m_V(f0, 1),
-  d_.m_V(f1, 2) - d_.m_V(f0, 2)); double x1_0 = x_.norm(); x_ /= x1_0; Vector3d
-  l_(d_.m_V(f2, 0) - d_.m_V(f0, 0), d_.m_V(f2, 1) - d_.m_V(f0, 1), d_.m_V(f2, 2)
-  - d_.m_V(f0, 2));
+  Vector3d x_(d_.mesh_vertices_(f1, 0) - d_.mesh_vertices_(f0, 0),
+  d_.mesh_vertices_(f1, 1) - d_.mesh_vertices_(f0, 1), d_.mesh_vertices_(f1, 2)
+  - d_.mesh_vertices_(f0, 2)); double x1_0 = x_.norm(); x_ /= x1_0; Vector3d
+  l_(d_.mesh_vertices_(f2, 0) - d_.mesh_vertices_(f0, 0), d_.mesh_vertices_(f2,
+  1) - d_.mesh_vertices_(f0, 1), d_.mesh_vertices_(f2, 2)
+  - d_.mesh_vertices_(f0, 2));
 
   Vector3d n_ = x_.cross(l_);
   n_.normalize();
@@ -2336,15 +2342,20 @@ void Parafun::local_coordinate_inverse(int i, double &p00, double &p01,
   double area_tri = area[i];
   double area_min = 1e-15;
   if (area_tri > area_min) {
-    Vector3d t_(d_.m_V(f0, 0), d_.m_V(f0, 1), d_.m_V(f0, 2));
-    Vector3d u_(d_.m_V(f1, 0), d_.m_V(f1, 1), d_.m_V(f1, 2));
-    Vector3d v_(d_.m_V(f2, 0), d_.m_V(f2, 1), d_.m_V(f2, 2));
-    Vector3d x_(d_.m_V(f1, 0) - d_.m_V(f0, 0), d_.m_V(f1, 1) - d_.m_V(f0, 1),
-                d_.m_V(f1, 2) - d_.m_V(f0, 2));
+    Vector3d t_(d_.mesh_vertices_(f0, 0), d_.mesh_vertices_(f0, 1),
+                d_.mesh_vertices_(f0, 2));
+    Vector3d u_(d_.mesh_vertices_(f1, 0), d_.mesh_vertices_(f1, 1),
+                d_.mesh_vertices_(f1, 2));
+    Vector3d v_(d_.mesh_vertices_(f2, 0), d_.mesh_vertices_(f2, 1),
+                d_.mesh_vertices_(f2, 2));
+    Vector3d x_(d_.mesh_vertices_(f1, 0) - d_.mesh_vertices_(f0, 0),
+                d_.mesh_vertices_(f1, 1) - d_.mesh_vertices_(f0, 1),
+                d_.mesh_vertices_(f1, 2) - d_.mesh_vertices_(f0, 2));
     double x1_0 = x_.norm();
     x_ /= x1_0;
-    Vector3d l_(d_.m_V(f2, 0) - d_.m_V(f0, 0), d_.m_V(f2, 1) - d_.m_V(f0, 1),
-                d_.m_V(f2, 2) - d_.m_V(f0, 2));
+    Vector3d l_(d_.mesh_vertices_(f2, 0) - d_.mesh_vertices_(f0, 0),
+                d_.mesh_vertices_(f2, 1) - d_.mesh_vertices_(f0, 1),
+                d_.mesh_vertices_(f2, 2) - d_.mesh_vertices_(f0, 2));
     Vector3d n_ = x_.cross(l_);
     n_.normalize();
     Vector3d y_ = n_.cross(x_);
@@ -2372,10 +2383,10 @@ void Parafun::local_coordinate_inverse_scaf(int i, double &p00, double &p01,
   int f1 = F1[i];
   int f2 = F2[i];
 
-  Vector2d x_(d_.w_uv_(f1, 0) - d_.w_uv_(f0, 0),
-              d_.w_uv_(f1, 1) - d_.w_uv_(f0, 1));
-  Vector2d l_(d_.w_uv_(f2, 0) - d_.w_uv_(f0, 0),
-              d_.w_uv_(f2, 1) - d_.w_uv_(f0, 1));
+  Vector2d x_(d_.whole_uv_(f1, 0) - d_.whole_uv_(f0, 0),
+              d_.whole_uv_(f1, 1) - d_.whole_uv_(f0, 1));
+  Vector2d l_(d_.whole_uv_(f2, 0) - d_.whole_uv_(f0, 0),
+              d_.whole_uv_(f2, 1) - d_.whole_uv_(f0, 1));
 
   double area_tri = abs(x_(0) * l_(1) - x_(1) * l_(0));
   double x1_0, x2_0, y2_0;
@@ -2416,7 +2427,7 @@ double Parafun::newton_equation(const double &a, const double &b,
   return tt;
 }
 void Parafun::adjust_shell_weight(double new_weight) {
-  d_.shell_factor = new_weight;
+  d_.shell_factor_ = new_weight;
   d_.UpdateShell();
   init_area();
 }
@@ -2462,7 +2473,7 @@ void Parafun::fungrid(const VectorXd &x) {
   for (int j = 0; j < cell_points.size(); ++j) {
     cell_points[j].clear();
   }
-  VectorXi boundary_vertex = d_.frame_ids;
+  VectorXi boundary_vertex = d_.frame_ids_;
   int bound_num = BE_N;
   double l_x_min, l_x_max, l_y_min, l_y_max, b, len;
   int id_x_min, id_x_max, id_y_min, id_y_max;

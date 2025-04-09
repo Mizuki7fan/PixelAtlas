@@ -8,38 +8,37 @@ using namespace std;
 using namespace Eigen;
 
 ShellData::ShellData()
-    : mesh_measure_(0),    //
-      num_shell_faces_(0), //
-      dim(2),              //
-      mv_num(0),           //
-      mf_num(0),           //
-      sv_num(0)            //
+    : mesh_measure_(0),      //
+      num_shell_faces_(0),   //
+      num_mesh_vertices_(0), //
+      num_mesh_faces_(0),    //
+      num_shell_vertices_(0) //
 {
-  w_uv_.resize(0, 0);
+  whole_uv_.resize(0, 0);
 };
 
 void ShellData::UpdateShell() {
-  mv_num = m_V.rows();
-  mf_num = m_T.rows();
+  num_mesh_vertices_ = mesh_vertices_.rows();
+  num_mesh_faces_ = mesh_faces_.rows();
 
-  num_vertices_ = w_uv_.rows();
+  num_vertices_ = whole_uv_.rows();
   num_shell_faces_ = shell_faces_.rows();
 
-  sv_num = num_vertices_ - mv_num;
-  num_faces_ = num_shell_faces_ + mf_num;
+  num_shell_vertices_ = num_vertices_ - num_mesh_vertices_;
+  num_faces_ = num_shell_faces_ + num_mesh_faces_;
 
-  s_M = Eigen::VectorXd::Constant(num_shell_faces_, shell_factor);
+  shell_face_area_ = Eigen::VectorXd::Constant(num_shell_faces_, shell_factor_);
 }
 
 void ShellData::MeshImprove() {
-  MatrixXd m_uv = w_uv_.topRows(mv_num);
+  MatrixXd m_uv = whole_uv_.topRows(num_mesh_vertices_);
   MatrixXd V_bnd;
-  V_bnd.resize(internal_bnd.size(), 2);
-  for (int i = 0; i < internal_bnd.size(); i++) {
-    V_bnd.row(i) = m_uv.row(internal_bnd(i));
+  V_bnd.resize(internal_bnd_.size(), 2);
+  for (int i = 0; i < internal_bnd_.size(); i++) {
+    V_bnd.row(i) = m_uv.row(internal_bnd_(i));
   }
 
-  if (frame_V.size() == 0) {
+  if (frame_vertices_.size() == 0) {
     VectorXd uv_max = m_uv.colwise().maxCoeff();
     VectorXd uv_min = m_uv.colwise().minCoeff();
     VectorXd uv_mid = (uv_max + uv_min) / 2.;
@@ -49,7 +48,7 @@ void ShellData::MeshImprove() {
               << uv_mid(0) << " " << uv_mid(1) << std::endl;
     double raduis2 = 1.05 * raduis1; // 1.1 rabbit
 
-    int frame_points = internal_bnd.size() / 5;
+    int frame_points = internal_bnd_.size() / 5;
     if (frame_points > 200) {
       frame_points = 200;
     }
@@ -57,36 +56,37 @@ void ShellData::MeshImprove() {
     std::cout << "shell boundary: " << frame_points << std::endl;
 
     double delta_angle = 2 * std::numbers::pi / frame_points;
-    frame_V.resize(frame_points, 2);
+    frame_vertices_.resize(frame_points, 2);
     for (int i = 0; i < frame_points; ++i) {
-      frame_V.row(i) << raduis2 * cos(i * delta_angle),
+      frame_vertices_.row(i) << raduis2 * cos(i * delta_angle),
           raduis2 * sin(-i * delta_angle);
     }
 
-    frame_ids = Eigen::VectorXi::LinSpaced(frame_V.rows(), mv_num,
-                                           mv_num + frame_V.rows() - 1);
+    frame_ids_ = Eigen::VectorXi::LinSpaced(
+        frame_vertices_.rows(), num_mesh_vertices_,
+        num_mesh_vertices_ + frame_vertices_.rows() - 1);
   } else {
-    for (int i = 0; i < frame_V.rows(); ++i) {
-      frame_V.row(i) = w_uv_.row(frame_ids(i));
+    for (int i = 0; i < frame_vertices_.rows(); ++i) {
+      frame_vertices_.row(i) = whole_uv_.row(frame_ids_(i));
     }
   }
 
   MatrixXd V;
   MatrixXi E;
 
-  V.resize(V_bnd.rows() + frame_V.rows(), V_bnd.cols());
-  V << V_bnd, frame_V;
+  V.resize(V_bnd.rows() + frame_vertices_.rows(), V_bnd.cols());
+  V << V_bnd, frame_vertices_;
 
   E.resize(V.rows(), 2);
   for (int i = 0; i < E.rows(); i++)
     E.row(i) << i, i + 1;
   int acc_bs = 0;
-  for (auto bs : bnd_sizes) {
+  for (auto bs : bnd_sizes_) {
     E(acc_bs + bs - 1, 1) = acc_bs;
     acc_bs += bs;
   }
   E(V.rows() - 1, 1) = acc_bs;
-  assert(acc_bs == internal_bnd.size());
+  assert(acc_bs == internal_bnd_.size());
 
   // ycy H �洢����ÿ��chart�ĵ�һ�������ε�����
   MatrixXd H = MatrixXd::Zero(component_sizes.size(), 2);
@@ -95,7 +95,7 @@ void ShellData::MeshImprove() {
     int hole_i = 0;
     for (auto cs : component_sizes) {
       for (int i = 0; i < 3; i++)
-        H.row(hole_i) += m_uv.row(m_T(hole_f, i)); // redoing step 2
+        H.row(hole_i) += m_uv.row(mesh_faces_(hole_f, i)); // redoing step 2
       hole_f += cs;
       hole_i++;
     }
@@ -104,23 +104,24 @@ void ShellData::MeshImprove() {
 
   MatrixXd uv2;
   GenerateTriangulate(V, E, H, uv2, shell_faces_);
-  auto bnd_n = internal_bnd.size();
+  auto bnd_n = internal_bnd_.size();
 
   for (auto i = 0; i < shell_faces_.rows(); i++) {
     for (auto j = 0; j < shell_faces_.cols(); j++) {
       auto &x = shell_faces_(i, j);
       if (x < bnd_n)
-        x = internal_bnd(x);
+        x = internal_bnd_(x);
       else
         x += m_uv.rows() - bnd_n;
     }
   }
 
-  whole_triangles_.resize(m_T.rows() + shell_faces_.rows(), 3);
-  whole_triangles_ << m_T, shell_faces_;
+  whole_faces_.resize(mesh_faces_.rows() + shell_faces_.rows(), 3);
+  whole_faces_ << mesh_faces_, shell_faces_;
 
-  w_uv_.conservativeResize(m_uv.rows() - bnd_n + uv2.rows(), 2);
-  w_uv_.bottomRows(uv2.rows() - bnd_n) = uv2.bottomRows(-bnd_n + uv2.rows());
+  whole_uv_.conservativeResize(m_uv.rows() - bnd_n + uv2.rows(), 2);
+  whole_uv_.bottomRows(uv2.rows() - bnd_n) =
+      uv2.bottomRows(-bnd_n + uv2.rows());
 
   UpdateShell();
 }
@@ -148,8 +149,8 @@ void ShellData::AddNewPatch(const Eigen::MatrixXd &V_in,
     }
   }
 
-  m_M.conservativeResize(mf_num + M.size());
-  m_M.bottomRows(M.size()) = M;
+  mesh_face_area_.conservativeResize(num_mesh_faces_ + M.size());
+  mesh_face_area_.bottomRows(M.size()) = M;
   mesh_measure_ += M.sum();
 
   const Eigen::MatrixXd &V_ref = V_in;
@@ -220,31 +221,31 @@ void ShellData::AddNewPatch(const Eigen::MatrixXd &V_in,
 
   component_sizes.push_back(F_ref.rows());
 
-  if (mv_num == 0) {
-    w_uv_ = uv_init;
+  if (num_mesh_vertices_ == 0) {
+    whole_uv_ = uv_init;
   } else {
-    MatrixXd m_uv = w_uv_.topRows(mv_num);
-    w_uv_.resize(m_uv.rows() + uv_init.rows(), 2);
-    w_uv_ << m_uv, uv_init;
+    MatrixXd m_uv = whole_uv_.topRows(num_mesh_vertices_);
+    whole_uv_.resize(m_uv.rows() + uv_init.rows(), 2);
+    whole_uv_ << m_uv, uv_init;
   }
 
   std::cout << "size: " << all_bnds.size() << std::endl;
   for (auto cur_bnd : all_bnds) {
-    internal_bnd.conservativeResize(internal_bnd.size() + cur_bnd.size());
-    internal_bnd.bottomRows(cur_bnd.size()) =
-        Map<ArrayXi>(cur_bnd.data(), cur_bnd.size()) + mv_num;
-    bnd_sizes.push_back(cur_bnd.size());
+    internal_bnd_.conservativeResize(internal_bnd_.size() + cur_bnd.size());
+    internal_bnd_.bottomRows(cur_bnd.size()) =
+        Map<ArrayXi>(cur_bnd.data(), cur_bnd.size()) + num_mesh_vertices_;
+    bnd_sizes_.push_back(cur_bnd.size());
   }
 
-  m_T.conservativeResize(mf_num + F_ref.rows(), 3);
-  m_T.bottomRows(F_ref.rows()) = F_ref.array() + mv_num;
-  mf_num += F_ref.rows();
+  mesh_faces_.conservativeResize(num_mesh_faces_ + F_ref.rows(), 3);
+  mesh_faces_.bottomRows(F_ref.rows()) = F_ref.array() + num_mesh_vertices_;
+  num_mesh_faces_ += F_ref.rows();
 
-  m_V.conservativeResize(mv_num + V_ref.rows(), 3);
-  m_V.bottomRows(V_ref.rows()) = V_ref;
-  mv_num += V_ref.rows();
+  mesh_vertices_.conservativeResize(num_mesh_vertices_ + V_ref.rows(), 3);
+  mesh_vertices_.bottomRows(V_ref.rows()) = V_ref;
+  num_mesh_vertices_ += V_ref.rows();
 
-  frame_V.resize(0, 0);
+  frame_vertices_.resize(0, 0);
 
   MeshImprove();
 }

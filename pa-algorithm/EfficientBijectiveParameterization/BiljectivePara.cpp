@@ -26,8 +26,9 @@ void BiljectivePara::parameterization() {
   bool is_second = true;
 
   parafun_solver->after_mesh_improve();
-  last_mesh_energy_ = parafun_solver->compute_energy(shell_data.w_uv_, false) /
-                      shell_data.mesh_measure_;
+  last_mesh_energy_ =
+      parafun_solver->compute_energy(shell_data.whole_uv_, false) /
+      shell_data.mesh_measure_;
   parafun_solver->adjust_shell_weight(
       (last_mesh_energy_)*shell_data.mesh_measure_ /
       (shell_data.num_shell_faces_) / 1000.0);
@@ -36,7 +37,7 @@ void BiljectivePara::parameterization() {
   // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
   // / (shell_data.sf_num) / 100000.0);
   double last_all_energy =
-      parafun_solver->compute_energy(shell_data.w_uv_, true);
+      parafun_solver->compute_energy(shell_data.whole_uv_, true);
 
   // std::cout << "last_mesh_energy:" << last_mesh_energy << endl;
   // std::cout << "last_all_energy:" << last_all_energy << endl;
@@ -166,7 +167,7 @@ void BiljectivePara::load() {
 
   uv_mesh_ = mesh;
   for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {
-    auto p = shell_data.w_uv_.row(vertex.idx());
+    auto p = shell_data.whole_uv_.row(vertex.idx());
     cgl::Point3II pos(p(0), p(1), 0.0);
     uv_mesh_.point(vertex) = pos;
   }
@@ -174,7 +175,7 @@ void BiljectivePara::load() {
 
 void BiljectivePara::WriteUVMesh(std::ofstream &of_obj) {
   for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {
-    auto pos = shell_data.w_uv_.row(vertex.idx());
+    auto pos = shell_data.whole_uv_.row(vertex.idx());
     uv_mesh_.point(vertex) = cgl::Point3II(pos[0], pos[1], 0.0);
   }
 
@@ -184,7 +185,7 @@ void BiljectivePara::WriteUVMesh(std::ofstream &of_obj) {
 void BiljectivePara::shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos,
                               VectorXi &bnd) {
   tri = shell_data.shell_faces_;
-  pre_pos = shell_data.w_uv_pre_;
-  pos = shell_data.w_uv_;
-  bnd = shell_data.frame_ids;
+  pre_pos = shell_data.whole_uv_pre_;
+  pos = shell_data.whole_uv_;
+  bnd = shell_data.frame_ids_;
 }
