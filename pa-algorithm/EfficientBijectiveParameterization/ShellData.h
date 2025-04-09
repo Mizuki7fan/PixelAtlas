@@ -35,8 +35,5 @@ private:
   unsigned int num_mesh_vertices_, num_mesh_faces_;
   //  long num_mesh_vertices_, num_mesh_faces_;
   unsigned int num_shell_vertices_;
-  Eigen::MatrixXi w_T;
-  Eigen::VectorXd w_M; // area/volume weights for whole
-  Eigen::VectorXi external_bnd;
-  std::vector<int> component_sizes; // multi-chart support
+  std::vector<int> component_sizes_; // multi-chart support
 };
