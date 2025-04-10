@@ -25,9 +25,9 @@ void BiljectivePara::parameterization() {
   bool is_first = true;
   bool is_second = true;
 
-  parafun_solver->after_mesh_improve();
+  parafun_solver->AfterMeshImprove();
   last_mesh_energy_ =
-      parafun_solver->compute_energy(shell_data.whole_uv_, false) /
+      parafun_solver->ComputeEnergy(shell_data.whole_uv_, false) /
       shell_data.mesh_measure_;
   parafun_solver->adjust_shell_weight(
       (last_mesh_energy_)*shell_data.mesh_measure_ /
@@ -37,7 +37,7 @@ void BiljectivePara::parameterization() {
   // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
   // / (shell_data.sf_num) / 100000.0);
   double last_all_energy =
-      parafun_solver->compute_energy(shell_data.whole_uv_, true);
+      parafun_solver->ComputeEnergy(shell_data.whole_uv_, true);
 
   // std::cout << "last_mesh_energy:" << last_mesh_energy << endl;
   // std::cout << "last_all_energy:" << last_all_energy << endl;
@@ -163,7 +163,7 @@ void BiljectivePara::load() {
 
   shell_data = ShellData();
   shell_data.AddNewPatch(V, F, Eigen::RowVector2d(0, 0));
-  parafun_solver.reset(new Parafun(shell_data));
+  parafun_solver.reset(new ParaFun(shell_data));
 
   uv_mesh_ = mesh;
   for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {

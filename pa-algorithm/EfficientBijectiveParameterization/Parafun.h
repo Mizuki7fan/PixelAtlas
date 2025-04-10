@@ -2,59 +2,49 @@
 
 #include "ShellData.h"
 #include <CGAL-Interface/CGAL-Interface.h>
+#include <LinSysSolver-Interface/Solver.h>
+
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <LinSysSolver-Interface/Solver.h>
-#include <fstream>
-#include <iostream>
-#include <math.h>
-#include <time.h>
 #include <vector>
 
-using namespace Eigen;
-using namespace std;
-
-#define PI 3.141592653589793238463L
-
-class Parafun {
-
+class ParaFun {
 public:
-  Parafun(ShellData &data) : d_(data) {
-    pardiso = NULL;
-    is_first = true;
-    bound_distortion_K = 250;
-    barrer_coef = d_.mesh_measure_ * 1e-8;
-    std::cout << barrer_coef << std::endl;
-  };
-  ~Parafun();
+  ParaFun(ShellData &data);
+  ~ParaFun();
 
-  void after_mesh_improve();
+  void AfterMeshImprove();
+  double ComputeEnergy(const Eigen::MatrixXd &x, bool whole = false);
+  void adjust_shell_weight(double new_weight);
+  double BPE(bool is_ip_convrate, bool is_slim_convrate);
+
+private:
   void init();
   void handle_mintri();
   void init_area();
   void setvirtualtri();
   void Pre_calculate();
 
-  double BPE(bool is_ip_convrate, bool is_slim_convrate);
   void CM(bool is_interp = false);
   void SLIM(bool is_interp = false);
   void Update_source_same_t();
 
-  void fungrid(const VectorXd &x);
+  void fungrid(const Eigen::VectorXd &x);
 
-  void Energy(const VectorXd &x, double &energy, bool is_interp = false,
+  void Energy(const Eigen::VectorXd &x, double &energy, bool is_interp = false,
               bool is_whole = true);
   void Energysource();
-  double compute_energy(const Eigen::MatrixXd &x, bool whole = false);
-  void adjust_shell_weight(double new_weight);
 
-  void max_step(const VectorXd &xx, const VectorXd &dd, double &step);
-  void tmaxdetect(const VectorXd &x, const VectorXd &d, double &tmax);
-  void backtracking_line_search(const VectorXd &x, const VectorXd &d,
-                                const VectorXd &negetive_grad, double &alpha,
-                                bool is_interp = false);
+  void max_step(const Eigen::VectorXd &xx, const Eigen::VectorXd &dd,
+                double &step);
+  void tmaxdetect(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
+                  double &tmax);
+  void backtracking_line_search(const Eigen::VectorXd &x,
+                                const Eigen::VectorXd &d,
+                                const Eigen::VectorXd &negetive_grad,
+                                double &alpha, bool is_interp = false);
   double get_smallest_pos_quad_zero(double a, double b, double c);
 
   double distance(double s0, double s1, double e0, double e1, double p0,
@@ -66,88 +56,88 @@ public:
   void local_coordinate_inverse_scaf(int i, double &p00, double &p01,
                                      double &p10, double &p11);
 
-  bool check_intersection(const VectorXd &pos);
+  bool check_intersection(const Eigen::VectorXd &pos);
 
+public:
+  double energy_mesh;
+  int AV_F_N_H;
+  double time1 = 0, time2 = 0, time3 = 0;
+  double density = 0;
+  std::vector<double> area;
+  double energy_shell, energy_barrier;
+  double barrer_coef;
+
+private:
   ShellData &d_;
   int total_num;
   int F_N;
   int V_N;
   int kDim = 2;
-  vector<int> F0;
-  vector<int> F1;
-  vector<int> F2;
-  VectorXd position_of_mesh;
-  vector<double> area;
-  vector<double> area_src;
+  std::vector<int> F0;
+  std::vector<int> F1;
+  std::vector<int> F2;
+  Eigen::VectorXd position_of_mesh;
+  std::vector<double> area_src;
   double area_threshold;
 
   bool is_first;
   double Intp_T_Min;
   double changetocm_flag;
   double bound_distortion_K;
-  vector<double> source_p00;
-  vector<double> source_p01;
-  vector<double> source_p10;
-  vector<double> source_p11;
-  vector<double> update_p00;
-  vector<double> update_p01;
-  vector<double> update_p10;
-  vector<double> update_p11;
+  std::vector<double> source_p00;
+  std::vector<double> source_p01;
+  std::vector<double> source_p10;
+  std::vector<double> source_p11;
+  std::vector<double> update_p00;
+  std::vector<double> update_p01;
+  std::vector<double> update_p10;
+  std::vector<double> update_p11;
 
   Solver *pardiso;
-  vector<int> pardiso_ia;
-  vector<int> pardiso_ja;
-  vector<double> pardiso_a;
-  vector<double> pardiso_b;
+  std::vector<int> pardiso_ia;
+  std::vector<int> pardiso_ja;
+  std::vector<double> pardiso_a;
+  std::vector<double> pardiso_b;
 
-  double energy_mesh;
-  double energy_barrier;
   double energy_all;
-  double energy_shell;
 
-  vector<int> id_h00;
-  vector<int> id_h01;
-  vector<int> id_h02;
-  vector<int> id_h03;
-  vector<int> id_h04;
-  vector<int> id_h05;
-  vector<int> id_h11;
-  vector<int> id_h12;
-  vector<int> id_h13;
-  vector<int> id_h14;
-  vector<int> id_h15;
-  vector<int> id_h22;
-  vector<int> id_h23;
-  vector<int> id_h24;
-  vector<int> id_h25;
-  vector<int> id_h33;
-  vector<int> id_h34;
-  vector<int> id_h35;
-  vector<int> id_h44;
-  vector<int> id_h45;
-  vector<int> id_h55;
+  std::vector<int> id_h00;
+  std::vector<int> id_h01;
+  std::vector<int> id_h02;
+  std::vector<int> id_h03;
+  std::vector<int> id_h04;
+  std::vector<int> id_h05;
+  std::vector<int> id_h11;
+  std::vector<int> id_h12;
+  std::vector<int> id_h13;
+  std::vector<int> id_h14;
+  std::vector<int> id_h15;
+  std::vector<int> id_h22;
+  std::vector<int> id_h23;
+  std::vector<int> id_h24;
+  std::vector<int> id_h25;
+  std::vector<int> id_h33;
+  std::vector<int> id_h34;
+  std::vector<int> id_h35;
+  std::vector<int> id_h44;
+  std::vector<int> id_h45;
+  std::vector<int> id_h55;
 
-  double barrer_coef;
   double threhold;
   double average_length;
-  double time1 = 0;
-  double time2 = 0;
-  double time3 = 0;
-  double density = 0;
 
   int BE_N;
   int V_F_N;
   int AV_F_N;
-  int AV_F_N_H;
-  vector<int> V_F0;
-  vector<int> V_F1;
-  vector<int> V_F2;
-  vector<int> V_F0_H;
-  vector<int> V_F1_H;
-  vector<int> V_F2_H;
-  vector<int> is_active;
-  vector<int> AV_ID;
-  vector<int> boundary_vertexID;
+  std::vector<int> V_F0;
+  std::vector<int> V_F1;
+  std::vector<int> V_F2;
+  std::vector<int> V_F0_H;
+  std::vector<int> V_F1_H;
+  std::vector<int> V_F2_H;
+  std::vector<int> is_active;
+  std::vector<int> AV_ID;
+  std::vector<int> boundary_vertexID;
 
   int cellx_num;
   int celly_num;
@@ -157,5 +147,5 @@ public:
   double y_max;
   double lengthgrid_x;
   double lengthgrid_y;
-  vector<vector<int>> cell_points;
+  std::vector<std::vector<int>> cell_points;
 };

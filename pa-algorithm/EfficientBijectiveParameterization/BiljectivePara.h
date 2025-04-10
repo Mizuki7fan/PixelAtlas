@@ -23,7 +23,7 @@ protected:
   const cgl::SurfaceMesh3 &mesh;
   cgl::SurfaceMesh3 uv_mesh_;
   ShellData shell_data;
-  std::shared_ptr<Parafun> parafun_solver = nullptr;
+  std::shared_ptr<ParaFun> parafun_solver = nullptr;
   double last_mesh_energy_;
   double convgence_con_rate = 1e-5;
   int MAX_ITER_NUM = 5000;

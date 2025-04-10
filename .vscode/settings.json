@@ -19,5 +19,10 @@
     }, 
     "search.exclude": {//设置搜索排除范围
         "**/build": true,//排除build目录
-    }
+    },
+    "leek-fund.binance": [
+        "BTC_USDT",
+        "ETH_USDT",
+        "EOS_USDT"
+    ]
 }
