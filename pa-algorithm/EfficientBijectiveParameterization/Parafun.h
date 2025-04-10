@@ -5,10 +5,6 @@
 #include <LinSysSolver-Interface/Solver.h>
 
 #include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-#include <Eigen/Sparse>
-#include <vector>
 
 class ParaFun {
 public:
@@ -17,58 +13,58 @@ public:
 
   void AfterMeshImprove();
   double ComputeEnergy(const Eigen::MatrixXd &x, bool whole = false);
-  void adjust_shell_weight(double new_weight);
+  void AdjustShellWeight(double new_weight);
   double BPE(bool is_ip_convrate, bool is_slim_convrate);
 
 private:
-  void init();
-  void handle_mintri();
-  void init_area();
-  void setvirtualtri();
-  void Pre_calculate();
+  void Init();
+  void HandleMinTri();
+  void InitArea();
+  void SetVirtualTri();
+  void PreCalculate();
 
   void CM(bool is_interp = false);
   void SLIM(bool is_interp = false);
-  void Update_source_same_t();
+  void UpdateSourceSameT();
 
-  void fungrid(const Eigen::VectorXd &x);
+  void FunGrid(const Eigen::VectorXd &x);
 
   void Energy(const Eigen::VectorXd &x, double &energy, bool is_interp = false,
               bool is_whole = true);
-  void Energysource();
+  void EnergySource();
 
-  void max_step(const Eigen::VectorXd &xx, const Eigen::VectorXd &dd,
-                double &step);
-  void tmaxdetect(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
+  void MaxStep(const Eigen::VectorXd &xx, const Eigen::VectorXd &dd,
+               double &step);
+  void DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
                   double &tmax);
-  void backtracking_line_search(const Eigen::VectorXd &x,
-                                const Eigen::VectorXd &d,
-                                const Eigen::VectorXd &negetive_grad,
-                                double &alpha, bool is_interp = false);
-  double get_smallest_pos_quad_zero(double a, double b, double c);
+  void BacktrackingLineSearch(const Eigen::VectorXd &x,
+                              const Eigen::VectorXd &d,
+                              const Eigen::VectorXd &negetive_grad,
+                              double &alpha, bool is_interp = false);
+  double GetSmallestPosQuadZero(double a, double b, double c);
 
-  double distance(double s0, double s1, double e0, double e1, double p0,
-                  double p1);
+  double GetDistance(double s0, double s1, double e0, double e1, double p0,
+                     double p1);
 
-  double newton_equation(const double &a, const double &b, const double &K);
-  void local_coordinate_inverse(int i, double &p00, double &p01, double &p10,
-                                double &p11);
-  void local_coordinate_inverse_scaf(int i, double &p00, double &p01,
-                                     double &p10, double &p11);
+  double NewtonEquation(const double &a, const double &b, const double &K);
+  void LocalCoordinateInverse(int i, double &p00, double &p01, double &p10,
+                              double &p11);
+  void LocalCoordinateInverseScaf(int i, double &p00, double &p01, double &p10,
+                                  double &p11);
 
-  bool check_intersection(const Eigen::VectorXd &pos);
+  bool CheckIntersection(const Eigen::VectorXd &pos);
 
 public:
-  double energy_mesh;
-  int AV_F_N_H;
-  double time1 = 0, time2 = 0, time3 = 0;
+  double energy_mesh_;
+  int AV_F_N_H_;
+  double time_1 = 0, time_2 = 0, time_3 = 0;
   double density = 0;
   std::vector<double> area;
   double energy_shell, energy_barrier;
   double barrer_coef;
 
 private:
-  ShellData &d_;
+  ShellData &shell_data_;
   int total_num;
   int F_N;
   int V_N;

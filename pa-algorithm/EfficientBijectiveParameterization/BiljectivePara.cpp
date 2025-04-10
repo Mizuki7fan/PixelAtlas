@@ -22,19 +22,17 @@ void BiljectivePara::parameterization() {
   double conv_rate_mesh = 1.0;
   double conv_rate_all = 1.0;
   long time_beg, time_end;
-  bool is_first = true;
-  bool is_second = true;
 
   parafun_solver->AfterMeshImprove();
   last_mesh_energy_ =
       parafun_solver->ComputeEnergy(shell_data.whole_uv_, false) /
       shell_data.mesh_measure_;
-  parafun_solver->adjust_shell_weight(
+  parafun_solver->AdjustShellWeight(
       (last_mesh_energy_)*shell_data.mesh_measure_ /
       (shell_data.num_shell_faces_) / 1000.0);
-  // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
+  // parafun_solver->AdjustShellWeight((last_mesh_energy)*shell_data.mesh_measure_
   // / (shell_data.sf_num) / 10.0);
-  // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
+  // parafun_solver->AdjustShellWeight((last_mesh_energy)*shell_data.mesh_measure_
   // / (shell_data.sf_num) / 100000.0);
   double last_all_energy =
       parafun_solver->ComputeEnergy(shell_data.whole_uv_, true);
@@ -59,14 +57,14 @@ void BiljectivePara::parameterization() {
     shell_data.mesh_energy_ =
         parafun_solver->BPE(is_ip_convrate, is_slim_convrate);
     double current_mesh_energy =
-        parafun_solver->energy_mesh / shell_data.mesh_measure_;
+        parafun_solver->energy_mesh_ / shell_data.mesh_measure_;
     double current_all_energy = shell_data.mesh_energy_;
     double mesh_energy_decrease = last_mesh_energy_ - current_mesh_energy;
     double all_energy_decrease = last_all_energy - current_all_energy;
     time_end = clock();
     double time = (time_end - time_beg) / 1000.0;
     std::cout << time << " " << current_mesh_energy << "	"
-              << parafun_solver->AV_F_N_H << endl;
+              << parafun_solver->AV_F_N_H_ << endl;
     // cout << "Mesh Energy: " << current_mesh_energy << "\tEnergy Decrease: "
     // << mesh_energy_decrease << endl; cout << "All Energy:" <<
     // current_all_energy << "\tEnergy Decrease" << all_energy_decrease << endl;
@@ -86,46 +84,45 @@ void BiljectivePara::parameterization() {
   std::cout << "time: " << time_consumption << std::endl;
   std::cout << "energy:" << last_mesh_energy_ << std::endl;
   std::cout << "per time:" << time_consumption / iteration_count << std::endl;
-  cout << parafun_solver->time1 << " " << parafun_solver->time2 << " "
-       << parafun_solver->time3 << endl;
-  cout << parafun_solver->time1 << " "
-       << parafun_solver->time2 / iteration_count << " "
-       << parafun_solver->time3 / iteration_count << endl;
+  cout << parafun_solver->time_1 << " " << parafun_solver->time_2 << " "
+       << parafun_solver->time_3 << endl;
+  cout << parafun_solver->time_1 << " "
+       << parafun_solver->time_2 / iteration_count << " "
+       << parafun_solver->time_3 / iteration_count << endl;
   cout << parafun_solver->density << endl;
 }
 
 double BiljectivePara::adjust_weight(double conv_mesh,
                                      double last_mesh_energy) {
   if (conv_mesh > 1e-3 && weight1) {
-    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
+    // parafun_solver->AdjustShellWeight((last_mesh_energy)*shell_data.mesh_measure_
     // / (shell_data.sf_num) / 10.0);
-    parafun_solver->adjust_shell_weight(
+    parafun_solver->AdjustShellWeight(
         (last_mesh_energy)*shell_data.mesh_measure_ /
         (shell_data.num_shell_faces_) / 1000.0);
-    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure_ /
+    // parafun_solver->AdjustShellWeight(4.0*shell_data.mesh_measure_ /
     // (shell_data.sf_num) / 100000.0);
   } else if (conv_mesh > 1e-5 && weight2) {
-    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
+    // parafun_solver->AdjustShellWeight((last_mesh_energy)*shell_data.mesh_measure_
     // / (shell_data.sf_num) / 10.0);
-    parafun_solver->adjust_shell_weight(4.0 * shell_data.mesh_measure_ /
-                                        (shell_data.num_shell_faces_) /
-                                        100000.0);
-    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure_ /
+    parafun_solver->AdjustShellWeight(4.0 * shell_data.mesh_measure_ /
+                                      (shell_data.num_shell_faces_) / 100000.0);
+    // parafun_solver->AdjustShellWeight(4.0*shell_data.mesh_measure_ /
     // (shell_data.sf_num) / 1000.0);
     weight1 = false;
   } else {
-    // parafun_solver->adjust_shell_weight((last_mesh_energy)*shell_data.mesh_measure_
+    // parafun_solver->AdjustShellWeight((last_mesh_energy)*shell_data.mesh_measure_
     // / (shell_data.sf_num) / 10.0);
-    parafun_solver->adjust_shell_weight(4.0 * shell_data.mesh_measure_ /
-                                        shell_data.num_shell_faces_ /
-                                        100000000.0);
-    // parafun_solver->adjust_shell_weight(4.0*shell_data.mesh_measure_ /
+    parafun_solver->AdjustShellWeight(4.0 * shell_data.mesh_measure_ /
+                                      shell_data.num_shell_faces_ /
+                                      100000000.0);
+    // parafun_solver->AdjustShellWeight(4.0*shell_data.mesh_measure_ /
     // (shell_data.sf_num) / 1000.0);
     weight2 = false;
   }
 
   double last_all_energy =
-      parafun_solver->energy_mesh +
+      parafun_solver->energy_mesh_ +
       parafun_solver->area.back() * parafun_solver->energy_shell +
       parafun_solver->barrer_coef * parafun_solver->energy_barrier;
 

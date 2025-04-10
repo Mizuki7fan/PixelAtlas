@@ -5,18 +5,18 @@
 #include <LinSysSolver-Interface/EigenLinSolver.h>
 #endif
 
-ParaFun::ParaFun(ShellData &data) : d_(data) {
+ParaFun::ParaFun(ShellData &data) : shell_data_(data) {
   pardiso = NULL;
   is_first = true;
   bound_distortion_K = 250;
-  barrer_coef = d_.mesh_measure_ * 1e-8;
+  barrer_coef = shell_data_.mesh_measure_ * 1e-8;
   std::cout << barrer_coef << std::endl;
 }
 
 void ParaFun::AfterMeshImprove() {
-  total_num = d_.num_vertices_;
-  F_N = d_.num_faces_;
-  V_N = d_.num_vertices_;
+  total_num = shell_data_.num_vertices_;
+  F_N = shell_data_.num_faces_;
+  V_N = shell_data_.num_vertices_;
   F0.resize(F_N);
   F1.resize(F_N);
   F2.resize(F_N);
@@ -25,22 +25,22 @@ void ParaFun::AfterMeshImprove() {
 
   for (size_t i = 0; i < kDim; i++) {
     position_of_mesh.block(i * total_num, 0, total_num, 1) =
-        d_.whole_uv_.col(i);
+        shell_data_.whole_uv_.col(i);
   }
 
-  init();
+  Init();
 }
-void ParaFun::init() {
+void ParaFun::Init() {
   for (int i = 0; i < F_N; ++i) {
-    F0[i] = d_.whole_faces_(i, 0);
-    F1[i] = d_.whole_faces_(i, 1);
-    F2[i] = d_.whole_faces_(i, 2);
+    F0[i] = shell_data_.whole_faces_(i, 0);
+    F1[i] = shell_data_.whole_faces_(i, 1);
+    F2[i] = shell_data_.whole_faces_(i, 2);
   }
 
-  handle_mintri();
-  init_area();
-  setvirtualtri();
-  Pre_calculate();
+  HandleMinTri();
+  InitArea();
+  SetVirtualTri();
+  PreCalculate();
 
   const double *pos = position_of_mesh.data();
 
@@ -62,15 +62,16 @@ void ParaFun::init() {
     }
   }
 
-  int frame_num = d_.frame_ids_.size();
+  int frame_num = shell_data_.frame_ids_.size();
   average_length = 0;
   for (int j = 0; j < frame_num - 1; ++j) {
-    average_length +=
-        (d_.frame_vertices_.row(j) - d_.frame_vertices_.row(j + 1)).norm();
+    average_length += (shell_data_.frame_vertices_.row(j) -
+                       shell_data_.frame_vertices_.row(j + 1))
+                          .norm();
   }
-  average_length +=
-      (d_.frame_vertices_.row(frame_num - 1) - d_.frame_vertices_.row(0))
-          .norm();
+  average_length += (shell_data_.frame_vertices_.row(frame_num - 1) -
+                     shell_data_.frame_vertices_.row(0))
+                        .norm();
   average_length = average_length / frame_num;
   threhold = average_length / 8.0;
   threhold = 2 * threhold; // dis * 2
@@ -101,7 +102,7 @@ void ParaFun::init() {
   double time_consumption = (time_end - time_beg) / 1000.0;
   time1 += time_consumption;
 
-  fungrid(position_of_mesh);
+  FunGrid(position_of_mesh);
   int f0, f1, f2;
   double x0, y0, x1, y1, x2, y2;
   double dis, E_b, energy2 = 0;
@@ -119,7 +120,7 @@ void ParaFun::init() {
     x2 = pos[f2];
     y2 = pos[f2 + V_N];
 
-    dis = distance(x0, y0, x1, y1, x2, y2);
+    dis = GetDistance(x0, y0, x1, y1, x2, y2);
     if (dis < 0) {
       std::cout << "distance is zero" << std::endl;
     }
@@ -131,26 +132,26 @@ void ParaFun::init() {
   if (is_first)
     is_first = false;
 }
-void ParaFun::init_area() {
+void ParaFun::InitArea() {
   area.resize(F_N);
-  int src_t_num = d_.mesh_faces_.rows();
+  int src_t_num = shell_data_.mesh_faces_.rows();
   area_src.resize(src_t_num);
   for (int i = 0; i < src_t_num; ++i) {
-    area_src[i] = d_.mesh_face_area_(i);
-    area[i] = d_.mesh_face_area_(i);
+    area_src[i] = shell_data_.mesh_face_area_(i);
+    area[i] = shell_data_.mesh_face_area_(i);
     if (area[i] < 1e-15) {
       std::cout << "error" << std::endl;
     }
   }
   for (int i = src_t_num; i < F_N; ++i) {
-    area[i] = d_.shell_face_area_(i - src_t_num);
+    area[i] = shell_data_.shell_face_area_(i - src_t_num);
     if (area[i] < 1e-15) {
       std::cout << "error" << std::endl;
     }
   }
 }
-void ParaFun::setvirtualtri() {
-  Eigen::VectorXi boundary_vertex = d_.frame_ids_;
+void ParaFun::SetVirtualTri() {
+  Eigen::VectorXi boundary_vertex = shell_data_.frame_ids_;
   BE_N = boundary_vertex.size();
 
   V_F_N = BE_N * (BE_N - 2);
@@ -186,15 +187,15 @@ void ParaFun::setvirtualtri() {
     }
   }
 }
-void ParaFun::Pre_calculate() {
+void ParaFun::PreCalculate() {
   source_p00.resize(F_N);
   source_p01.resize(F_N);
   source_p10.resize(F_N);
   source_p11.resize(F_N);
   if (is_first) {
-    for (int i = 0; i < d_.mesh_faces_.rows(); ++i) {
+    for (int i = 0; i < shell_data_.mesh_faces_.rows(); ++i) {
       double p00, p01, p10, p11;
-      local_coordinate_inverse(i, p00, p01, p10, p11);
+      LocalCoordinateInverse(i, p00, p01, p10, p11);
       source_p00[i] = p00;
       source_p01[i] = p01;
       source_p10[i] = p10;
@@ -202,9 +203,9 @@ void ParaFun::Pre_calculate() {
     }
   }
 
-  for (int i = d_.mesh_faces_.rows(); i < F_N; ++i) {
+  for (int i = shell_data_.mesh_faces_.rows(); i < F_N; ++i) {
     double p00, p01, p10, p11;
-    local_coordinate_inverse_scaf(i, p00, p01, p10, p11);
+    LocalCoordinateInverseScaf(i, p00, p01, p10, p11);
     source_p00[i] = p00;
     source_p01[i] = p01;
     source_p10[i] = p10;
@@ -223,10 +224,10 @@ void ParaFun::Pre_calculate() {
   std::vector<T> tripletlist;
   std::vector<std::set<int>> VV_tmp;
   VV_tmp.resize(V_N);
-  for (size_t i = 0; i < d_.mesh_faces_.rows(); i++) {
+  for (size_t i = 0; i < shell_data_.mesh_faces_.rows(); i++) {
     int vid[3];
-    for (size_t j = 0; j < d_.mesh_faces_.cols(); j++) {
-      vid[j] = d_.mesh_faces_(i, j);
+    for (size_t j = 0; j < shell_data_.mesh_faces_.cols(); j++) {
+      vid[j] = shell_data_.mesh_faces_(i, j);
     }
     VV_tmp[vid[0]].insert(vid[1]);
     VV_tmp[vid[0]].insert(vid[2]);
@@ -237,10 +238,10 @@ void ParaFun::Pre_calculate() {
   }
 
   std::vector<int> s_vid;
-  for (size_t i = 0; i < d_.shell_faces_.rows(); i++) {
+  for (size_t i = 0; i < shell_data_.shell_faces_.rows(); i++) {
     s_vid.clear();
-    for (size_t j = 0; j < d_.shell_faces_.cols(); j++) {
-      int s_id = d_.shell_faces_(i, j);
+    for (size_t j = 0; j < shell_data_.shell_faces_.cols(); j++) {
+      int s_id = shell_data_.shell_faces_(i, j);
       s_vid.push_back(s_id);
     }
     VV_tmp[s_vid[0]].insert(s_vid[1]);
@@ -252,12 +253,12 @@ void ParaFun::Pre_calculate() {
   }
 
   std::vector<int> v_vid;
-  for (int i = 0; i < d_.frame_ids_.size(); ++i) {
-    for (int j = 0; j < d_.frame_ids_.size(); ++j) {
+  for (int i = 0; i < shell_data_.frame_ids_.size(); ++i) {
+    for (int j = 0; j < shell_data_.frame_ids_.size(); ++j) {
       if (j == i) {
         continue;
       }
-      VV_tmp[d_.frame_ids_(i)].insert(d_.frame_ids_(j));
+      VV_tmp[shell_data_.frame_ids_(i)].insert(shell_data_.frame_ids_(j));
     }
   }
 
@@ -405,22 +406,24 @@ void ParaFun::Pre_calculate() {
   // std:cout << "density: " << double(nnz) << std::endl;
   density += double(nnz) / 4 / V_N / V_N;
 }
-void ParaFun::handle_mintri() {
+void ParaFun::HandleMinTri() {
   double min_bnd_edge_len = std::numeric_limits<double>::infinity();
   int acc_bnd = 0;
-  for (int i = 0; i < d_.bnd_sizes_.size(); i++) {
-    int current_size = d_.bnd_sizes_[i];
+  for (int i = 0; i < shell_data_.bnd_sizes_.size(); i++) {
+    int current_size = shell_data_.bnd_sizes_[i];
 
     for (int e = acc_bnd; e < acc_bnd + current_size - 1; e++) {
-      min_bnd_edge_len = (std::min)(min_bnd_edge_len,
-                                    (d_.whole_uv_.row(d_.internal_bnd_(e)) -
-                                     d_.whole_uv_.row(d_.internal_bnd_(e + 1)))
-                                        .squaredNorm());
+      min_bnd_edge_len = (std::min)(
+          min_bnd_edge_len,
+          (shell_data_.whole_uv_.row(shell_data_.internal_bnd_(e)) -
+           shell_data_.whole_uv_.row(shell_data_.internal_bnd_(e + 1)))
+              .squaredNorm());
     }
     min_bnd_edge_len = (std::min)(
         min_bnd_edge_len,
-        (d_.whole_uv_.row(d_.internal_bnd_(acc_bnd)) -
-         d_.whole_uv_.row(d_.internal_bnd_(acc_bnd + current_size - 1)))
+        (shell_data_.whole_uv_.row(shell_data_.internal_bnd_(acc_bnd)) -
+         shell_data_.whole_uv_.row(
+             shell_data_.internal_bnd_(acc_bnd + current_size - 1)))
             .squaredNorm());
     acc_bnd += current_size;
   }
@@ -429,9 +432,9 @@ void ParaFun::handle_mintri() {
 }
 
 double ParaFun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
-  d_.whole_uv_pre_ = d_.whole_uv_;
+  shell_data_.whole_uv_pre_ = shell_data_.whole_uv_;
   if (is_ip_convrate) {
-    Update_source_same_t();
+    UpdateSourceSameT();
   }
   bool is_interp = is_ip_convrate && (Intp_T_Min < 0.999);
   bool is_slim = is_interp && is_slim_convrate && (changetocm_flag < 0.99);
@@ -442,17 +445,18 @@ double ParaFun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
   } else {
     CM(is_interp);
   }
-  d_.whole_uv_ = Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::ColMajor>>(
-      position_of_mesh.data(), total_num, kDim);
+  shell_data_.whole_uv_ =
+      Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::ColMajor>>(
+          position_of_mesh.data(), total_num, kDim);
 
   energy_all =
-      energy_mesh + area.back() * energy_shell + barrer_coef * energy_barrier;
+      energy_mesh_ + area.back() * energy_shell + barrer_coef * energy_barrier;
   return energy_all;
 }
-void ParaFun::Update_source_same_t() {
+void ParaFun::UpdateSourceSameT() {
   double t_min = 1;
   int geqK = 0;
-  int update_fn = d_.mesh_faces_.rows();
+  int update_fn = shell_data_.mesh_faces_.rows();
   std::vector<double> all_s0;
   all_s0.resize(update_fn);
   std::vector<double> all_s1;
@@ -535,7 +539,7 @@ void ParaFun::Update_source_same_t() {
     if (E_d <= bound_distortion_K) {
       geqK++;
     } else {
-      tt = newton_equation(sig0, sig1, bound_distortion_K);
+      tt = NewtonEquation(sig0, sig1, bound_distortion_K);
       if (tt < t_min) {
         t_min = tt;
       }
@@ -624,7 +628,7 @@ void ParaFun::SLIM(bool is_interp) {
     tmp_p11 = source_p11.data();
   }
 
-  int src_t_num = d_.mesh_faces_.rows();
+  int src_t_num = shell_data_.mesh_faces_.rows();
   for (int i = 0; i < src_t_num; ++i) {
     area_now = area[i];
     f0 = F0[i];
@@ -887,7 +891,7 @@ void ParaFun::SLIM(bool is_interp) {
   double h_u, uu, aa, bb, cc;
   double a1x0, a1x1, a1x2, a1x3, a1x4, a1x5, a2x0, a2x1, a2x2, a2x3, a2x4, a2x5;
 
-  AV_F_N_H = AV_F_N;
+  AV_F_N_H_ = AV_F_N;
   V_F0_H = V_F0;
   V_F1_H = V_F1;
   V_F2_H = V_F2;
@@ -1033,13 +1037,12 @@ void ParaFun::SLIM(bool is_interp) {
   pardiso->FreeNumericalFactorizationMemory();
 
   double temp_t;
-  max_step(position_of_mesh, d, temp_t);
+  MaxStep(position_of_mesh, d, temp_t);
   double alpha = std::min(1.0, 0.8 * temp_t);
-  backtracking_line_search(position_of_mesh, d, negative_grad, alpha,
-                           is_interp);
+  BacktrackingLineSearch(position_of_mesh, d, negative_grad, alpha, is_interp);
   // std::cout << "slim step: " << alpha << std::endl;
   position_of_mesh += alpha * d;
-  Energysource();
+  EnergySource();
 }
 void ParaFun::CM(bool is_interp) {
   double area_now;
@@ -1084,7 +1087,7 @@ void ParaFun::CM(bool is_interp) {
     tmp_p11 = source_p11.data();
   }
 
-  for (int i = 0; i < d_.mesh_faces_.rows(); ++i) {
+  for (int i = 0; i < shell_data_.mesh_faces_.rows(); ++i) {
     area_now = area[i];
     f0 = F0[i];
     f1 = F1[i];
@@ -1280,7 +1283,7 @@ void ParaFun::CM(bool is_interp) {
     pardiso_a[id_h55[i]] += h55;
   }
 
-  for (int i = d_.mesh_faces_.rows(); i < F_N; i++) {
+  for (int i = shell_data_.mesh_faces_.rows(); i < F_N; i++) {
     area_now = area[i];
     f0 = F0[i];
     f1 = F1[i];
@@ -1477,7 +1480,7 @@ void ParaFun::CM(bool is_interp) {
   double len01, len0i, len1i, coef1, coef2, dis;
   int i;
   double s0, s1, e0, e1, p0, p1;
-  AV_F_N_H = AV_F_N;
+  AV_F_N_H_ = AV_F_N;
   V_F0_H = V_F0;
   V_F1_H = V_F1;
   V_F2_H = V_F2;
@@ -1619,17 +1622,17 @@ void ParaFun::CM(bool is_interp) {
   pardiso->FreeNumericalFactorizationMemory();
 
   double temp_t;
-  max_step(position_of_mesh, d, temp_t);
+  MaxStep(position_of_mesh, d, temp_t);
   double alpha = 0.95 * temp_t;
   // double alpha = 0.8*temp_t;
-  backtracking_line_search(position_of_mesh, d, negative_grad, alpha);
+  BacktrackingLineSearch(position_of_mesh, d, negative_grad, alpha);
   position_of_mesh += alpha * d;
   // std::cout <<is_interp<< " cm step: " << alpha << std::endl;
-  Energysource();
+  EnergySource();
 }
 
-void ParaFun::max_step(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
-                       double &step) {
+void ParaFun::MaxStep(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
+                      double &step) {
   double temp_t = std::numeric_limits<double>::infinity();
   int f0, f1, f2;
   double a, b, c, tt, tt1, tt2;
@@ -1658,7 +1661,7 @@ void ParaFun::max_step(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
     b = (u1 - u0) * (y2 - y0) + (x1 - x0) * (v2 - v0) - (y1 - y0) * (u2 - u0) -
         (x2 - x0) * (v1 - v0);
     c = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
-    tt = get_smallest_pos_quad_zero(a, b, c);
+    tt = GetSmallestPosQuadZero(a, b, c);
 
     if (temp_t > tt) {
       temp_t = tt;
@@ -1667,7 +1670,7 @@ void ParaFun::max_step(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
 
   temp_t = 0.95 * temp_t;
   const double *dir = qq.data();
-  tmaxdetect(xx, qq, temp_t);
+  DetectTmax(xx, qq, temp_t);
   double a2, b2, c2, a3, b3, c3;
   double root3[3];
   double d, q, r, r2, q3, A, B, tt3, tt4;
@@ -1737,7 +1740,7 @@ void ParaFun::max_step(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
   bool check_isintersection = false;
   do {
     check_isintersection = false;
-    check_isintersection = check_intersection(xx + temp_t * qq);
+    check_isintersection = CheckIntersection(xx + temp_t * qq);
     if (check_isintersection) {
       temp_t = 0.8 * temp_t;
     }
@@ -1745,7 +1748,7 @@ void ParaFun::max_step(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
 
   step = temp_t;
 }
-void ParaFun::tmaxdetect(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
+void ParaFun::DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
                          double &tmax) {
   const double *pos = x.data();
   std::vector<double> x_update(2 * V_N);
@@ -1801,7 +1804,7 @@ void ParaFun::tmaxdetect(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
     cell_points[j].clear();
   }
 
-  Eigen::VectorXi boundary_vertex = d_.frame_ids_;
+  Eigen::VectorXi boundary_vertex = shell_data_.frame_ids_;
   int id, id_x_min, id_x_max, id_y_min, id_y_max;
   double s0, s1, e0, e1, p0, p1, s0_, s1_, e0_, e1_;
   double l_x_min, l_x_max, l_y_min, l_y_max;
@@ -1924,7 +1927,7 @@ void ParaFun::tmaxdetect(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
   AV_F_N = AV_ID.size();
   //	std::cout << AV_F_N << std::endl;
 }
-double ParaFun::get_smallest_pos_quad_zero(double a, double b, double c) {
+double ParaFun::GetSmallestPosQuadZero(double a, double b, double c) {
   using namespace std;
   double t1, t2;
   if (std::abs(a) < 1.0e-10) {
@@ -1969,8 +1972,8 @@ double ParaFun::get_smallest_pos_quad_zero(double a, double b, double c) {
     return t1 > 0 ? t1 : INFINITY;
   }
 }
-bool ParaFun::check_intersection(const Eigen::VectorXd &pos) {
-  Eigen::VectorXi boundary_vertex = d_.frame_ids_;
+bool ParaFun::CheckIntersection(const Eigen::VectorXd &pos) {
+  Eigen::VectorXi boundary_vertex = shell_data_.frame_ids_;
   BE_N = boundary_vertex.size();
 
   int id_start, id_end, id_before, id_mid1, id_mid2;
@@ -2011,10 +2014,10 @@ bool ParaFun::check_intersection(const Eigen::VectorXd &pos) {
   return false;
 }
 
-void ParaFun::backtracking_line_search(const Eigen::VectorXd &x,
-                                       const Eigen::VectorXd &d,
-                                       const Eigen::VectorXd &negetive_grad,
-                                       double &alpha, bool is_interp) {
+void ParaFun::BacktrackingLineSearch(const Eigen::VectorXd &x,
+                                     const Eigen::VectorXd &d,
+                                     const Eigen::VectorXd &negetive_grad,
+                                     double &alpha, bool is_interp) {
   double h = 0.5;
   double tt = -(negetive_grad.transpose() * d)(0, 0);
   double c = 0.2;
@@ -2098,7 +2101,7 @@ void ParaFun::Energy(const Eigen::VectorXd &position, double &energyupdate,
   energyupdate = energy;
 
   if (is_whole) {
-    fungrid(position);
+    FunGrid(position);
     double dis, E_b, energy2 = 0;
     for (int i = 0; i < AV_F_N; ++i) {
       f0 = V_F0[AV_ID[i]];
@@ -2114,7 +2117,7 @@ void ParaFun::Energy(const Eigen::VectorXd &position, double &energyupdate,
       x2 = pos[f2];
       y2 = pos[f2 + V_N];
 
-      dis = distance(x0, y0, x1, y1, x2, y2);
+      dis = GetDistance(x0, y0, x1, y1, x2, y2);
       if (dis < 0) {
         std::cout << "distance is zero" << std::endl;
       }
@@ -2127,7 +2130,7 @@ void ParaFun::Energy(const Eigen::VectorXd &position, double &energyupdate,
   }
 }
 
-void ParaFun::Energysource() {
+void ParaFun::EnergySource() {
   double end_e_area = 0;
 
   int f0, f1, f2;
@@ -2139,7 +2142,7 @@ void ParaFun::Energysource() {
   double q00, q01, q10, q11;
 
   const double *pos = position_of_mesh.data();
-  for (int i = 0; i < d_.mesh_faces_.rows(); ++i) {
+  for (int i = 0; i < shell_data_.mesh_faces_.rows(); ++i) {
     f0 = F0[i];
     f1 = F1[i];
     f2 = F2[i];
@@ -2181,10 +2184,10 @@ void ParaFun::Energysource() {
     end_e_area += ((E_1 + E_2) * area[i]);
   }
   // std::cout << max_E_d << std::endl;
-  energy_mesh = end_e_area;
+  energy_mesh_ = end_e_area;
 
   end_e_area = 0;
-  for (int i = d_.mesh_faces_.rows(); i < F_N; ++i) {
+  for (int i = shell_data_.mesh_faces_.rows(); i < F_N; ++i) {
     f0 = F0[i];
     f1 = F1[i];
     f2 = F2[i];
@@ -2235,7 +2238,7 @@ double ParaFun::ComputeEnergy(const Eigen::MatrixXd &x, bool whole) {
   double q00, q01, q10, q11;
 
   const double *pos = x.data();
-  int src_t_num = d_.mesh_faces_.rows();
+  int src_t_num = shell_data_.mesh_faces_.rows();
 
   for (int i = 0; i < src_t_num; ++i) {
     f0 = F0[i];
@@ -2320,23 +2323,25 @@ double ParaFun::ComputeEnergy(const Eigen::MatrixXd &x, bool whole) {
   }
   // cout << "compute energy with scaf "<<whole<<" "<< end_e_area << endl;
   // cout << "compute energy with scaf/area " << whole << " " <<
-  // end_e_area/d_.mesh_measure_ << endl;
+  // end_e_area/shell_data_.mesh_measure_ << endl;
 
   return end_e_area;
 }
 
-void ParaFun::local_coordinate_inverse(int i, double &p00, double &p01,
-                                       double &p10, double &p11) {
+void ParaFun::LocalCoordinateInverse(int i, double &p00, double &p01,
+                                     double &p10, double &p11) {
   /*int f0 = F0[i];
   int f1 = F1[i];
   int f2 = F2[i];
 
-  Vector3d x_(d_.mesh_vertices_(f1, 0) - d_.mesh_vertices_(f0, 0),
-  d_.mesh_vertices_(f1, 1) - d_.mesh_vertices_(f0, 1), d_.mesh_vertices_(f1, 2)
-  - d_.mesh_vertices_(f0, 2)); double x1_0 = x_.norm(); x_ /= x1_0; Vector3d
-  l_(d_.mesh_vertices_(f2, 0) - d_.mesh_vertices_(f0, 0), d_.mesh_vertices_(f2,
-  1) - d_.mesh_vertices_(f0, 1), d_.mesh_vertices_(f2, 2)
-  - d_.mesh_vertices_(f0, 2));
+  Vector3d x_(shell_data_.mesh_vertices_(f1, 0) - shell_data_.mesh_vertices_(f0,
+  0), shell_data_.mesh_vertices_(f1, 1) - shell_data_.mesh_vertices_(f0, 1),
+  shell_data_.mesh_vertices_(f1, 2)
+  - shell_data_.mesh_vertices_(f0, 2)); double x1_0 = x_.norm(); x_ /= x1_0;
+  Vector3d l_(shell_data_.mesh_vertices_(f2, 0) - shell_data_.mesh_vertices_(f0,
+  0), shell_data_.mesh_vertices_(f2, 1) - shell_data_.mesh_vertices_(f0, 1),
+  shell_data_.mesh_vertices_(f2, 2)
+  - shell_data_.mesh_vertices_(f0, 2));
 
   Vector3d n_ = x_.cross(l_);
   n_.normalize();
@@ -2355,20 +2360,25 @@ void ParaFun::local_coordinate_inverse(int i, double &p00, double &p01,
   double area_tri = area[i];
   double area_min = 1e-15;
   if (area_tri > area_min) {
-    Eigen::Vector3d t_(d_.mesh_vertices_(f0, 0), d_.mesh_vertices_(f0, 1),
-                       d_.mesh_vertices_(f0, 2));
-    Eigen::Vector3d u_(d_.mesh_vertices_(f1, 0), d_.mesh_vertices_(f1, 1),
-                       d_.mesh_vertices_(f1, 2));
-    Eigen::Vector3d v_(d_.mesh_vertices_(f2, 0), d_.mesh_vertices_(f2, 1),
-                       d_.mesh_vertices_(f2, 2));
-    Eigen::Vector3d x_(d_.mesh_vertices_(f1, 0) - d_.mesh_vertices_(f0, 0),
-                       d_.mesh_vertices_(f1, 1) - d_.mesh_vertices_(f0, 1),
-                       d_.mesh_vertices_(f1, 2) - d_.mesh_vertices_(f0, 2));
+    Eigen::Vector3d t_(shell_data_.mesh_vertices_(f0, 0),
+                       shell_data_.mesh_vertices_(f0, 1),
+                       shell_data_.mesh_vertices_(f0, 2));
+    Eigen::Vector3d u_(shell_data_.mesh_vertices_(f1, 0),
+                       shell_data_.mesh_vertices_(f1, 1),
+                       shell_data_.mesh_vertices_(f1, 2));
+    Eigen::Vector3d v_(shell_data_.mesh_vertices_(f2, 0),
+                       shell_data_.mesh_vertices_(f2, 1),
+                       shell_data_.mesh_vertices_(f2, 2));
+    Eigen::Vector3d x_(
+        shell_data_.mesh_vertices_(f1, 0) - shell_data_.mesh_vertices_(f0, 0),
+        shell_data_.mesh_vertices_(f1, 1) - shell_data_.mesh_vertices_(f0, 1),
+        shell_data_.mesh_vertices_(f1, 2) - shell_data_.mesh_vertices_(f0, 2));
     double x1_0 = x_.norm();
     x_ /= x1_0;
-    Eigen::Vector3d l_(d_.mesh_vertices_(f2, 0) - d_.mesh_vertices_(f0, 0),
-                       d_.mesh_vertices_(f2, 1) - d_.mesh_vertices_(f0, 1),
-                       d_.mesh_vertices_(f2, 2) - d_.mesh_vertices_(f0, 2));
+    Eigen::Vector3d l_(
+        shell_data_.mesh_vertices_(f2, 0) - shell_data_.mesh_vertices_(f0, 0),
+        shell_data_.mesh_vertices_(f2, 1) - shell_data_.mesh_vertices_(f0, 1),
+        shell_data_.mesh_vertices_(f2, 2) - shell_data_.mesh_vertices_(f0, 2));
     Eigen::Vector3d n_ = x_.cross(l_);
     n_.normalize();
     Eigen::Vector3d y_ = n_.cross(x_);
@@ -2390,16 +2400,18 @@ void ParaFun::local_coordinate_inverse(int i, double &p00, double &p01,
     p11 = 1 / y2_0;
   }
 }
-void ParaFun::local_coordinate_inverse_scaf(int i, double &p00, double &p01,
-                                            double &p10, double &p11) {
+void ParaFun::LocalCoordinateInverseScaf(int i, double &p00, double &p01,
+                                         double &p10, double &p11) {
   int f0 = F0[i];
   int f1 = F1[i];
   int f2 = F2[i];
 
-  Eigen::Vector2d x_(d_.whole_uv_(f1, 0) - d_.whole_uv_(f0, 0),
-                     d_.whole_uv_(f1, 1) - d_.whole_uv_(f0, 1));
-  Eigen::Vector2d l_(d_.whole_uv_(f2, 0) - d_.whole_uv_(f0, 0),
-                     d_.whole_uv_(f2, 1) - d_.whole_uv_(f0, 1));
+  Eigen::Vector2d x_(
+      shell_data_.whole_uv_(f1, 0) - shell_data_.whole_uv_(f0, 0),
+      shell_data_.whole_uv_(f1, 1) - shell_data_.whole_uv_(f0, 1));
+  Eigen::Vector2d l_(
+      shell_data_.whole_uv_(f2, 0) - shell_data_.whole_uv_(f0, 0),
+      shell_data_.whole_uv_(f2, 1) - shell_data_.whole_uv_(f0, 1));
 
   double area_tri = std::abs(x_(0) * l_(1) - x_(1) * l_(0));
   double x1_0, x2_0, y2_0;
@@ -2422,8 +2434,8 @@ void ParaFun::local_coordinate_inverse_scaf(int i, double &p00, double &p01,
   p11 = 1 / y2_0;
 }
 
-double ParaFun::newton_equation(const double &a, const double &b,
-                                const double &K) {
+double ParaFun::NewtonEquation(const double &a, const double &b,
+                               const double &K) {
   double tt = 1;
   double E_d = pow(a, 2 * tt) + pow(b, 2 * tt) + pow(1 / a, 2 * tt) +
                pow(1 / b, 2 * tt) - K;
@@ -2439,25 +2451,25 @@ double ParaFun::newton_equation(const double &a, const double &b,
   }
   return tt;
 }
-void ParaFun::adjust_shell_weight(double new_weight) {
-  d_.shell_factor_ = new_weight;
-  d_.UpdateShell();
-  init_area();
+void ParaFun::AdjustShellWeight(double new_weight) {
+  shell_data_.shell_factor_ = new_weight;
+  shell_data_.UpdateShell();
+  InitArea();
 }
 
-double ParaFun::distance(double s0, double s1, double e0, double e1, double p0,
-                         double p1) {
+double ParaFun::GetDistance(double s0, double s1, double e0, double e1,
+                            double p0, double p1) {
   double s0_ = s0, s1_ = s1;
   double e0_ = e0, e1_ = e1;
 
-  double len01 = sqrt((s0 - e0) * (s0 - e0) + (s1 - e1) * (s1 - e1));
-  double len0i = sqrt((p0 - s0_) * (p0 - s0_) + (p1 - s1_) * (p1 - s1_));
-  double len1i = sqrt((p0 - e0_) * (p0 - e0_) + (p1 - e1_) * (p1 - e1_));
+  double len01 = std::sqrt((s0 - e0) * (s0 - e0) + (s1 - e1) * (s1 - e1));
+  double len0i = std::sqrt((p0 - s0_) * (p0 - s0_) + (p1 - s1_) * (p1 - s1_));
+  double len1i = std::sqrt((p0 - e0_) * (p0 - e0_) + (p1 - e1_) * (p1 - e1_));
 
   return len0i + len1i - len01;
 }
 
-void ParaFun::fungrid(const Eigen::VectorXd &x) {
+void ParaFun::FunGrid(const Eigen::VectorXd &x) {
   const double *pos = x.data();
 
   x_min = pos[0];
@@ -2486,7 +2498,7 @@ void ParaFun::fungrid(const Eigen::VectorXd &x) {
   for (int j = 0; j < cell_points.size(); ++j) {
     cell_points[j].clear();
   }
-  Eigen::VectorXi boundary_vertex = d_.frame_ids_;
+  Eigen::VectorXi boundary_vertex = shell_data_.frame_ids_;
   int bound_num = BE_N;
   double l_x_min, l_x_max, l_y_min, l_y_max, b, len;
   int id_x_min, id_x_max, id_y_min, id_y_max;
