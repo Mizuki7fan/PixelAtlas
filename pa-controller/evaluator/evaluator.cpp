@@ -235,7 +235,7 @@ void Evaluator::PrintDataDifference() {
     std::pair<std::string, double> max_difference =
         map_property_to_max_difference_.at(property_info.first);
     std::cout << std::format(
-                     "metric name: {},\nvalid data: {}/{},\navg squared "
+                     "metric name: \"{}\",\nvalid data: {}/{},\navg squared "
                      "difference: {},\n"
                      "max difference: ({}, {})",
                      property_info.first, //

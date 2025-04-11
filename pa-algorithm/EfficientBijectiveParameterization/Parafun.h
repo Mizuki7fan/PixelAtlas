@@ -92,8 +92,8 @@ private:
   std::vector<int> id_h44_, id_h45_;
   std::vector<int> id_h55_;
 
-  double threhold;
-  double average_length;
+  double threhold_;
+  double average_length_;
 
   int BE_N_;
   int V_F_N_;
@@ -108,13 +108,13 @@ private:
   std::vector<int> AV_ID_;
   std::vector<int> boundary_vertexID_;
 
-  int cellx_num;
-  int celly_num;
-  double x_min;
-  double x_max;
-  double y_min;
-  double y_max;
-  double lengthgrid_x;
-  double lengthgrid_y;
-  std::vector<std::vector<int>> cell_points;
+  int num_cell_x_;
+  int num_cell_y_;
+  double x_min_;
+  double x_max_;
+  double y_min_;
+  double y_max_;
+  double lengthgrid_x_;
+  double lengthgrid_y_;
+  std::vector<std::vector<int>> cell_points_;
 };

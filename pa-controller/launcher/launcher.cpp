@@ -1,15 +1,8 @@
 #include <boost/process.hpp>
-// #include <filesystem>
-// #include <format>
 #include <frame/assert.hpp>
 #include <frame/command_structures.h>
 #include <frame/parse.h>
 #include <iostream>
-// #include <regex>
-// #include <sstream>
-
-// namespace fs = std::filesystem;
-// namespace bp = boost::process;
 
 int main(int argc, char *argv[]) {
   std::cout << argc << argv[0] << std::endl;

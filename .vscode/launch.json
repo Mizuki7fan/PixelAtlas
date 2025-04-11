@@ -2,6 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "generate project",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pa-script/etc/reset_compile_commands.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}"
+        },
+        {
             "name": "debug-preprocess",
             "type": "cppvsdbg",
             "request": "launch",
@@ -40,15 +49,6 @@
                 "--run_name","base",
                 "--clean"
                 ],//参数
-        },
-        {
-            "name": "generate project",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/pa-script/etc/reset_compile_commands.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "cwd": "${workspaceFolder}"
         },
         {
             "name": "release-evaluator",

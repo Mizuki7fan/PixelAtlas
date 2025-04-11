@@ -12,6 +12,7 @@ endif()
 # 设置编译器标志, 对整个项目都生效
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     add_compile_options("/source-charset:utf-8")#避免报错: 该文件包含不能在当前代码页(936)中表示的字符
+    add_compile_definitions(_WIN32_WINNT=0x0A00)
     set(CMAKE_EXPORT_COMPILE_COMMANDS OFF CACHE BOOL "Disable export of compile commands" FORCE)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-Wall -Wextra -Werror)

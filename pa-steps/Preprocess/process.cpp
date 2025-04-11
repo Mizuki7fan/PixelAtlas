@@ -13,10 +13,10 @@ void MainProcess() {
   cgl::SurfaceMesh3 tri_mesh;
   CGAL::IO::read_OBJ(model_path.string(), tri_mesh);
   std::unique_ptr<BiljectivePara> bil_para =
-      std::make_unique<BiljectivePara>(tri_mesh, model_path.string());
+      std::make_unique<BiljectivePara>(tri_mesh);
 
-  bil_para->load(); // 读入网格、完成shell的构建
-  bil_para->parameterization();
+  bil_para->Load(); // 读入网格、完成shell的构建
+  bil_para->Parameterization();
 
   std::ofstream fout = frm::CreateResultFilestream("uv_mesh.obj");
   bil_para->WriteUVMesh(fout);
@@ -25,6 +25,7 @@ void MainProcess() {
   // 写入metrics
   std::unordered_map<std::string, std::string> metrics;
   metrics["distortion"] = "double";
+
   std::unordered_map<std::string, frm::MetricValue> metric_values;
   metric_values["distortion"] = bil_para->GetDistortion();
 

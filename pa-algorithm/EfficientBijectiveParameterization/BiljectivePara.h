@@ -8,27 +8,27 @@ using namespace std;
 
 class BiljectivePara {
 public:
-  BiljectivePara(const cgl::SurfaceMesh3 &m, string filename);
+  BiljectivePara(const cgl::SurfaceMesh3 &mesh);
   ~BiljectivePara();
 
-  void parameterization();
-  void load();
+  void Parameterization();
+  void Load();
   void WriteUVMesh(std::ofstream &fout);
-  void shelltri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos, VectorXi &bnd);
-  double adjust_weight(double conv_mesh, double last_energy);
   double GetDistortion() { return last_mesh_energy_; }
 
-protected:
-  string modelname;
-  const cgl::SurfaceMesh3 &mesh;
-  cgl::SurfaceMesh3 uv_mesh_;
-  ShellData shell_data;
-  std::shared_ptr<ParaFun> parafun_solver = nullptr;
-  double last_mesh_energy_;
-  double convgence_con_rate = 1e-5;
-  int MAX_ITER_NUM = 5000;
-  bool is_initialization;
+private:
+  void ShellTri(MatrixXi &tri, MatrixXd &pre_pos, MatrixXd &pos, VectorXi &bnd);
+  double AdjustWeight(double conv_mesh, double last_energy);
 
-  bool weight1;
-  bool weight2;
+private:
+  const cgl::SurfaceMesh3 &mesh_;
+  cgl::SurfaceMesh3 uv_mesh_;
+  ShellData shell_data_;
+  std::shared_ptr<ParaFun> solver_ = nullptr;
+  double last_mesh_energy_;
+  double convgence_con_rate_ = 1e-5;
+  static constexpr int kNumMaxIteration = 5000;
+  bool is_initialization_;
+
+  bool weight1_, weight2_;
 };

@@ -8,7 +8,7 @@
                 "uv_mesh.obj"
             ],
             "metrics": [
-                {"type": "DOUBLE", "name": "distortion"}
+                {"type": "DOUBLE", "name": "distortion"}         
             ]
         }
     ],
