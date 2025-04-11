@@ -7,6 +7,7 @@ int main(int argc, char *argv[]) {
   Evaluator evaluator(argc, argv);
   evaluator.LoadData();
   evaluator.PrintData();
-  evaluator.PrintDataAvgSquaredDifference();
+  evaluator.AnalyseDataDifference();
+  evaluator.PrintDataDifference();
   return 0;
 }

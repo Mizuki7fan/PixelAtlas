@@ -84,12 +84,12 @@ void BiljectivePara::parameterization() {
   std::cout << "time: " << time_consumption << std::endl;
   std::cout << "energy:" << last_mesh_energy_ << std::endl;
   std::cout << "per time:" << time_consumption / iteration_count << std::endl;
-  cout << parafun_solver->time_1 << " " << parafun_solver->time_2 << " "
-       << parafun_solver->time_3 << endl;
-  cout << parafun_solver->time_1 << " "
-       << parafun_solver->time_2 / iteration_count << " "
-       << parafun_solver->time_3 / iteration_count << endl;
-  cout << parafun_solver->density << endl;
+  cout << parafun_solver->time_1_ << " " << parafun_solver->time_2_ << " "
+       << parafun_solver->time_3_ << endl;
+  cout << parafun_solver->time_1_ << " "
+       << parafun_solver->time_2_ / iteration_count << " "
+       << parafun_solver->time_3_ / iteration_count << endl;
+  cout << parafun_solver->density_ << endl;
 }
 
 double BiljectivePara::adjust_weight(double conv_mesh,
@@ -123,8 +123,8 @@ double BiljectivePara::adjust_weight(double conv_mesh,
 
   double last_all_energy =
       parafun_solver->energy_mesh_ +
-      parafun_solver->area.back() * parafun_solver->energy_shell +
-      parafun_solver->barrer_coef * parafun_solver->energy_barrier;
+      parafun_solver->area_.back() * parafun_solver->energy_shell_ +
+      parafun_solver->barrer_coef_ * parafun_solver->energy_barrier_;
 
   // std::cout << conv_mesh <<"   "<<parafun_solver->area.back() <<"    "<<
   // last_all_energy << std::endl;

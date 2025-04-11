@@ -6,35 +6,35 @@
 #endif
 
 ParaFun::ParaFun(ShellData &data) : shell_data_(data) {
-  pardiso = NULL;
-  is_first = true;
-  bound_distortion_K = 250;
-  barrer_coef = shell_data_.mesh_measure_ * 1e-8;
-  std::cout << barrer_coef << std::endl;
+  solver_ = nullptr;
+  is_first_ = true;
+  bound_distortion_K_ = 250;
+  barrer_coef_ = shell_data_.mesh_measure_ * 1e-8;
+  std::cout << barrer_coef_ << std::endl;
 }
 
 void ParaFun::AfterMeshImprove() {
-  total_num = shell_data_.num_vertices_;
-  F_N = shell_data_.num_faces_;
-  V_N = shell_data_.num_vertices_;
-  F0.resize(F_N);
-  F1.resize(F_N);
-  F2.resize(F_N);
+  total_num_ = shell_data_.num_vertices_;
+  F_N_ = shell_data_.num_faces_;
+  V_N_ = shell_data_.num_vertices_;
+  F_[0].resize(F_N_);
+  F_[1].resize(F_N_);
+  F_[2].resize(F_N_);
 
-  position_of_mesh.resize(2 * total_num);
+  position_of_mesh_.resize(2 * total_num_);
 
   for (size_t i = 0; i < kDim; i++) {
-    position_of_mesh.block(i * total_num, 0, total_num, 1) =
+    position_of_mesh_.block(i * total_num_, 0, total_num_, 1) =
         shell_data_.whole_uv_.col(i);
   }
 
   Init();
 }
 void ParaFun::Init() {
-  for (int i = 0; i < F_N; ++i) {
-    F0[i] = shell_data_.whole_faces_(i, 0);
-    F1[i] = shell_data_.whole_faces_(i, 1);
-    F2[i] = shell_data_.whole_faces_(i, 2);
+  for (int i = 0; i < F_N_; ++i) {
+    F_[0][i] = shell_data_.whole_faces_(i, 0);
+    F_[1][i] = shell_data_.whole_faces_(i, 1);
+    F_[2][i] = shell_data_.whole_faces_(i, 2);
   }
 
   HandleMinTri();
@@ -42,23 +42,23 @@ void ParaFun::Init() {
   SetVirtualTri();
   PreCalculate();
 
-  const double *pos = position_of_mesh.data();
+  const double *pos = position_of_mesh_.data();
 
   x_min = pos[0];
   x_max = pos[0];
-  y_min = pos[V_N];
-  y_max = pos[V_N];
-  for (int i = 1; i < V_N; ++i) {
+  y_min = pos[V_N_];
+  y_max = pos[V_N_];
+  for (int i = 1; i < V_N_; ++i) {
     if (pos[i] < x_min) {
       x_min = pos[i];
     } else if (pos[i] > x_max) {
       x_max = pos[i];
     }
 
-    if (pos[i + V_N] < y_min) {
-      y_min = pos[i + V_N];
-    } else if (pos[i + V_N] > y_max) {
-      y_max = pos[i + V_N];
+    if (pos[i + V_N_] < y_min) {
+      y_min = pos[i + V_N_];
+    } else if (pos[i + V_N_] > y_max) {
+      y_max = pos[i + V_N_];
     }
   }
 
@@ -81,44 +81,43 @@ void ParaFun::Init() {
   cell_points.clear();
   cell_points.resize(cellx_num * celly_num);
 
-  if (pardiso != NULL) {
-    delete pardiso;
-    pardiso = NULL;
-  }
+  if (solver_ != nullptr)
+    solver_ = nullptr;
+
 #if defined(USE_MKL)
-  pardiso = new MKLPardisoSolver();
+  solver_ = std::make_unique<MKLPardisoSolver>();
 #elif defined(USE_EIGEN)
-  pardiso = new EigenLinSolver();
+  solver_ = std::make_unique<EigenLinSolver>();
 #endif
-  pardiso->ia_ = pardiso_ia;
-  pardiso->ja_ = pardiso_ja;
-  pardiso->a_.resize(pardiso_ja.size());
-  pardiso->nnz_ = pardiso_ja.size();
-  pardiso->num_ = 2 * V_N;
+  solver_->ia_ = pardiso_ia_;
+  solver_->ja_ = pardiso_ja_;
+  solver_->a_.resize(pardiso_ja_.size());
+  solver_->nnz_ = pardiso_ja_.size();
+  solver_->num_ = 2 * V_N_;
   long time_beg, time_end;
   time_beg = clock();
-  pardiso->PardisoInit();
+  solver_->PardisoInit();
   time_end = clock();
   double time_consumption = (time_end - time_beg) / 1000.0;
-  time1 += time_consumption;
+  time_1_ += time_consumption;
 
-  FunGrid(position_of_mesh);
+  FunGrid(position_of_mesh_);
   int f0, f1, f2;
   double x0, y0, x1, y1, x2, y2;
   double dis, E_b, energy2 = 0;
-  for (int i = 0; i < AV_F_N; ++i) {
-    f0 = V_F0[AV_ID[i]];
-    f1 = V_F1[AV_ID[i]];
-    f2 = V_F2[AV_ID[i]];
+  for (int i = 0; i < AV_F_N_; ++i) {
+    f0 = V_F0_[AV_ID_[i]];
+    f1 = V_F1_[AV_ID_[i]];
+    f2 = V_F2_[AV_ID_[i]];
 
     x0 = pos[f0];
-    y0 = pos[f0 + V_N];
+    y0 = pos[f0 + V_N_];
 
     x1 = pos[f1];
-    y1 = pos[f1 + V_N];
+    y1 = pos[f1 + V_N_];
 
     x2 = pos[f2];
-    y2 = pos[f2 + V_N];
+    y2 = pos[f2 + V_N_];
 
     dis = GetDistance(x0, y0, x1, y1, x2, y2);
     if (dis < 0) {
@@ -127,103 +126,103 @@ void ParaFun::Init() {
     E_b = (1 - threhold / dis) * (1 - threhold / dis);
     energy2 += E_b;
   }
-  energy_barrier = energy2;
+  energy_barrier_ = energy2;
 
-  if (is_first)
-    is_first = false;
+  if (is_first_)
+    is_first_ = false;
 }
 void ParaFun::InitArea() {
-  area.resize(F_N);
+  area_.resize(F_N_);
   int src_t_num = shell_data_.mesh_faces_.rows();
-  area_src.resize(src_t_num);
+  area_src_.resize(src_t_num);
   for (int i = 0; i < src_t_num; ++i) {
-    area_src[i] = shell_data_.mesh_face_area_(i);
-    area[i] = shell_data_.mesh_face_area_(i);
-    if (area[i] < 1e-15) {
+    area_src_[i] = shell_data_.mesh_face_area_(i);
+    area_[i] = shell_data_.mesh_face_area_(i);
+    if (area_[i] < 1e-15) {
       std::cout << "error" << std::endl;
     }
   }
-  for (int i = src_t_num; i < F_N; ++i) {
-    area[i] = shell_data_.shell_face_area_(i - src_t_num);
-    if (area[i] < 1e-15) {
+  for (int i = src_t_num; i < F_N_; ++i) {
+    area_[i] = shell_data_.shell_face_area_(i - src_t_num);
+    if (area_[i] < 1e-15) {
       std::cout << "error" << std::endl;
     }
   }
 }
 void ParaFun::SetVirtualTri() {
   Eigen::VectorXi boundary_vertex = shell_data_.frame_ids_;
-  BE_N = boundary_vertex.size();
+  BE_N_ = boundary_vertex.size();
 
-  V_F_N = BE_N * (BE_N - 2);
-  V_F0.resize(V_F_N);
-  V_F1.resize(V_F_N);
-  V_F2.resize(V_F_N);
-  is_active.resize(V_F_N, -1);
-  AV_ID.reserve(V_F_N);
+  V_F_N_ = BE_N_ * (BE_N_ - 2);
+  V_F0_.resize(V_F_N_);
+  V_F1_.resize(V_F_N_);
+  V_F2_.resize(V_F_N_);
+  is_active_.resize(V_F_N_, -1);
+  AV_ID_.reserve(V_F_N_);
 
-  boundary_vertexID.clear();
-  boundary_vertexID.resize(V_N, -1);
+  boundary_vertexID_.clear();
+  boundary_vertexID_.resize(V_N_, -1);
 
   int id = 0;
-  for (int i = 0; i < BE_N; ++i) {
-    boundary_vertexID[boundary_vertex(i)] = id;
+  for (int i = 0; i < BE_N_; ++i) {
+    boundary_vertexID_[boundary_vertex(i)] = id;
     id++;
   }
 
   int id_start, id_end, id_mid;
   int k;
-  for (int i = 0; i < BE_N; ++i) {
+  for (int i = 0; i < BE_N_; ++i) {
     id_start = boundary_vertex(i);
-    id_end = boundary_vertex((i + 1) % BE_N);
+    id_end = boundary_vertex((i + 1) % BE_N_);
     k = 0;
 
-    for (int j = 0; j < BE_N; ++j) {
+    for (int j = 0; j < BE_N_; ++j) {
       if (id_start != boundary_vertex(j) && id_end != boundary_vertex(j)) {
-        V_F0[i * (BE_N - 2) + k] = id_start;
-        V_F1[i * (BE_N - 2) + k] = id_end;
-        V_F2[i * (BE_N - 2) + k] = boundary_vertex(j);
+        V_F0_[i * (BE_N_ - 2) + k] = id_start;
+        V_F1_[i * (BE_N_ - 2) + k] = id_end;
+        V_F2_[i * (BE_N_ - 2) + k] = boundary_vertex(j);
         ++k;
       }
     }
   }
 }
 void ParaFun::PreCalculate() {
-  source_p00.resize(F_N);
-  source_p01.resize(F_N);
-  source_p10.resize(F_N);
-  source_p11.resize(F_N);
-  if (is_first) {
+  source_p00_.resize(F_N_);
+  source_p01_.resize(F_N_);
+  source_p10_.resize(F_N_);
+  source_p11_.resize(F_N_);
+  if (is_first_) {
     for (int i = 0; i < shell_data_.mesh_faces_.rows(); ++i) {
       double p00, p01, p10, p11;
       LocalCoordinateInverse(i, p00, p01, p10, p11);
-      source_p00[i] = p00;
-      source_p01[i] = p01;
-      source_p10[i] = p10;
-      source_p11[i] = p11;
+      source_p00_[i] = p00;
+      source_p01_[i] = p01;
+      source_p10_[i] = p10;
+      source_p11_[i] = p11;
     }
   }
 
-  for (int i = shell_data_.mesh_faces_.rows(); i < F_N; ++i) {
+  for (int i = shell_data_.mesh_faces_.rows(); i < F_N_; ++i) {
     double p00, p01, p10, p11;
     LocalCoordinateInverseScaf(i, p00, p01, p10, p11);
-    source_p00[i] = p00;
-    source_p01[i] = p01;
-    source_p10[i] = p10;
-    source_p11[i] = p11;
+    source_p00_[i] = p00;
+    source_p01_[i] = p01;
+    source_p10_[i] = p10;
+    source_p11_[i] = p11;
   }
-  update_p00 = source_p00;
-  update_p01 = source_p01;
-  update_p10 = source_p10;
-  update_p11 = source_p11;
+  update_p00_ = source_p00_;
+  update_p01_ = source_p01_;
+  update_p10_ = source_p10_;
+  update_p11_ = source_p11_;
 
-  pardiso_ia.clear();
-  pardiso_ia.reserve(2 * V_N + 1);
-  pardiso_ja.clear();
-  pardiso_ja.reserve(8 * V_N + BE_N * BE_N * 2);
+  pardiso_ia_.clear();
+  pardiso_ia_.reserve(2 * V_N_ + 1);
+  pardiso_ja_.clear();
+  pardiso_ja_.reserve(8 * V_N_ + BE_N_ * BE_N_ * 2);
   typedef Eigen::Triplet<int> T;
   std::vector<T> tripletlist;
   std::vector<std::set<int>> VV_tmp;
-  VV_tmp.resize(V_N);
+  VV_tmp.resize(V_N_);
   for (size_t i = 0; i < shell_data_.mesh_faces_.rows(); i++) {
     int vid[3];
     for (size_t j = 0; j < shell_data_.mesh_faces_.cols(); j++) {
@@ -262,8 +261,8 @@ void ParaFun::PreCalculate() {
     }
   }
 
-  for (int i = 0; i < V_N; i++) {
-    pardiso_ia.push_back(pardiso_ja.size());
+  for (int i = 0; i < V_N_; i++) {
+    pardiso_ia_.push_back(pardiso_ja_.size());
     VV_tmp[i].insert(i);
     std::vector<int> row_id;
     for (auto &var : VV_tmp[i]) {
@@ -273,138 +272,138 @@ void ParaFun::PreCalculate() {
         std::find(row_id.begin(), row_id.end(), i);
     int dd = 0;
     for (int k = std::distance(row_id.begin(), iter); k < row_id.size(); k++) {
-      pardiso_ja.push_back(row_id[k]);
+      pardiso_ja_.push_back(row_id[k]);
       tripletlist.push_back(T(i, row_id[k], dd));
       ++dd;
     }
     for (int k = 0; k < row_id.size(); k++) {
-      pardiso_ja.push_back(row_id[k] + V_N);
-      tripletlist.push_back(T(i, row_id[k] + V_N, dd));
+      pardiso_ja_.push_back(row_id[k] + V_N_);
+      tripletlist.push_back(T(i, row_id[k] + V_N_, dd));
       ++dd;
     }
   }
-  for (int i = V_N; i < 2 * V_N; i++) {
-    pardiso_ia.push_back(pardiso_ja.size());
+  for (int i = V_N_; i < 2 * V_N_; i++) {
+    pardiso_ia_.push_back(pardiso_ja_.size());
     std::vector<int> row_id;
-    for (auto &var : VV_tmp[i - V_N]) {
+    for (auto &var : VV_tmp[i - V_N_]) {
       row_id.push_back(var);
     }
     std::vector<int>::iterator iter =
-        std::find(row_id.begin(), row_id.end(), i - V_N);
+        std::find(row_id.begin(), row_id.end(), i - V_N_);
     int dd = 0;
     for (int k = std::distance(row_id.begin(), iter); k < row_id.size(); k++) {
-      pardiso_ja.push_back(row_id[k] + V_N);
-      tripletlist.push_back(T(i, row_id[k] + V_N, dd));
+      pardiso_ja_.push_back(row_id[k] + V_N_);
+      tripletlist.push_back(T(i, row_id[k] + V_N_, dd));
       ++dd;
     }
   }
 
   Eigen::SparseMatrix<int> find_id_in_rows;
-  find_id_in_rows.resize(2 * V_N, 2 * V_N);
+  find_id_in_rows.resize(2 * V_N_, 2 * V_N_);
   find_id_in_rows.setFromTriplets(tripletlist.begin(), tripletlist.end());
-  pardiso_ia.push_back(pardiso_ja.size());
-  id_h00.resize(F_N + V_F_N, -1);
-  id_h01.resize(F_N + V_F_N, -1);
-  id_h02.resize(F_N + V_F_N, -1);
-  id_h03.resize(F_N + V_F_N, -1);
-  id_h04.resize(F_N + V_F_N, -1);
-  id_h05.resize(F_N + V_F_N, -1);
-  id_h11.resize(F_N + V_F_N, -1);
-  id_h12.resize(F_N + V_F_N, -1);
-  id_h13.resize(F_N + V_F_N, -1);
-  id_h14.resize(F_N + V_F_N, -1);
-  id_h15.resize(F_N + V_F_N, -1);
-  id_h22.resize(F_N + V_F_N, -1);
-  id_h23.resize(F_N + V_F_N, -1);
-  id_h24.resize(F_N + V_F_N, -1);
-  id_h25.resize(F_N + V_F_N, -1);
-  id_h33.resize(F_N + V_F_N, -1);
-  id_h34.resize(F_N + V_F_N, -1);
-  id_h35.resize(F_N + V_F_N, -1);
-  id_h44.resize(F_N + V_F_N, -1);
-  id_h45.resize(F_N + V_F_N, -1);
-  id_h55.resize(F_N + V_F_N, -1);
+  pardiso_ia_.push_back(pardiso_ja_.size());
+  id_h00_.resize(F_N_ + V_F_N_, -1);
+  id_h01_.resize(F_N_ + V_F_N_, -1);
+  id_h02_.resize(F_N_ + V_F_N_, -1);
+  id_h03_.resize(F_N_ + V_F_N_, -1);
+  id_h04_.resize(F_N_ + V_F_N_, -1);
+  id_h05_.resize(F_N_ + V_F_N_, -1);
+  id_h11_.resize(F_N_ + V_F_N_, -1);
+  id_h12_.resize(F_N_ + V_F_N_, -1);
+  id_h13_.resize(F_N_ + V_F_N_, -1);
+  id_h14_.resize(F_N_ + V_F_N_, -1);
+  id_h15_.resize(F_N_ + V_F_N_, -1);
+  id_h22_.resize(F_N_ + V_F_N_, -1);
+  id_h23_.resize(F_N_ + V_F_N_, -1);
+  id_h24_.resize(F_N_ + V_F_N_, -1);
+  id_h25_.resize(F_N_ + V_F_N_, -1);
+  id_h33_.resize(F_N_ + V_F_N_, -1);
+  id_h34_.resize(F_N_ + V_F_N_, -1);
+  id_h35_.resize(F_N_ + V_F_N_, -1);
+  id_h44_.resize(F_N_ + V_F_N_, -1);
+  id_h45_.resize(F_N_ + V_F_N_, -1);
+  id_h55_.resize(F_N_ + V_F_N_, -1);
 
-  for (int i = 0; i < F_N; i++) {
-    int f0 = F0[i];
-    int f1 = F1[i];
-    int f2 = F2[i];
-    int f3 = f0 + V_N;
-    int f4 = f1 + V_N;
-    int f5 = f2 + V_N;
+  for (int i = 0; i < F_N_; i++) {
+    int f0 = F_[0][i];
+    int f1 = F_[1][i];
+    int f2 = F_[2][i];
+    int f3 = f0 + V_N_;
+    int f4 = f1 + V_N_;
+    int f5 = f2 + V_N_;
     int min01 = std::min(f0, f1);
     int max01 = f0 + f1 - min01;
     int min02 = std::min(f0, f2);
     int max02 = f0 + f2 - min02;
     int min12 = std::min(f1, f2);
     int max12 = f1 + f2 - min12;
-    id_h00[i] = pardiso_ia[f0];
-    id_h01[i] = pardiso_ia[min01] + find_id_in_rows.coeff(min01, max01);
-    id_h02[i] = pardiso_ia[min02] + find_id_in_rows.coeff(min02, max02);
-    id_h03[i] = pardiso_ia[f0] + find_id_in_rows.coeff(f0, f3);
-    id_h04[i] = pardiso_ia[f0] + find_id_in_rows.coeff(f0, f4);
-    id_h05[i] = pardiso_ia[f0] + find_id_in_rows.coeff(f0, f5);
-    id_h11[i] = pardiso_ia[f1];
-    id_h12[i] = pardiso_ia[min12] + find_id_in_rows.coeff(min12, max12);
-    id_h13[i] = pardiso_ia[f1] + find_id_in_rows.coeff(f1, f3);
-    id_h14[i] = pardiso_ia[f1] + find_id_in_rows.coeff(f1, f4);
-    id_h15[i] = pardiso_ia[f1] + find_id_in_rows.coeff(f1, f5);
-    id_h22[i] = pardiso_ia[f2];
-    id_h23[i] = pardiso_ia[f2] + find_id_in_rows.coeff(f2, f3);
-    id_h24[i] = pardiso_ia[f2] + find_id_in_rows.coeff(f2, f4);
-    id_h25[i] = pardiso_ia[f2] + find_id_in_rows.coeff(f2, f5);
-    id_h33[i] = pardiso_ia[f3];
-    id_h34[i] = pardiso_ia[min01 + V_N] +
-                find_id_in_rows.coeff(min01 + V_N, max01 + V_N);
-    id_h35[i] = pardiso_ia[min02 + V_N] +
-                find_id_in_rows.coeff(min02 + V_N, max02 + V_N);
-    id_h44[i] = pardiso_ia[f4];
-    id_h45[i] = pardiso_ia[min12 + V_N] +
-                find_id_in_rows.coeff(min12 + V_N, max12 + V_N);
-    id_h55[i] = pardiso_ia[f5];
+    id_h00_[i] = pardiso_ia_[f0];
+    id_h01_[i] = pardiso_ia_[min01] + find_id_in_rows.coeff(min01, max01);
+    id_h02_[i] = pardiso_ia_[min02] + find_id_in_rows.coeff(min02, max02);
+    id_h03_[i] = pardiso_ia_[f0] + find_id_in_rows.coeff(f0, f3);
+    id_h04_[i] = pardiso_ia_[f0] + find_id_in_rows.coeff(f0, f4);
+    id_h05_[i] = pardiso_ia_[f0] + find_id_in_rows.coeff(f0, f5);
+    id_h11_[i] = pardiso_ia_[f1];
+    id_h12_[i] = pardiso_ia_[min12] + find_id_in_rows.coeff(min12, max12);
+    id_h13_[i] = pardiso_ia_[f1] + find_id_in_rows.coeff(f1, f3);
+    id_h14_[i] = pardiso_ia_[f1] + find_id_in_rows.coeff(f1, f4);
+    id_h15_[i] = pardiso_ia_[f1] + find_id_in_rows.coeff(f1, f5);
+    id_h22_[i] = pardiso_ia_[f2];
+    id_h23_[i] = pardiso_ia_[f2] + find_id_in_rows.coeff(f2, f3);
+    id_h24_[i] = pardiso_ia_[f2] + find_id_in_rows.coeff(f2, f4);
+    id_h25_[i] = pardiso_ia_[f2] + find_id_in_rows.coeff(f2, f5);
+    id_h33_[i] = pardiso_ia_[f3];
+    id_h34_[i] = pardiso_ia_[min01 + V_N_] +
+                 find_id_in_rows.coeff(min01 + V_N_, max01 + V_N_);
+    id_h35_[i] = pardiso_ia_[min02 + V_N_] +
+                 find_id_in_rows.coeff(min02 + V_N_, max02 + V_N_);
+    id_h44_[i] = pardiso_ia_[f4];
+    id_h45_[i] = pardiso_ia_[min12 + V_N_] +
+                 find_id_in_rows.coeff(min12 + V_N_, max12 + V_N_);
+    id_h55_[i] = pardiso_ia_[f5];
   }
 
-  for (int i = F_N; i < F_N + V_F_N; i++) {
-    int f0 = V_F0[i - F_N];
-    int f1 = V_F1[i - F_N];
-    int f2 = V_F2[i - F_N];
-    int f3 = V_F0[i - F_N] + V_N;
-    int f4 = V_F1[i - F_N] + V_N;
-    int f5 = V_F2[i - F_N] + V_N;
+  for (int i = F_N_; i < F_N_ + V_F_N_; i++) {
+    int f0 = V_F0_[i - F_N_];
+    int f1 = V_F1_[i - F_N_];
+    int f2 = V_F2_[i - F_N_];
+    int f3 = V_F0_[i - F_N_] + V_N_;
+    int f4 = V_F1_[i - F_N_] + V_N_;
+    int f5 = V_F2_[i - F_N_] + V_N_;
     int min01 = std::min(f0, f1);
     int max01 = f0 + f1 - min01;
     int min02 = std::min(f0, f2);
     int max02 = f0 + f2 - min02;
     int min12 = std::min(f1, f2);
     int max12 = f1 + f2 - min12;
-    id_h00[i] = pardiso_ia[f0];
-    id_h01[i] = pardiso_ia[min01] + find_id_in_rows.coeff(min01, max01);
-    id_h02[i] = pardiso_ia[min02] + find_id_in_rows.coeff(min02, max02);
-    id_h03[i] = pardiso_ia[f0] + find_id_in_rows.coeff(f0, f3);
-    id_h04[i] = pardiso_ia[f0] + find_id_in_rows.coeff(f0, f4);
-    id_h05[i] = pardiso_ia[f0] + find_id_in_rows.coeff(f0, f5);
-    id_h11[i] = pardiso_ia[f1];
-    id_h12[i] = pardiso_ia[min12] + find_id_in_rows.coeff(min12, max12);
-    id_h13[i] = pardiso_ia[f1] + find_id_in_rows.coeff(f1, f3);
-    id_h14[i] = pardiso_ia[f1] + find_id_in_rows.coeff(f1, f4);
-    id_h15[i] = pardiso_ia[f1] + find_id_in_rows.coeff(f1, f5);
-    id_h22[i] = pardiso_ia[f2];
-    id_h23[i] = pardiso_ia[f2] + find_id_in_rows.coeff(f2, f3);
-    id_h24[i] = pardiso_ia[f2] + find_id_in_rows.coeff(f2, f4);
-    id_h25[i] = pardiso_ia[f2] + find_id_in_rows.coeff(f2, f5);
-    id_h33[i] = pardiso_ia[f3];
-    id_h34[i] = pardiso_ia[min01 + V_N] +
-                find_id_in_rows.coeff(min01 + V_N, max01 + V_N);
-    id_h35[i] = pardiso_ia[min02 + V_N] +
-                find_id_in_rows.coeff(min02 + V_N, max02 + V_N);
-    id_h44[i] = pardiso_ia[f4];
-    id_h45[i] = pardiso_ia[min12 + V_N] +
-                find_id_in_rows.coeff(min12 + V_N, max12 + V_N);
-    id_h55[i] = pardiso_ia[f5];
+    id_h00_[i] = pardiso_ia_[f0];
+    id_h01_[i] = pardiso_ia_[min01] + find_id_in_rows.coeff(min01, max01);
+    id_h02_[i] = pardiso_ia_[min02] + find_id_in_rows.coeff(min02, max02);
+    id_h03_[i] = pardiso_ia_[f0] + find_id_in_rows.coeff(f0, f3);
+    id_h04_[i] = pardiso_ia_[f0] + find_id_in_rows.coeff(f0, f4);
+    id_h05_[i] = pardiso_ia_[f0] + find_id_in_rows.coeff(f0, f5);
+    id_h11_[i] = pardiso_ia_[f1];
+    id_h12_[i] = pardiso_ia_[min12] + find_id_in_rows.coeff(min12, max12);
+    id_h13_[i] = pardiso_ia_[f1] + find_id_in_rows.coeff(f1, f3);
+    id_h14_[i] = pardiso_ia_[f1] + find_id_in_rows.coeff(f1, f4);
+    id_h15_[i] = pardiso_ia_[f1] + find_id_in_rows.coeff(f1, f5);
+    id_h22_[i] = pardiso_ia_[f2];
+    id_h23_[i] = pardiso_ia_[f2] + find_id_in_rows.coeff(f2, f3);
+    id_h24_[i] = pardiso_ia_[f2] + find_id_in_rows.coeff(f2, f4);
+    id_h25_[i] = pardiso_ia_[f2] + find_id_in_rows.coeff(f2, f5);
+    id_h33_[i] = pardiso_ia_[f3];
+    id_h34_[i] = pardiso_ia_[min01 + V_N_] +
+                 find_id_in_rows.coeff(min01 + V_N_, max01 + V_N_);
+    id_h35_[i] = pardiso_ia_[min02 + V_N_] +
+                 find_id_in_rows.coeff(min02 + V_N_, max02 + V_N_);
+    id_h44_[i] = pardiso_ia_[f4];
+    id_h45_[i] = pardiso_ia_[min12 + V_N_] +
+                 find_id_in_rows.coeff(min12 + V_N_, max12 + V_N_);
+    id_h55_[i] = pardiso_ia_[f5];
   }
-  int nnz = pardiso_ja.size();
-  // std:cout << "density: " << double(nnz) << std::endl;
-  density += double(nnz) / 4 / V_N / V_N;
+  int nnz = pardiso_ja_.size();
+  // std:cout << "density_: " << double(nnz) << std::endl;
+  density_ += double(nnz) / 4 / V_N_ / V_N_;
 }
 void ParaFun::HandleMinTri() {
   double min_bnd_edge_len = std::numeric_limits<double>::infinity();
@@ -428,7 +427,7 @@ void ParaFun::HandleMinTri() {
     acc_bnd += current_size;
   }
 
-  area_threshold = min_bnd_edge_len / 4.0;
+  area_threshold_ = min_bnd_edge_len / 4.0;
 }
 
 double ParaFun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
@@ -436,8 +435,8 @@ double ParaFun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
   if (is_ip_convrate) {
     UpdateSourceSameT();
   }
-  bool is_interp = is_ip_convrate && (Intp_T_Min < 0.999);
-  bool is_slim = is_interp && is_slim_convrate && (changetocm_flag < 0.99);
+  bool is_interp = is_ip_convrate && (Intp_T_Min_ < 0.999);
+  bool is_slim = is_interp && is_slim_convrate && (change_to_cm_flag_ < 0.99);
   // is_interp = false;
   if (is_slim) {
     SLIM(is_interp);
@@ -447,11 +446,10 @@ double ParaFun::BPE(bool is_ip_convrate, bool is_slim_convrate) {
   }
   shell_data_.whole_uv_ =
       Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::ColMajor>>(
-          position_of_mesh.data(), total_num, kDim);
+          position_of_mesh_.data(), total_num_, kDim);
 
-  energy_all =
-      energy_mesh_ + area.back() * energy_shell + barrer_coef * energy_barrier;
-  return energy_all;
+  return energy_mesh_ + area_.back() * energy_shell_ +
+         barrer_coef_ * energy_barrier_;
 }
 void ParaFun::UpdateSourceSameT() {
   double t_min = 1;
@@ -479,27 +477,27 @@ void ParaFun::UpdateSourceSameT() {
   double j00, j01, j10, j11;
   double p00, p01, p10, p11;
   double q00, q01, q10, q11;
-  double *position = position_of_mesh.data();
+  double *position = position_of_mesh_.data();
 
   for (int i = 0; i < update_fn; ++i) {
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
     x0 = position[f0];
-    y0 = position[f0 + total_num];
+    y0 = position[f0 + total_num_];
     x1 = position[f1];
-    y1 = position[f1 + total_num];
+    y1 = position[f1 + total_num_];
     x2 = position[f2];
-    y2 = position[f2 + total_num];
+    y2 = position[f2 + total_num_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
     q10 = y1 - y0;
     q11 = y2 - y0;
-    p00 = source_p00[i];
-    p01 = source_p01[i];
-    p10 = source_p10[i];
-    p11 = source_p11[i];
+    p00 = source_p00_[i];
+    p01 = source_p01_[i];
+    p10 = source_p10_[i];
+    p11 = source_p11_[i];
     j00 = p00 * q00 + p10 * q01;
     j01 = p01 * q00 + p11 * q01;
     j10 = p00 * q10 + p10 * q11;
@@ -536,21 +534,21 @@ void ParaFun::UpdateSourceSameT() {
           temp * (j01 * j01 + j11 * j11 - 0.5 * (sig0 * sig0 + sig1 * sig1));
     }
 
-    if (E_d <= bound_distortion_K) {
+    if (E_d <= bound_distortion_K_) {
       geqK++;
     } else {
-      tt = NewtonEquation(sig0, sig1, bound_distortion_K);
+      tt = NewtonEquation(sig0, sig1, bound_distortion_K_);
       if (tt < t_min) {
         t_min = tt;
       }
     }
   }
 
-  changetocm_flag = (double)geqK / update_fn;
-  update_p00 = source_p00;
-  update_p01 = source_p01;
-  update_p10 = source_p10;
-  update_p11 = source_p11;
+  change_to_cm_flag_ = (double)geqK / update_fn;
+  update_p00_ = source_p00_;
+  update_p01_ = source_p01_;
+  update_p10_ = source_p10_;
+  update_p11_ = source_p11_;
 
   for (int i = 0; i < update_fn; ++i) {
     double sig0 = all_s0[i];
@@ -565,17 +563,17 @@ void ParaFun::UpdateSourceSameT() {
     double w10 = delta_new * all_w10[i];
     double w11 = delta_new * all_w11[i] + plus_new;
 
-    p00 = source_p00[i];
-    p01 = source_p01[i];
-    p10 = source_p10[i];
-    p11 = source_p11[i];
-    update_p00[i] = p00 * w00 + p01 * w10;
-    update_p01[i] = p00 * w01 + p01 * w11;
-    update_p10[i] = p10 * w00 + p11 * w10;
-    update_p11[i] = p10 * w01 + p11 * w11;
+    p00 = source_p00_[i];
+    p01 = source_p01_[i];
+    p10 = source_p10_[i];
+    p11 = source_p11_[i];
+    update_p00_[i] = p00 * w00 + p01 * w10;
+    update_p01_[i] = p00 * w01 + p01 * w11;
+    update_p10_[i] = p10 * w00 + p11 * w10;
+    update_p11_[i] = p10 * w01 + p11 * w11;
   }
 
-  Intp_T_Min = t_min;
+  Intp_T_Min_ = t_min;
 }
 void ParaFun::SLIM(bool is_interp) {
   double area_now;
@@ -603,13 +601,13 @@ void ParaFun::SLIM(bool is_interp) {
 
   double h00, h01, h02, h03, h04, h05, h11, h12, h13, h14, h15, h22, h23, h24,
       h25, h33, h34, h35, h44, h45, h55;
-  double *position = position_of_mesh.data();
+  double *position = position_of_mesh_.data();
 
-  int nnz = pardiso_ja.size();
-  pardiso_a.clear();
-  pardiso_b.clear();
-  pardiso_a.resize(nnz, 0.0);
-  pardiso_b.resize(2 * V_N, 0.0);
+  int nnz = pardiso_ja_.size();
+  pardiso_a_.clear();
+  pardiso_b_.clear();
+  pardiso_a_.resize(nnz, 0.0);
+  pardiso_b_.resize(2 * V_N_, 0.0);
 
   double *tmp_p00;
   double *tmp_p01;
@@ -617,29 +615,29 @@ void ParaFun::SLIM(bool is_interp) {
   double *tmp_p11;
 
   if (is_interp) {
-    tmp_p00 = update_p00.data();
-    tmp_p01 = update_p01.data();
-    tmp_p10 = update_p10.data();
-    tmp_p11 = update_p11.data();
+    tmp_p00 = update_p00_.data();
+    tmp_p01 = update_p01_.data();
+    tmp_p10 = update_p10_.data();
+    tmp_p11 = update_p11_.data();
   } else {
-    tmp_p00 = source_p00.data();
-    tmp_p01 = source_p01.data();
-    tmp_p10 = source_p10.data();
-    tmp_p11 = source_p11.data();
+    tmp_p00 = source_p00_.data();
+    tmp_p01 = source_p01_.data();
+    tmp_p10 = source_p10_.data();
+    tmp_p11 = source_p11_.data();
   }
 
   int src_t_num = shell_data_.mesh_faces_.rows();
   for (int i = 0; i < src_t_num; ++i) {
-    area_now = area[i];
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+    area_now = area_[i];
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
     x0 = position[f0];
-    y0 = position[f0 + total_num];
+    y0 = position[f0 + total_num_];
     x1 = position[f1];
-    y1 = position[f1 + total_num];
+    y1 = position[f1 + total_num_];
     x2 = position[f2];
-    y2 = position[f2 + total_num];
+    y2 = position[f2 + total_num_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
@@ -729,47 +727,47 @@ void ParaFun::SLIM(bool is_interp) {
     r3 =
         area_now * ((1 + 1 / (det * det)) * j11 - tr * j00 / (det * det * det));
 
-    pardiso_b[f0] -= r0 * d00 + r1 * d10;
-    pardiso_b[f1] -= r0 * d01 + r1 * d11;
-    pardiso_b[f2] -= r0 * d02 + r1 * d12;
-    pardiso_b[f0 + V_N] -= r2 * d00 + r3 * d10;
-    pardiso_b[f1 + V_N] -= r2 * d01 + r3 * d11;
-    pardiso_b[f2 + V_N] -= r2 * d02 + r3 * d12;
+    pardiso_b_[f0] -= r0 * d00 + r1 * d10;
+    pardiso_b_[f1] -= r0 * d01 + r1 * d11;
+    pardiso_b_[f2] -= r0 * d02 + r1 * d12;
+    pardiso_b_[f0 + V_N_] -= r2 * d00 + r3 * d10;
+    pardiso_b_[f1 + V_N_] -= r2 * d01 + r3 * d11;
+    pardiso_b_[f2 + V_N_] -= r2 * d02 + r3 * d12;
 
-    pardiso_a[id_h00[i]] += h00;
-    pardiso_a[id_h01[i]] += h01;
-    pardiso_a[id_h02[i]] += h02;
-    pardiso_a[id_h03[i]] += h03;
-    pardiso_a[id_h04[i]] += h04;
-    pardiso_a[id_h05[i]] += h05;
-    pardiso_a[id_h11[i]] += h11;
-    pardiso_a[id_h12[i]] += h12;
-    pardiso_a[id_h13[i]] += h13;
-    pardiso_a[id_h14[i]] += h14;
-    pardiso_a[id_h15[i]] += h15;
-    pardiso_a[id_h22[i]] += h22;
-    pardiso_a[id_h23[i]] += h23;
-    pardiso_a[id_h24[i]] += h24;
-    pardiso_a[id_h25[i]] += h25;
-    pardiso_a[id_h33[i]] += h33;
-    pardiso_a[id_h34[i]] += h34;
-    pardiso_a[id_h35[i]] += h35;
-    pardiso_a[id_h44[i]] += h44;
-    pardiso_a[id_h45[i]] += h45;
-    pardiso_a[id_h55[i]] += h55;
+    pardiso_a_[id_h00_[i]] += h00;
+    pardiso_a_[id_h01_[i]] += h01;
+    pardiso_a_[id_h02_[i]] += h02;
+    pardiso_a_[id_h03_[i]] += h03;
+    pardiso_a_[id_h04_[i]] += h04;
+    pardiso_a_[id_h05_[i]] += h05;
+    pardiso_a_[id_h11_[i]] += h11;
+    pardiso_a_[id_h12_[i]] += h12;
+    pardiso_a_[id_h13_[i]] += h13;
+    pardiso_a_[id_h14_[i]] += h14;
+    pardiso_a_[id_h15_[i]] += h15;
+    pardiso_a_[id_h22_[i]] += h22;
+    pardiso_a_[id_h23_[i]] += h23;
+    pardiso_a_[id_h24_[i]] += h24;
+    pardiso_a_[id_h25_[i]] += h25;
+    pardiso_a_[id_h33_[i]] += h33;
+    pardiso_a_[id_h34_[i]] += h34;
+    pardiso_a_[id_h35_[i]] += h35;
+    pardiso_a_[id_h44_[i]] += h44;
+    pardiso_a_[id_h45_[i]] += h45;
+    pardiso_a_[id_h55_[i]] += h55;
   }
 
-  for (int i = src_t_num; i < F_N; ++i) {
-    area_now = area[i];
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+  for (int i = src_t_num; i < F_N_; ++i) {
+    area_now = area_[i];
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
     x0 = position[f0];
-    y0 = position[f0 + total_num];
+    y0 = position[f0 + total_num_];
     x1 = position[f1];
-    y1 = position[f1 + total_num];
+    y1 = position[f1 + total_num_];
     x2 = position[f2];
-    y2 = position[f2 + total_num];
+    y2 = position[f2 + total_num_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
@@ -855,34 +853,34 @@ void ParaFun::SLIM(bool is_interp) {
     r3 =
         area_now * ((1 + 1 / (det * det)) * j11 - tr * j00 / (det * det * det));
 
-    pardiso_b[f0] -= r0 * d00 + r1 * d10;
-    pardiso_b[f1] -= r0 * d01 + r1 * d11;
-    pardiso_b[f2] -= r0 * d02 + r1 * d12;
-    pardiso_b[f0 + V_N] -= r2 * d00 + r3 * d10;
-    pardiso_b[f1 + V_N] -= r2 * d01 + r3 * d11;
-    pardiso_b[f2 + V_N] -= r2 * d02 + r3 * d12;
+    pardiso_b_[f0] -= r0 * d00 + r1 * d10;
+    pardiso_b_[f1] -= r0 * d01 + r1 * d11;
+    pardiso_b_[f2] -= r0 * d02 + r1 * d12;
+    pardiso_b_[f0 + V_N_] -= r2 * d00 + r3 * d10;
+    pardiso_b_[f1 + V_N_] -= r2 * d01 + r3 * d11;
+    pardiso_b_[f2 + V_N_] -= r2 * d02 + r3 * d12;
 
-    pardiso_a[id_h00[i]] += h00;
-    pardiso_a[id_h01[i]] += h01;
-    pardiso_a[id_h02[i]] += h02;
-    pardiso_a[id_h03[i]] += h03;
-    pardiso_a[id_h04[i]] += h04;
-    pardiso_a[id_h05[i]] += h05;
-    pardiso_a[id_h11[i]] += h11;
-    pardiso_a[id_h12[i]] += h12;
-    pardiso_a[id_h13[i]] += h13;
-    pardiso_a[id_h14[i]] += h14;
-    pardiso_a[id_h15[i]] += h15;
-    pardiso_a[id_h22[i]] += h22;
-    pardiso_a[id_h23[i]] += h23;
-    pardiso_a[id_h24[i]] += h24;
-    pardiso_a[id_h25[i]] += h25;
-    pardiso_a[id_h33[i]] += h33;
-    pardiso_a[id_h34[i]] += h34;
-    pardiso_a[id_h35[i]] += h35;
-    pardiso_a[id_h44[i]] += h44;
-    pardiso_a[id_h45[i]] += h45;
-    pardiso_a[id_h55[i]] += h55;
+    pardiso_a_[id_h00_[i]] += h00;
+    pardiso_a_[id_h01_[i]] += h01;
+    pardiso_a_[id_h02_[i]] += h02;
+    pardiso_a_[id_h03_[i]] += h03;
+    pardiso_a_[id_h04_[i]] += h04;
+    pardiso_a_[id_h05_[i]] += h05;
+    pardiso_a_[id_h11_[i]] += h11;
+    pardiso_a_[id_h12_[i]] += h12;
+    pardiso_a_[id_h13_[i]] += h13;
+    pardiso_a_[id_h14_[i]] += h14;
+    pardiso_a_[id_h15_[i]] += h15;
+    pardiso_a_[id_h22_[i]] += h22;
+    pardiso_a_[id_h23_[i]] += h23;
+    pardiso_a_[id_h24_[i]] += h24;
+    pardiso_a_[id_h25_[i]] += h25;
+    pardiso_a_[id_h33_[i]] += h33;
+    pardiso_a_[id_h34_[i]] += h34;
+    pardiso_a_[id_h35_[i]] += h35;
+    pardiso_a_[id_h44_[i]] += h44;
+    pardiso_a_[id_h45_[i]] += h45;
+    pardiso_a_[id_h55_[i]] += h55;
   }
 
   double len01, len0i, len1i, coef1, coef2, dis;
@@ -891,20 +889,20 @@ void ParaFun::SLIM(bool is_interp) {
   double h_u, uu, aa, bb, cc;
   double a1x0, a1x1, a1x2, a1x3, a1x4, a1x5, a2x0, a2x1, a2x2, a2x3, a2x4, a2x5;
 
-  AV_F_N_H_ = AV_F_N;
-  V_F0_H = V_F0;
-  V_F1_H = V_F1;
-  V_F2_H = V_F2;
-  for (int ii = 0; ii < AV_F_N; ++ii) {
-    f0 = V_F0[AV_ID[ii]];
-    f1 = V_F1[AV_ID[ii]];
-    f2 = V_F2[AV_ID[ii]];
+  AV_F_N_H_ = AV_F_N_;
+  V_F0_H_ = V_F0_;
+  V_F1_H_ = V_F1_;
+  V_F2_H_ = V_F2_;
+  for (int ii = 0; ii < AV_F_N_; ++ii) {
+    f0 = V_F0_[AV_ID_[ii]];
+    f1 = V_F1_[AV_ID_[ii]];
+    f2 = V_F2_[AV_ID_[ii]];
     x0 = position[f0];
-    y0 = position[f0 + V_N];
+    y0 = position[f0 + V_N_];
     x1 = position[f1];
-    y1 = position[f1 + V_N];
+    y1 = position[f1 + V_N_];
     x2 = position[f2];
-    y2 = position[f2 + V_N];
+    y2 = position[f2 + V_N_];
 
     s0 = x0 + x1;
     s1 = y0 + y1;
@@ -917,8 +915,8 @@ void ParaFun::SLIM(bool is_interp) {
     len1i = sqrt((p0 - e0) * (p0 - e0) + (p1 - e1) * (p1 - e1));
     dis = len0i + len1i - len01;
 
-    h_u = 2 * barrer_coef * threhold * (dis - threhold) / dis / dis / dis;
-    uu = 2 * barrer_coef * threhold * (3 * threhold - 2 * dis) / dis / dis /
+    h_u = 2 * barrer_coef_ * threhold * (dis - threhold) / dis / dis / dis;
+    uu = 2 * barrer_coef_ * threhold * (3 * threhold - 2 * dis) / dis / dis /
          dis / dis;
 
     a1x0 = (x0 - x2) / len0i - (x0 - x1) / len01;
@@ -978,70 +976,70 @@ void ParaFun::SLIM(bool is_interp) {
     h45 += uu * a1x4 * a1x5;
     h55 += uu * a1x5 * a1x5;
 
-    pardiso_b[f0] -= h_u * (a1x0);
-    pardiso_b[f1] -= h_u * (a1x1);
-    pardiso_b[f2] -= h_u * (a1x2);
-    pardiso_b[f0 + V_N] -= h_u * (a1x3);
-    pardiso_b[f1 + V_N] -= h_u * (a1x4);
-    pardiso_b[f2 + V_N] -= h_u * (a1x5);
+    pardiso_b_[f0] -= h_u * (a1x0);
+    pardiso_b_[f1] -= h_u * (a1x1);
+    pardiso_b_[f2] -= h_u * (a1x2);
+    pardiso_b_[f0 + V_N_] -= h_u * (a1x3);
+    pardiso_b_[f1 + V_N_] -= h_u * (a1x4);
+    pardiso_b_[f2 + V_N_] -= h_u * (a1x5);
 
-    i = F_N + AV_ID[ii];
-    pardiso_a[id_h00[i]] += h00;
-    pardiso_a[id_h01[i]] += h01;
-    pardiso_a[id_h02[i]] += h02;
-    pardiso_a[id_h03[i]] += h03;
-    pardiso_a[id_h04[i]] += h04;
-    pardiso_a[id_h05[i]] += h05;
-    pardiso_a[id_h11[i]] += h11;
-    pardiso_a[id_h12[i]] += h12;
-    pardiso_a[id_h13[i]] += h13;
-    pardiso_a[id_h14[i]] += h14;
-    pardiso_a[id_h15[i]] += h15;
-    pardiso_a[id_h22[i]] += h22;
-    pardiso_a[id_h23[i]] += h23;
-    pardiso_a[id_h24[i]] += h24;
-    pardiso_a[id_h25[i]] += h25;
-    pardiso_a[id_h33[i]] += h33;
-    pardiso_a[id_h34[i]] += h34;
-    pardiso_a[id_h35[i]] += h35;
-    pardiso_a[id_h44[i]] += h44;
-    pardiso_a[id_h45[i]] += h45;
-    pardiso_a[id_h55[i]] += h55;
+    i = F_N_ + AV_ID_[ii];
+    pardiso_a_[id_h00_[i]] += h00;
+    pardiso_a_[id_h01_[i]] += h01;
+    pardiso_a_[id_h02_[i]] += h02;
+    pardiso_a_[id_h03_[i]] += h03;
+    pardiso_a_[id_h04_[i]] += h04;
+    pardiso_a_[id_h05_[i]] += h05;
+    pardiso_a_[id_h11_[i]] += h11;
+    pardiso_a_[id_h12_[i]] += h12;
+    pardiso_a_[id_h13_[i]] += h13;
+    pardiso_a_[id_h14_[i]] += h14;
+    pardiso_a_[id_h15_[i]] += h15;
+    pardiso_a_[id_h22_[i]] += h22;
+    pardiso_a_[id_h23_[i]] += h23;
+    pardiso_a_[id_h24_[i]] += h24;
+    pardiso_a_[id_h25_[i]] += h25;
+    pardiso_a_[id_h33_[i]] += h33;
+    pardiso_a_[id_h34_[i]] += h34;
+    pardiso_a_[id_h35_[i]] += h35;
+    pardiso_a_[id_h44_[i]] += h44;
+    pardiso_a_[id_h45_[i]] += h45;
+    pardiso_a_[id_h55_[i]] += h55;
   }
 
-  pardiso_a[0] += 1.0;
-  pardiso_a[pardiso_ia[V_N]] += 1.0;
-  pardiso->a_ = pardiso_a;
-  pardiso->rhs_ = pardiso_b;
+  pardiso_a_[0] += 1.0;
+  pardiso_a_[pardiso_ia_[V_N_]] += 1.0;
+  solver_->a_ = pardiso_a_;
+  solver_->rhs_ = pardiso_b_;
   long time_beg, time_end;
   time_beg = clock();
-  pardiso->Factorize();
+  solver_->Factorize();
   time_end = clock();
   double time_consumption = (time_end - time_beg) / 1000.0;
-  time2 += time_consumption;
+  time_2_ += time_consumption;
   time_beg = clock();
-  pardiso->PardisoSolver();
+  solver_->PardisoSolver();
   time_end = clock();
   time_consumption = (time_end - time_beg) / 1000.0;
-  time3 += time_consumption;
+  time_3_ += time_consumption;
   // std::cout << "numerical factorize" << time_consumption << std::endl;
 
-  std::vector<double> result_d = pardiso->result_;
-  Eigen::VectorXd negative_grad(2 * total_num), d(2 * total_num);
-  for (int i = 0; i < V_N; i++) {
-    negative_grad(i) = pardiso_b[i];
-    negative_grad(i + total_num) = pardiso_b[i + V_N];
+  std::vector<double> result_d = solver_->result_;
+  Eigen::VectorXd negative_grad(2 * total_num_), d(2 * total_num_);
+  for (int i = 0; i < V_N_; i++) {
+    negative_grad(i) = pardiso_b_[i];
+    negative_grad(i + total_num_) = pardiso_b_[i + V_N_];
     d(i) = result_d[i];
-    d(i + total_num) = result_d[i + V_N];
+    d(i + total_num_) = result_d[i + V_N_];
   }
-  pardiso->FreeNumericalFactorizationMemory();
+  solver_->FreeNumericalFactorizationMemory();
 
   double temp_t;
-  MaxStep(position_of_mesh, d, temp_t);
+  MaxStep(position_of_mesh_, d, temp_t);
   double alpha = std::min(1.0, 0.8 * temp_t);
-  BacktrackingLineSearch(position_of_mesh, d, negative_grad, alpha, is_interp);
+  BacktrackingLineSearch(position_of_mesh_, d, negative_grad, alpha, is_interp);
   // std::cout << "slim step: " << alpha << std::endl;
-  position_of_mesh += alpha * d;
+  position_of_mesh_ += alpha * d;
   EnergySource();
 }
 void ParaFun::CM(bool is_interp) {
@@ -1064,40 +1062,40 @@ void ParaFun::CM(bool is_interp) {
   double u, v;
   double h00, h01, h02, h03, h04, h05, h11, h12, h13, h14, h15, h22, h23, h24,
       h25, h33, h34, h35, h44, h45, h55;
-  double *position = position_of_mesh.data();
-  int nnz = pardiso_ja.size();
-  pardiso_a.clear();
-  pardiso_b.clear();
-  pardiso_a.resize(nnz, 0.0);
-  pardiso_b.resize(2 * V_N, 0.0);
+  double *position = position_of_mesh_.data();
+  int nnz = pardiso_ja_.size();
+  pardiso_a_.clear();
+  pardiso_b_.clear();
+  pardiso_a_.resize(nnz, 0.0);
+  pardiso_b_.resize(2 * V_N_, 0.0);
 
   double *tmp_p00;
   double *tmp_p01;
   double *tmp_p10;
   double *tmp_p11;
   if (is_interp) {
-    tmp_p00 = update_p00.data();
-    tmp_p01 = update_p01.data();
-    tmp_p10 = update_p10.data();
-    tmp_p11 = update_p11.data();
+    tmp_p00 = update_p00_.data();
+    tmp_p01 = update_p01_.data();
+    tmp_p10 = update_p10_.data();
+    tmp_p11 = update_p11_.data();
   } else {
-    tmp_p00 = source_p00.data();
-    tmp_p01 = source_p01.data();
-    tmp_p10 = source_p10.data();
-    tmp_p11 = source_p11.data();
+    tmp_p00 = source_p00_.data();
+    tmp_p01 = source_p01_.data();
+    tmp_p10 = source_p10_.data();
+    tmp_p11 = source_p11_.data();
   }
 
   for (int i = 0; i < shell_data_.mesh_faces_.rows(); ++i) {
-    area_now = area[i];
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+    area_now = area_[i];
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
     x0 = position[f0];
-    y0 = position[f0 + V_N];
+    y0 = position[f0 + V_N_];
     x1 = position[f1];
-    y1 = position[f1 + V_N];
+    y1 = position[f1 + V_N_];
     x2 = position[f2];
-    y2 = position[f2 + V_N];
+    y2 = position[f2 + V_N_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
@@ -1253,47 +1251,47 @@ void ParaFun::CM(bool is_interp) {
 
     u = aa * walpha;
     v = bb * wbeta;
-    pardiso_b[f0] -= (u * a1x0 + v * a2x0);
-    pardiso_b[f1] -= (u * a1x1 + v * a2x1);
-    pardiso_b[f2] -= (u * a1x2 + v * a2x2);
-    pardiso_b[f0 + V_N] -= (u * a1x3 + v * a2x3);
-    pardiso_b[f1 + V_N] -= (u * a1x4 + v * a2x4);
-    pardiso_b[f2 + V_N] -= (u * a1x5 + v * a2x5);
+    pardiso_b_[f0] -= (u * a1x0 + v * a2x0);
+    pardiso_b_[f1] -= (u * a1x1 + v * a2x1);
+    pardiso_b_[f2] -= (u * a1x2 + v * a2x2);
+    pardiso_b_[f0 + V_N_] -= (u * a1x3 + v * a2x3);
+    pardiso_b_[f1 + V_N_] -= (u * a1x4 + v * a2x4);
+    pardiso_b_[f2 + V_N_] -= (u * a1x5 + v * a2x5);
 
-    pardiso_a[id_h00[i]] += h00;
-    pardiso_a[id_h01[i]] += h01;
-    pardiso_a[id_h02[i]] += h02;
-    pardiso_a[id_h03[i]] += h03;
-    pardiso_a[id_h04[i]] += h04;
-    pardiso_a[id_h05[i]] += h05;
-    pardiso_a[id_h11[i]] += h11;
-    pardiso_a[id_h12[i]] += h12;
-    pardiso_a[id_h13[i]] += h13;
-    pardiso_a[id_h14[i]] += h14;
-    pardiso_a[id_h15[i]] += h15;
-    pardiso_a[id_h22[i]] += h22;
-    pardiso_a[id_h23[i]] += h23;
-    pardiso_a[id_h24[i]] += h24;
-    pardiso_a[id_h25[i]] += h25;
-    pardiso_a[id_h33[i]] += h33;
-    pardiso_a[id_h34[i]] += h34;
-    pardiso_a[id_h35[i]] += h35;
-    pardiso_a[id_h44[i]] += h44;
-    pardiso_a[id_h45[i]] += h45;
-    pardiso_a[id_h55[i]] += h55;
+    pardiso_a_[id_h00_[i]] += h00;
+    pardiso_a_[id_h01_[i]] += h01;
+    pardiso_a_[id_h02_[i]] += h02;
+    pardiso_a_[id_h03_[i]] += h03;
+    pardiso_a_[id_h04_[i]] += h04;
+    pardiso_a_[id_h05_[i]] += h05;
+    pardiso_a_[id_h11_[i]] += h11;
+    pardiso_a_[id_h12_[i]] += h12;
+    pardiso_a_[id_h13_[i]] += h13;
+    pardiso_a_[id_h14_[i]] += h14;
+    pardiso_a_[id_h15_[i]] += h15;
+    pardiso_a_[id_h22_[i]] += h22;
+    pardiso_a_[id_h23_[i]] += h23;
+    pardiso_a_[id_h24_[i]] += h24;
+    pardiso_a_[id_h25_[i]] += h25;
+    pardiso_a_[id_h33_[i]] += h33;
+    pardiso_a_[id_h34_[i]] += h34;
+    pardiso_a_[id_h35_[i]] += h35;
+    pardiso_a_[id_h44_[i]] += h44;
+    pardiso_a_[id_h45_[i]] += h45;
+    pardiso_a_[id_h55_[i]] += h55;
   }
 
-  for (int i = shell_data_.mesh_faces_.rows(); i < F_N; i++) {
-    area_now = area[i];
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+  for (int i = shell_data_.mesh_faces_.rows(); i < F_N_; i++) {
+    area_now = area_[i];
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
     x0 = position[f0];
-    y0 = position[f0 + V_N];
+    y0 = position[f0 + V_N_];
     x1 = position[f1];
-    y1 = position[f1 + V_N];
+    y1 = position[f1 + V_N_];
     x2 = position[f2];
-    y2 = position[f2 + V_N];
+    y2 = position[f2 + V_N_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
@@ -1447,53 +1445,53 @@ void ParaFun::CM(bool is_interp) {
 
     u = aa * walpha;
     v = bb * wbeta;
-    pardiso_b[f0] -= (u * a1x0 + v * a2x0);
-    pardiso_b[f1] -= (u * a1x1 + v * a2x1);
-    pardiso_b[f2] -= (u * a1x2 + v * a2x2);
-    pardiso_b[f0 + V_N] -= (u * a1x3 + v * a2x3);
-    pardiso_b[f1 + V_N] -= (u * a1x4 + v * a2x4);
-    pardiso_b[f2 + V_N] -= (u * a1x5 + v * a2x5);
+    pardiso_b_[f0] -= (u * a1x0 + v * a2x0);
+    pardiso_b_[f1] -= (u * a1x1 + v * a2x1);
+    pardiso_b_[f2] -= (u * a1x2 + v * a2x2);
+    pardiso_b_[f0 + V_N_] -= (u * a1x3 + v * a2x3);
+    pardiso_b_[f1 + V_N_] -= (u * a1x4 + v * a2x4);
+    pardiso_b_[f2 + V_N_] -= (u * a1x5 + v * a2x5);
 
-    pardiso_a[id_h00[i]] += h00;
-    pardiso_a[id_h01[i]] += h01;
-    pardiso_a[id_h02[i]] += h02;
-    pardiso_a[id_h03[i]] += h03;
-    pardiso_a[id_h04[i]] += h04;
-    pardiso_a[id_h05[i]] += h05;
-    pardiso_a[id_h11[i]] += h11;
-    pardiso_a[id_h12[i]] += h12;
-    pardiso_a[id_h13[i]] += h13;
-    pardiso_a[id_h14[i]] += h14;
-    pardiso_a[id_h15[i]] += h15;
-    pardiso_a[id_h22[i]] += h22;
-    pardiso_a[id_h23[i]] += h23;
-    pardiso_a[id_h24[i]] += h24;
-    pardiso_a[id_h25[i]] += h25;
-    pardiso_a[id_h33[i]] += h33;
-    pardiso_a[id_h34[i]] += h34;
-    pardiso_a[id_h35[i]] += h35;
-    pardiso_a[id_h44[i]] += h44;
-    pardiso_a[id_h45[i]] += h45;
-    pardiso_a[id_h55[i]] += h55;
+    pardiso_a_[id_h00_[i]] += h00;
+    pardiso_a_[id_h01_[i]] += h01;
+    pardiso_a_[id_h02_[i]] += h02;
+    pardiso_a_[id_h03_[i]] += h03;
+    pardiso_a_[id_h04_[i]] += h04;
+    pardiso_a_[id_h05_[i]] += h05;
+    pardiso_a_[id_h11_[i]] += h11;
+    pardiso_a_[id_h12_[i]] += h12;
+    pardiso_a_[id_h13_[i]] += h13;
+    pardiso_a_[id_h14_[i]] += h14;
+    pardiso_a_[id_h15_[i]] += h15;
+    pardiso_a_[id_h22_[i]] += h22;
+    pardiso_a_[id_h23_[i]] += h23;
+    pardiso_a_[id_h24_[i]] += h24;
+    pardiso_a_[id_h25_[i]] += h25;
+    pardiso_a_[id_h33_[i]] += h33;
+    pardiso_a_[id_h34_[i]] += h34;
+    pardiso_a_[id_h35_[i]] += h35;
+    pardiso_a_[id_h44_[i]] += h44;
+    pardiso_a_[id_h45_[i]] += h45;
+    pardiso_a_[id_h55_[i]] += h55;
   }
 
   double len01, len0i, len1i, coef1, coef2, dis;
   int i;
   double s0, s1, e0, e1, p0, p1;
-  AV_F_N_H_ = AV_F_N;
-  V_F0_H = V_F0;
-  V_F1_H = V_F1;
-  V_F2_H = V_F2;
-  for (int ii = 0; ii < AV_F_N; ++ii) {
-    f0 = V_F0[AV_ID[ii]];
-    f1 = V_F1[AV_ID[ii]];
-    f2 = V_F2[AV_ID[ii]];
+  AV_F_N_H_ = AV_F_N_;
+  V_F0_H_ = V_F0_;
+  V_F1_H_ = V_F1_;
+  V_F2_H_ = V_F2_;
+  for (int ii = 0; ii < AV_F_N_; ++ii) {
+    f0 = V_F0_[AV_ID_[ii]];
+    f1 = V_F1_[AV_ID_[ii]];
+    f2 = V_F2_[AV_ID_[ii]];
     x0 = position[f0];
-    y0 = position[f0 + V_N];
+    y0 = position[f0 + V_N_];
     x1 = position[f1];
-    y1 = position[f1 + V_N];
+    y1 = position[f1 + V_N_];
     x2 = position[f2];
-    y2 = position[f2 + V_N];
+    y2 = position[f2 + V_N_];
 
     s0 = x0;
     s1 = y0;
@@ -1506,8 +1504,8 @@ void ParaFun::CM(bool is_interp) {
     len1i = sqrt((p0 - e0) * (p0 - e0) + (p1 - e1) * (p1 - e1));
     dis = len0i + len1i - len01;
 
-    h_u = 2 * barrer_coef * threhold * (dis - threhold) / dis / dis / dis;
-    uu = 2 * barrer_coef * threhold * (3 * threhold - 2 * dis) / dis / dis /
+    h_u = 2 * barrer_coef_ * threhold * (dis - threhold) / dis / dis / dis;
+    uu = 2 * barrer_coef_ * threhold * (3 * threhold - 2 * dis) / dis / dis /
          dis / dis;
     a1x0 = (x0 - x2) / len0i - (x0 - x1) / len01;
     a1x1 = (x1 - x2) / len1i - (x1 - x0) / len01;
@@ -1565,68 +1563,68 @@ void ParaFun::CM(bool is_interp) {
     h45 += uu * a1x4 * a1x5;
     h55 += uu * a1x5 * a1x5;
 
-    pardiso_b[f0] -= h_u * (a1x0);
-    pardiso_b[f1] -= h_u * (a1x1);
-    pardiso_b[f2] -= h_u * (a1x2);
-    pardiso_b[f0 + V_N] -= h_u * (a1x3);
-    pardiso_b[f1 + V_N] -= h_u * (a1x4);
-    pardiso_b[f2 + V_N] -= h_u * (a1x5);
+    pardiso_b_[f0] -= h_u * (a1x0);
+    pardiso_b_[f1] -= h_u * (a1x1);
+    pardiso_b_[f2] -= h_u * (a1x2);
+    pardiso_b_[f0 + V_N_] -= h_u * (a1x3);
+    pardiso_b_[f1 + V_N_] -= h_u * (a1x4);
+    pardiso_b_[f2 + V_N_] -= h_u * (a1x5);
 
-    i = F_N + AV_ID[ii];
-    pardiso_a[id_h00[i]] += h00;
-    pardiso_a[id_h01[i]] += h01;
-    pardiso_a[id_h02[i]] += h02;
-    pardiso_a[id_h03[i]] += h03;
-    pardiso_a[id_h04[i]] += h04;
-    pardiso_a[id_h05[i]] += h05;
-    pardiso_a[id_h11[i]] += h11;
-    pardiso_a[id_h12[i]] += h12;
-    pardiso_a[id_h13[i]] += h13;
-    pardiso_a[id_h14[i]] += h14;
-    pardiso_a[id_h15[i]] += h15;
-    pardiso_a[id_h22[i]] += h22;
-    pardiso_a[id_h23[i]] += h23;
-    pardiso_a[id_h24[i]] += h24;
-    pardiso_a[id_h25[i]] += h25;
-    pardiso_a[id_h33[i]] += h33;
-    pardiso_a[id_h34[i]] += h34;
-    pardiso_a[id_h35[i]] += h35;
-    pardiso_a[id_h44[i]] += h44;
-    pardiso_a[id_h45[i]] += h45;
-    pardiso_a[id_h55[i]] += h55;
+    i = F_N_ + AV_ID_[ii];
+    pardiso_a_[id_h00_[i]] += h00;
+    pardiso_a_[id_h01_[i]] += h01;
+    pardiso_a_[id_h02_[i]] += h02;
+    pardiso_a_[id_h03_[i]] += h03;
+    pardiso_a_[id_h04_[i]] += h04;
+    pardiso_a_[id_h05_[i]] += h05;
+    pardiso_a_[id_h11_[i]] += h11;
+    pardiso_a_[id_h12_[i]] += h12;
+    pardiso_a_[id_h13_[i]] += h13;
+    pardiso_a_[id_h14_[i]] += h14;
+    pardiso_a_[id_h15_[i]] += h15;
+    pardiso_a_[id_h22_[i]] += h22;
+    pardiso_a_[id_h23_[i]] += h23;
+    pardiso_a_[id_h24_[i]] += h24;
+    pardiso_a_[id_h25_[i]] += h25;
+    pardiso_a_[id_h33_[i]] += h33;
+    pardiso_a_[id_h34_[i]] += h34;
+    pardiso_a_[id_h35_[i]] += h35;
+    pardiso_a_[id_h44_[i]] += h44;
+    pardiso_a_[id_h45_[i]] += h45;
+    pardiso_a_[id_h55_[i]] += h55;
   }
 
-  pardiso_a[0] += 1.0;
-  pardiso_a[pardiso_ia[V_N]] += 1.0;
-  pardiso->a_ = pardiso_a;
-  pardiso->rhs_ = pardiso_b;
+  pardiso_a_[0] += 1.0;
+  pardiso_a_[pardiso_ia_[V_N_]] += 1.0;
+  solver_->a_ = pardiso_a_;
+  solver_->rhs_ = pardiso_b_;
   long time_beg, time_end;
   time_beg = clock();
-  pardiso->Factorize();
+  solver_->Factorize();
   time_end = clock();
   double time_consumption = (time_end - time_beg) / 1000.0;
-  time2 += time_consumption;
+  time_2_ += time_consumption;
   time_beg = clock();
-  pardiso->PardisoSolver();
+  solver_->PardisoSolver();
   time_end = clock();
   time_consumption = (time_end - time_beg) / 1000.0;
-  time3 += time_consumption;
+  time_3_ += time_consumption;
   // std::cout << "numerical factorize" << time_consumption << std::endl;
 
-  std::vector<double> result_d = pardiso->result_;
-  Eigen::VectorXd negative_grad(2 * V_N), d(2 * V_N);
-  for (int i = 0; i < 2 * V_N; i++) {
-    negative_grad(i) = pardiso_b[i];
+  std::vector<double> result_d = solver_->result_;
+  Eigen::VectorXd negative_grad(2 * V_N_), d(2 * V_N_);
+  for (int i = 0; i < 2 * V_N_; i++) {
+    negative_grad(i) = pardiso_b_[i];
     d(i) = result_d[i];
   }
-  pardiso->FreeNumericalFactorizationMemory();
+  solver_->FreeNumericalFactorizationMemory();
 
   double temp_t;
-  MaxStep(position_of_mesh, d, temp_t);
+  MaxStep(position_of_mesh_, d, temp_t);
   double alpha = 0.95 * temp_t;
   // double alpha = 0.8*temp_t;
-  BacktrackingLineSearch(position_of_mesh, d, negative_grad, alpha);
-  position_of_mesh += alpha * d;
+  BacktrackingLineSearch(position_of_mesh_, d, negative_grad, alpha);
+  position_of_mesh_ += alpha * d;
   // std::cout <<is_interp<< " cm step: " << alpha << std::endl;
   EnergySource();
 }
@@ -1639,23 +1637,23 @@ void ParaFun::MaxStep(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
   double x0, x1, x2, y0, y1, y2, u0, u1, u2, v0, v1, v2;
   const double *x = xx.data();
 
-  for (int i = 0; i < F_N; ++i) {
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+  for (int i = 0; i < F_N_; ++i) {
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
 
     x0 = x[f0];
     x1 = x[f1];
     x2 = x[f2];
-    y0 = x[f0 + V_N];
-    y1 = x[f1 + V_N];
-    y2 = x[f2 + V_N];
+    y0 = x[f0 + V_N_];
+    y1 = x[f1 + V_N_];
+    y2 = x[f2 + V_N_];
     u0 = qq[f0];
     u1 = qq[f1];
     u2 = qq[f2];
-    v0 = qq[f0 + V_N];
-    v1 = qq[f1 + V_N];
-    v2 = qq[f2 + V_N];
+    v0 = qq[f0 + V_N_];
+    v1 = qq[f1 + V_N_];
+    v2 = qq[f2 + V_N_];
 
     a = (u1 - u0) * (v2 - v0) - (v1 - v0) * (u2 - u0);
     b = (u1 - u0) * (y2 - y0) + (x1 - x0) * (v2 - v0) - (y1 - y0) * (u2 - u0) -
@@ -1677,24 +1675,24 @@ void ParaFun::MaxStep(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
   double q1, q2, p1, p2, D, sqD, y, m2, m, n, alpha, beta, gamma, delta;
   double x0_up, x1_up, x2_up, y0_up, y1_up, y2_up;
 
-  for (int i = 0; i < AV_F_N; ++i) {
-    is_active[AV_ID[i]] = -1;
+  for (int i = 0; i < AV_F_N_; ++i) {
+    is_active_[AV_ID_[i]] = -1;
 
-    f0 = V_F0[AV_ID[i]];
-    f1 = V_F1[AV_ID[i]];
-    f2 = V_F2[AV_ID[i]];
+    f0 = V_F0_[AV_ID_[i]];
+    f1 = V_F1_[AV_ID_[i]];
+    f2 = V_F2_[AV_ID_[i]];
     x0 = x[f0];
     x1 = x[f1];
     x2 = x[f2];
-    y0 = x[f0 + V_N];
-    y1 = x[f1 + V_N];
-    y2 = x[f2 + V_N];
+    y0 = x[f0 + V_N_];
+    y1 = x[f1 + V_N_];
+    y2 = x[f2 + V_N_];
     u0 = dir[f0];
     u1 = dir[f1];
     u2 = dir[f2];
-    v0 = dir[f0 + V_N];
-    v1 = dir[f1 + V_N];
-    v2 = dir[f2 + V_N];
+    v0 = dir[f0 + V_N_];
+    v1 = dir[f1 + V_N_];
+    v2 = dir[f2 + V_N_];
 
     // no triangle flip
     a = (u1 - u0) * (v2 - v0) - (v1 - v0) * (u2 - u0);
@@ -1751,31 +1749,31 @@ void ParaFun::MaxStep(const Eigen::VectorXd &xx, const Eigen::VectorXd &qq,
 void ParaFun::DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
                          double &tmax) {
   const double *pos = x.data();
-  std::vector<double> x_update(2 * V_N);
-  for (int i = 0; i < 2 * V_N; ++i) {
+  std::vector<double> x_update(2 * V_N_);
+  for (int i = 0; i < 2 * V_N_; ++i) {
     x_update[i] = x[i] + tmax * d[i];
   }
   x_min = pos[0];
   x_max = pos[0];
-  y_min = pos[V_N];
-  y_max = pos[V_N];
+  y_min = pos[V_N_];
+  y_max = pos[V_N_];
 
   double x_min_up = x_update[0];
   double x_max_up = x_update[0];
-  double y_min_up = x_update[V_N];
-  double y_max_up = x_update[V_N];
+  double y_min_up = x_update[V_N_];
+  double y_max_up = x_update[V_N_];
 
-  for (int i = 1; i < V_N; ++i) {
+  for (int i = 1; i < V_N_; ++i) {
     if (pos[i] < x_min) {
       x_min = pos[i];
     } else if (pos[i] > x_max) {
       x_max = pos[i];
     }
 
-    if (pos[i + V_N] < y_min) {
-      y_min = pos[i + V_N];
-    } else if (pos[i + V_N] > y_max) {
-      y_max = pos[i + V_N];
+    if (pos[i + V_N_] < y_min) {
+      y_min = pos[i + V_N_];
+    } else if (pos[i + V_N_] > y_max) {
+      y_max = pos[i + V_N_];
     }
 
     if (x_update[i] < x_min_up) {
@@ -1784,10 +1782,10 @@ void ParaFun::DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
       x_max_up = x_update[i];
     }
 
-    if (x_update[i + V_N] < y_min_up) {
-      y_min_up = x_update[i + V_N];
-    } else if (x_update[i + V_N] > y_max_up) {
-      y_max_up = x_update[i + V_N];
+    if (x_update[i + V_N_] < y_min_up) {
+      y_min_up = x_update[i + V_N_];
+    } else if (x_update[i + V_N_] > y_max_up) {
+      y_max_up = x_update[i + V_N_];
     }
   }
   x_min = std::min(x_min, x_min_up);
@@ -1809,18 +1807,18 @@ void ParaFun::DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
   double s0, s1, e0, e1, p0, p1, s0_, s1_, e0_, e1_;
   double l_x_min, l_x_max, l_y_min, l_y_max;
 
-  AV_ID.clear();
-  AV_F_N = 0;
+  AV_ID_.clear();
+  AV_F_N_ = 0;
   int id_start, id_end;
   Eigen::Vector4d localx, localy;
   double a, len, b;
 
-  for (int i = 0; i < BE_N; ++i) {
+  for (int i = 0; i < BE_N_; ++i) {
     id = boundary_vertex(i);
     s0 = pos[id];
-    s1 = pos[id + V_N];
+    s1 = pos[id + V_N_];
     e0 = x_update[id];
-    e1 = x_update[id + V_N];
+    e1 = x_update[id + V_N_];
 
     l_x_min = std::min(s0, e0);
     l_x_max = std::max(s0, e0);
@@ -1846,17 +1844,17 @@ void ParaFun::DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
     }
   }
 
-  for (int i = 0; i < BE_N; ++i) {
+  for (int i = 0; i < BE_N_; ++i) {
     id_start = boundary_vertex(i);
-    id_end = boundary_vertex((i + 1) % BE_N);
+    id_end = boundary_vertex((i + 1) % BE_N_);
     s0 = pos[id_start];
-    s1 = pos[id_start + V_N];
+    s1 = pos[id_start + V_N_];
     e0 = pos[id_end];
-    e1 = pos[id_end + V_N];
+    e1 = pos[id_end + V_N_];
     s0_ = x_update[id_start];
-    s1_ = x_update[id_start + V_N];
+    s1_ = x_update[id_start + V_N_];
     e0_ = x_update[id_end];
-    e1_ = x_update[id_end + V_N];
+    e1_ = x_update[id_end + V_N_];
 
     localx[0] = s0;
     localx[1] = e0;
@@ -1902,21 +1900,26 @@ void ParaFun::DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
             continue;
           }
 
-          if (BE_N - 1 == i) {
-            if (is_active[i * (BE_N - 2) + boundary_vertexID[id_mid] - 1] < 0) {
-              is_active[i * (BE_N - 2) + boundary_vertexID[id_mid] - 1] = 1;
-              AV_ID.push_back(i * (BE_N - 2) + boundary_vertexID[id_mid] - 1);
+          if (BE_N_ - 1 == i) {
+            if (is_active_[i * (BE_N_ - 2) + boundary_vertexID_[id_mid] - 1] <
+                0) {
+              is_active_[i * (BE_N_ - 2) + boundary_vertexID_[id_mid] - 1] = 1;
+              AV_ID_.push_back(i * (BE_N_ - 2) + boundary_vertexID_[id_mid] -
+                               1);
             }
-          } else if (boundary_vertexID[id_mid] < boundary_vertexID[id_start]) {
-            if (is_active[i * (BE_N - 2) + boundary_vertexID[id_mid]] < 0) {
-              is_active[i * (BE_N - 2) + boundary_vertexID[id_mid]] = 1;
-              AV_ID.push_back(i * (BE_N - 2) + boundary_vertexID[id_mid]);
+          } else if (boundary_vertexID_[id_mid] <
+                     boundary_vertexID_[id_start]) {
+            if (is_active_[i * (BE_N_ - 2) + boundary_vertexID_[id_mid]] < 0) {
+              is_active_[i * (BE_N_ - 2) + boundary_vertexID_[id_mid]] = 1;
+              AV_ID_.push_back(i * (BE_N_ - 2) + boundary_vertexID_[id_mid]);
             }
 
           } else {
-            if (is_active[i * (BE_N - 2) + boundary_vertexID[id_mid] - 2] < 0) {
-              is_active[i * (BE_N - 2) + boundary_vertexID[id_mid] - 2] = 1;
-              AV_ID.push_back(i * (BE_N - 2) + boundary_vertexID[id_mid] - 2);
+            if (is_active_[i * (BE_N_ - 2) + boundary_vertexID_[id_mid] - 2] <
+                0) {
+              is_active_[i * (BE_N_ - 2) + boundary_vertexID_[id_mid] - 2] = 1;
+              AV_ID_.push_back(i * (BE_N_ - 2) + boundary_vertexID_[id_mid] -
+                               2);
             }
           }
         }
@@ -1924,8 +1927,8 @@ void ParaFun::DetectTmax(const Eigen::VectorXd &x, const Eigen::VectorXd &d,
     }
   }
 
-  AV_F_N = AV_ID.size();
-  //	std::cout << AV_F_N << std::endl;
+  AV_F_N_ = AV_ID_.size();
+  //	std::cout << AV_F_N_ << std::endl;
 }
 double ParaFun::GetSmallestPosQuadZero(double a, double b, double c) {
   using namespace std;
@@ -1974,15 +1977,15 @@ double ParaFun::GetSmallestPosQuadZero(double a, double b, double c) {
 }
 bool ParaFun::CheckIntersection(const Eigen::VectorXd &pos) {
   Eigen::VectorXi boundary_vertex = shell_data_.frame_ids_;
-  BE_N = boundary_vertex.size();
+  BE_N_ = boundary_vertex.size();
 
   int id_start, id_end, id_before, id_mid1, id_mid2;
-  for (int i = 0; i < BE_N; ++i) {
+  for (int i = 0; i < BE_N_; ++i) {
     id_start = boundary_vertex(i);
-    id_end = boundary_vertex((i + 1) % BE_N);
-    id_before = boundary_vertex((i - 1 + BE_N) % BE_N);
+    id_end = boundary_vertex((i + 1) % BE_N_);
+    id_before = boundary_vertex((i - 1 + BE_N_) % BE_N_);
 
-    for (int j = 0; j < BE_N; ++j) {
+    for (int j = 0; j < BE_N_; ++j) {
       if (id_before == boundary_vertex(j))
         continue;
       if (id_start == boundary_vertex(j))
@@ -1991,16 +1994,16 @@ bool ParaFun::CheckIntersection(const Eigen::VectorXd &pos) {
         continue;
 
       id_mid1 = boundary_vertex(j);
-      id_mid2 = boundary_vertex((j + 1) % BE_N);
+      id_mid2 = boundary_vertex((j + 1) % BE_N_);
       double x0 = pos(id_start);
-      double y0 = pos(id_start + V_N);
+      double y0 = pos(id_start + V_N_);
       double x1 = pos(id_end);
-      double y1 = pos(id_end + V_N);
+      double y1 = pos(id_end + V_N_);
 
       double x2 = pos(id_mid1);
-      double y2 = pos(id_mid1 + V_N);
+      double y2 = pos(id_mid1 + V_N_);
       double x3 = pos(id_mid2);
-      double y3 = pos(id_mid2 + V_N);
+      double y3 = pos(id_mid2 + V_N_);
 
       double cross1 = (y2 - y1) * (x2 - x0) - (y2 - y0) * (x2 - x1);
       double cross2 = (y3 - y1) * (x3 - x0) - (y3 - y0) * (x3 - x1);
@@ -2023,7 +2026,7 @@ void ParaFun::BacktrackingLineSearch(const Eigen::VectorXd &x,
   double c = 0.2;
   double ex;
   Energy(x, ex, is_interp, false);
-  ex = ex + barrer_coef * energy_barrier;
+  ex = ex + barrer_coef_ * energy_barrier_;
   double e;
   Eigen::VectorXd x_new = x + alpha * d;
   Energy(x_new, e, is_interp);
@@ -2051,30 +2054,30 @@ void ParaFun::Energy(const Eigen::VectorXd &position, double &energyupdate,
   double *tmp_p11;
 
   if (is_interp) {
-    tmp_p00 = update_p00.data();
-    tmp_p01 = update_p01.data();
-    tmp_p10 = update_p10.data();
-    tmp_p11 = update_p11.data();
+    tmp_p00 = update_p00_.data();
+    tmp_p01 = update_p01_.data();
+    tmp_p10 = update_p10_.data();
+    tmp_p11 = update_p11_.data();
   } else {
-    tmp_p00 = source_p00.data();
-    tmp_p01 = source_p01.data();
-    tmp_p10 = source_p10.data();
-    tmp_p11 = source_p11.data();
+    tmp_p00 = source_p00_.data();
+    tmp_p01 = source_p01_.data();
+    tmp_p10 = source_p10_.data();
+    tmp_p11 = source_p11_.data();
   }
 
-  for (int i = 0; i < F_N; ++i) {
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+  for (int i = 0; i < F_N_; ++i) {
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
 
     x0 = pos[f0];
-    y0 = pos[f0 + total_num];
+    y0 = pos[f0 + total_num_];
 
     x1 = pos[f1];
-    y1 = pos[f1 + total_num];
+    y1 = pos[f1 + total_num_];
 
     x2 = pos[f2];
-    y2 = pos[f2 + total_num];
+    y2 = pos[f2 + total_num_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
@@ -2095,7 +2098,7 @@ void ParaFun::Energy(const Eigen::VectorXd &position, double &energyupdate,
     E_d =
         (1 + 1 / (det * det)) * (j00 * j00 + j01 * j01 + j10 * j10 + j11 * j11);
 
-    energy += area[i] * E_d;
+    energy += area_[i] * E_d;
   }
 
   energyupdate = energy;
@@ -2103,19 +2106,19 @@ void ParaFun::Energy(const Eigen::VectorXd &position, double &energyupdate,
   if (is_whole) {
     FunGrid(position);
     double dis, E_b, energy2 = 0;
-    for (int i = 0; i < AV_F_N; ++i) {
-      f0 = V_F0[AV_ID[i]];
-      f1 = V_F1[AV_ID[i]];
-      f2 = V_F2[AV_ID[i]];
+    for (int i = 0; i < AV_F_N_; ++i) {
+      f0 = V_F0_[AV_ID_[i]];
+      f1 = V_F1_[AV_ID_[i]];
+      f2 = V_F2_[AV_ID_[i]];
 
       x0 = pos[f0];
-      y0 = pos[f0 + V_N];
+      y0 = pos[f0 + V_N_];
 
       x1 = pos[f1];
-      y1 = pos[f1 + V_N];
+      y1 = pos[f1 + V_N_];
 
       x2 = pos[f2];
-      y2 = pos[f2 + V_N];
+      y2 = pos[f2 + V_N_];
 
       dis = GetDistance(x0, y0, x1, y1, x2, y2);
       if (dis < 0) {
@@ -2124,9 +2127,9 @@ void ParaFun::Energy(const Eigen::VectorXd &position, double &energyupdate,
       E_b = (1 - threhold / dis) * (1 - threhold / dis);
       energy2 += E_b;
     }
-    energyupdate = energy + barrer_coef * energy2;
-    energy_barrier = energy2;
-    // std::cout << AV_F_N << std::endl;
+    energyupdate = energy + barrer_coef_ * energy2;
+    energy_barrier_ = energy2;
+    // std::cout << AV_F_N_ << std::endl;
   }
 }
 
@@ -2141,30 +2144,30 @@ void ParaFun::EnergySource() {
   double p00, p01, p10, p11;
   double q00, q01, q10, q11;
 
-  const double *pos = position_of_mesh.data();
+  const double *pos = position_of_mesh_.data();
   for (int i = 0; i < shell_data_.mesh_faces_.rows(); ++i) {
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
 
     x0 = pos[f0];
-    y0 = pos[f0 + total_num];
+    y0 = pos[f0 + total_num_];
 
     x1 = pos[f1];
-    y1 = pos[f1 + total_num];
+    y1 = pos[f1 + total_num_];
 
     x2 = pos[f2];
-    y2 = pos[f2 + total_num];
+    y2 = pos[f2 + total_num_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
     q10 = y1 - y0;
     q11 = y2 - y0;
 
-    p00 = source_p00[i];
-    p01 = source_p01[i];
-    p10 = source_p10[i];
-    p11 = source_p11[i];
+    p00 = source_p00_[i];
+    p01 = source_p01_[i];
+    p10 = source_p10_[i];
+    p11 = source_p11_[i];
 
     j00 = p00 * q00 + p10 * q01;
     j01 = p01 * q00 + p11 * q01;
@@ -2181,35 +2184,35 @@ void ParaFun::EnergySource() {
             max_E_d = E_1 + E_2;
     }*/
 
-    end_e_area += ((E_1 + E_2) * area[i]);
+    end_e_area += ((E_1 + E_2) * area_[i]);
   }
   // std::cout << max_E_d << std::endl;
   energy_mesh_ = end_e_area;
 
   end_e_area = 0;
-  for (int i = shell_data_.mesh_faces_.rows(); i < F_N; ++i) {
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+  for (int i = shell_data_.mesh_faces_.rows(); i < F_N_; ++i) {
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
 
     x0 = pos[f0];
-    y0 = pos[f0 + total_num];
+    y0 = pos[f0 + total_num_];
 
     x1 = pos[f1];
-    y1 = pos[f1 + total_num];
+    y1 = pos[f1 + total_num_];
 
     x2 = pos[f2];
-    y2 = pos[f2 + total_num];
+    y2 = pos[f2 + total_num_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
     q10 = y1 - y0;
     q11 = y2 - y0;
 
-    p00 = source_p00[i];
-    p01 = source_p01[i];
-    p10 = source_p10[i];
-    p11 = source_p11[i];
+    p00 = source_p00_[i];
+    p01 = source_p01_[i];
+    p10 = source_p10_[i];
+    p11 = source_p11_[i];
 
     j00 = p00 * q00 + p10 * q01;
     j01 = p01 * q00 + p11 * q01;
@@ -2224,7 +2227,7 @@ void ParaFun::EnergySource() {
     end_e_area += (E_1 + E_2);
   }
 
-  energy_shell = end_e_area;
+  energy_shell_ = end_e_area;
 }
 double ParaFun::ComputeEnergy(const Eigen::MatrixXd &x, bool whole) {
   double end_e_one_temp = 0, end_e_area = 0;
@@ -2241,28 +2244,28 @@ double ParaFun::ComputeEnergy(const Eigen::MatrixXd &x, bool whole) {
   int src_t_num = shell_data_.mesh_faces_.rows();
 
   for (int i = 0; i < src_t_num; ++i) {
-    f0 = F0[i];
-    f1 = F1[i];
-    f2 = F2[i];
+    f0 = F_[0][i];
+    f1 = F_[1][i];
+    f2 = F_[2][i];
 
     x0 = pos[f0];
-    y0 = pos[f0 + total_num];
+    y0 = pos[f0 + total_num_];
 
     x1 = pos[f1];
-    y1 = pos[f1 + total_num];
+    y1 = pos[f1 + total_num_];
 
     x2 = pos[f2];
-    y2 = pos[f2 + total_num];
+    y2 = pos[f2 + total_num_];
 
     q00 = x1 - x0;
     q01 = x2 - x0;
     q10 = y1 - y0;
     q11 = y2 - y0;
 
-    p00 = source_p00[i];
-    p01 = source_p01[i];
-    p10 = source_p10[i];
-    p11 = source_p11[i];
+    p00 = source_p00_[i];
+    p01 = source_p01_[i];
+    p10 = source_p10_[i];
+    p11 = source_p11_[i];
 
     j00 = p00 * q00 + p10 * q01;
     j01 = p01 * q00 + p11 * q01;
@@ -2276,33 +2279,33 @@ double ParaFun::ComputeEnergy(const Eigen::MatrixXd &x, bool whole) {
 
     end_e_one_temp += E_1;
     end_e_one_temp += E_2;
-    end_e_area += ((E_1 + E_2) * area_src[i]);
+    end_e_area += ((E_1 + E_2) * area_src_[i]);
   }
 
   if (whole) {
-    for (int i = src_t_num; i < F_N; ++i) {
-      f0 = F0[i];
-      f1 = F1[i];
-      f2 = F2[i];
+    for (int i = src_t_num; i < F_N_; ++i) {
+      f0 = F_[0][i];
+      f1 = F_[1][i];
+      f2 = F_[2][i];
 
       x0 = pos[f0];
-      y0 = pos[f0 + total_num];
+      y0 = pos[f0 + total_num_];
 
       x1 = pos[f1];
-      y1 = pos[f1 + total_num];
+      y1 = pos[f1 + total_num_];
 
       x2 = pos[f2];
-      y2 = pos[f2 + total_num];
+      y2 = pos[f2 + total_num_];
 
       q00 = x1 - x0;
       q01 = x2 - x0;
       q10 = y1 - y0;
       q11 = y2 - y0;
 
-      p00 = source_p00[i];
-      p01 = source_p01[i];
-      p10 = source_p10[i];
-      p11 = source_p11[i];
+      p00 = source_p00_[i];
+      p01 = source_p01_[i];
+      p10 = source_p10_[i];
+      p11 = source_p11_[i];
 
       j00 = p00 * q00 + p10 * q01;
       j01 = p01 * q00 + p11 * q01;
@@ -2316,10 +2319,10 @@ double ParaFun::ComputeEnergy(const Eigen::MatrixXd &x, bool whole) {
 
       end_e_one_temp += E_1;
       end_e_one_temp += E_2;
-      end_e_area += ((E_1 + E_2) * area[i]);
+      end_e_area += ((E_1 + E_2) * area_[i]);
     }
 
-    end_e_area += barrer_coef * energy_barrier;
+    end_e_area += barrer_coef_ * energy_barrier_;
   }
   // cout << "compute energy with scaf "<<whole<<" "<< end_e_area << endl;
   // cout << "compute energy with scaf/area " << whole << " " <<
@@ -2330,9 +2333,9 @@ double ParaFun::ComputeEnergy(const Eigen::MatrixXd &x, bool whole) {
 
 void ParaFun::LocalCoordinateInverse(int i, double &p00, double &p01,
                                      double &p10, double &p11) {
-  /*int f0 = F0[i];
-  int f1 = F1[i];
-  int f2 = F2[i];
+  /*int f0 = F_[0][i];
+  int f1 = F_[1][i];
+  int f2 = F_[2][i];
 
   Vector3d x_(shell_data_.mesh_vertices_(f1, 0) - shell_data_.mesh_vertices_(f0,
   0), shell_data_.mesh_vertices_(f1, 1) - shell_data_.mesh_vertices_(f0, 1),
@@ -2354,10 +2357,10 @@ void ParaFun::LocalCoordinateInverse(int i, double &p00, double &p01,
   p10 = 0;
   p11 = 1 / y2_0;*/
 
-  int f0 = F0[i];
-  int f1 = F1[i];
-  int f2 = F2[i];
-  double area_tri = area[i];
+  int f0 = F_[0][i];
+  int f1 = F_[1][i];
+  int f2 = F_[2][i];
+  double area_tri = area_[i];
   double area_min = 1e-15;
   if (area_tri > area_min) {
     Eigen::Vector3d t_(shell_data_.mesh_vertices_(f0, 0),
@@ -2402,9 +2405,9 @@ void ParaFun::LocalCoordinateInverse(int i, double &p00, double &p01,
 }
 void ParaFun::LocalCoordinateInverseScaf(int i, double &p00, double &p01,
                                          double &p10, double &p11) {
-  int f0 = F0[i];
-  int f1 = F1[i];
-  int f2 = F2[i];
+  int f0 = F_[0][i];
+  int f1 = F_[1][i];
+  int f2 = F_[2][i];
 
   Eigen::Vector2d x_(
       shell_data_.whole_uv_(f1, 0) - shell_data_.whole_uv_(f0, 0),
@@ -2415,7 +2418,7 @@ void ParaFun::LocalCoordinateInverseScaf(int i, double &p00, double &p01,
 
   double area_tri = std::abs(x_(0) * l_(1) - x_(1) * l_(0));
   double x1_0, x2_0, y2_0;
-  if (area_tri > area_threshold) {
+  if (area_tri > area_threshold_) {
     x1_0 = x_.norm();
     x_ /= x1_0;
     Eigen::Vector2d y_(-x_(1), x_(0));
@@ -2423,7 +2426,7 @@ void ParaFun::LocalCoordinateInverseScaf(int i, double &p00, double &p01,
     y2_0 = l_.dot(y_);
   } else {
     // cout << "area too small!!!!!!!!!!!!! " << endl;
-    double h = sqrt((2 * area_threshold) / sqrt(3.0));
+    double h = sqrt((2 * area_threshold_) / sqrt(3.0));
     x1_0 = h;
     x2_0 = h / 2.0;
     y2_0 = sqrt(3.0) * h / 2.0;
@@ -2474,19 +2477,19 @@ void ParaFun::FunGrid(const Eigen::VectorXd &x) {
 
   x_min = pos[0];
   x_max = pos[0];
-  y_min = pos[V_N];
-  y_max = pos[V_N];
-  for (int i = 1; i < V_N; ++i) {
+  y_min = pos[V_N_];
+  y_max = pos[V_N_];
+  for (int i = 1; i < V_N_; ++i) {
     if (pos[i] < x_min) {
       x_min = pos[i];
     } else if (pos[i] > x_max) {
       x_max = pos[i];
     }
 
-    if (pos[i + V_N] < y_min) {
-      y_min = pos[i + V_N];
-    } else if (pos[i + V_N] > y_max) {
-      y_max = pos[i + V_N];
+    if (pos[i + V_N_] < y_min) {
+      y_min = pos[i + V_N_];
+    } else if (pos[i + V_N_] > y_max) {
+      y_max = pos[i + V_N_];
     }
   }
 
@@ -2499,20 +2502,20 @@ void ParaFun::FunGrid(const Eigen::VectorXd &x) {
     cell_points[j].clear();
   }
   Eigen::VectorXi boundary_vertex = shell_data_.frame_ids_;
-  int bound_num = BE_N;
+  int bound_num = BE_N_;
   double l_x_min, l_x_max, l_y_min, l_y_max, b, len;
   int id_x_min, id_x_max, id_y_min, id_y_max;
   int id_start, id_end;
   double s0, s1, e0, e1, p0, p1, s0_, s1_, e0_, e1_;
 
-  AV_ID.clear();
-  AV_F_N = 0;
+  AV_ID_.clear();
+  AV_F_N_ = 0;
   double dis;
 
   for (int i = 0; i < bound_num; ++i) {
     int id = boundary_vertex(i);
     int x_i = std::floor((pos[id] - x_min) / lengthgrid_x);
-    int y_i = std::floor((pos[id + V_N] - y_min) / lengthgrid_y);
+    int y_i = std::floor((pos[id + V_N_] - y_min) / lengthgrid_y);
     if (y_i > celly_num - 1) {
       y_i = celly_num - 1;
     }
@@ -2524,11 +2527,11 @@ void ParaFun::FunGrid(const Eigen::VectorXd &x) {
 
   for (int i = 0; i < bound_num; ++i) {
     id_start = boundary_vertex(i);
-    id_end = boundary_vertex((i + 1) % BE_N);
+    id_end = boundary_vertex((i + 1) % BE_N_);
     s0 = pos[id_start];
-    s1 = pos[id_start + V_N];
+    s1 = pos[id_start + V_N_];
     e0 = pos[id_end];
-    e1 = pos[id_end + V_N];
+    e1 = pos[id_end + V_N_];
     len = sqrt((s0 - e0) * (s0 - e0) + (s1 - e1) * (s1 - e1));
     b = sqrt(threhold * len / 2 + threhold * threhold / 4);
     s0_ = s0;
@@ -2570,7 +2573,7 @@ void ParaFun::FunGrid(const Eigen::VectorXd &x) {
           }
 
           p0 = pos[id_p];
-          p1 = pos[id_p + V_N];
+          p1 = pos[id_p + V_N_];
           dis = sqrt((p0 - s0_) * (p0 - s0_) + (p1 - s1_) * (p1 - s1_)) +
                 sqrt((p0 - e0_) * (p0 - e0_) + (p1 - e1_) * (p1 - e1_)) - len;
           if (dis > threhold) {
@@ -2580,25 +2583,20 @@ void ParaFun::FunGrid(const Eigen::VectorXd &x) {
             std::cout << "distance error" << std::endl;
           }
 
-          if (BE_N - 1 == i) {
-            AV_ID.push_back(i * (BE_N - 2) + boundary_vertexID[id_p] - 1);
+          if (BE_N_ - 1 == i) {
+            AV_ID_.push_back(i * (BE_N_ - 2) + boundary_vertexID_[id_p] - 1);
           } else if (id_p < id_start) {
-            AV_ID.push_back(i * (BE_N - 2) + boundary_vertexID[id_p]);
+            AV_ID_.push_back(i * (BE_N_ - 2) + boundary_vertexID_[id_p]);
           } else {
-            AV_ID.push_back(i * (BE_N - 2) + boundary_vertexID[id_p] - 2);
+            AV_ID_.push_back(i * (BE_N_ - 2) + boundary_vertexID_[id_p] - 2);
           }
         }
       }
     }
   }
 
-  AV_F_N = AV_ID.size();
-  // std::cout << AV_F_N << std::endl;
+  AV_F_N_ = AV_ID_.size();
+  // std::cout << AV_F_N_ << std::endl;
 }
 
-ParaFun::~ParaFun() {
-  if (pardiso != NULL) {
-    delete pardiso;
-    pardiso = NULL;
-  }
-}
+ParaFun::~ParaFun() {}

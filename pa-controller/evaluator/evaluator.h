@@ -13,7 +13,8 @@ public:
   Evaluator(int argc, char *argv[]);
   void LoadData();
   void PrintData();
-  void PrintDataAvgSquaredDifference();
+  void AnalyseDataDifference();
+  void PrintDataDifference();
 
 private:
   void
@@ -25,4 +26,10 @@ private:
       sample_metric_data_;
   std::string work_name_[2];
   int cmd_idx_ = -1;
+
+  std::unordered_map<std::string, std::pair<std::size_t, std::size_t>>
+      map_property_to_num_valid_data_;
+  std::unordered_map<std::string, double> map_property_to_squared_difference_;
+  std::unordered_map<std::string, std::pair<std::string, double>>
+      map_property_to_max_difference_;
 };

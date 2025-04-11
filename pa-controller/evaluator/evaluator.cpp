@@ -150,19 +150,17 @@ void Evaluator::PrintData() {
   }
 }
 
-void Evaluator::PrintDataAvgSquaredDifference() {
-
+void Evaluator::AnalyseDataDifference() {
   const std::unordered_map<std::string, std::string> &metrics =
       all_step_list_[cmd_idx_].metrics;
-
   std::set<std::string> all_samples;
   for (std::size_t i = 0; i < 2; ++i)
     for (auto data : sample_metric_data_[i])
       all_samples.insert(data.first);
 
-  std::unordered_map<std::string, std::pair<std::size_t, std::size_t>>
-      map_property_to_num_valid_data;
-  std::unordered_map<std::string, double> map_property_to_squared_difference;
+  map_property_to_num_valid_data_.clear();
+  map_property_to_squared_difference_.clear();
+  map_property_to_max_difference_.clear();
 
   for (auto sample : all_samples) {
     const frm::Metric &metric_data_0 = sample_metric_data_[0].count(sample) != 0
@@ -173,14 +171,17 @@ void Evaluator::PrintDataAvgSquaredDifference() {
                                            : frm::Metric();
     // 使用try_emplace优化 - 只在键不存在时插入
     for (auto [name, value] : metric_data_0) {
-      map_property_to_num_valid_data.try_emplace(name, 0, 0);
-      map_property_to_squared_difference.try_emplace(name, 0.0);
+      map_property_to_num_valid_data_.try_emplace(name, 0, 0);
+      map_property_to_squared_difference_.try_emplace(name, 0.0);
+      map_property_to_max_difference_.try_emplace(name, "", 0.0);
     }
     for (auto [name, value] : metric_data_1) {
-      map_property_to_num_valid_data.try_emplace(name, 0, 0);
-      map_property_to_squared_difference.try_emplace(name, 0.0);
+      map_property_to_num_valid_data_.try_emplace(name, 0, 0);
+      map_property_to_squared_difference_.try_emplace(name, 0.0);
+      map_property_to_max_difference_.try_emplace(name, "", 0.0);
     }
   }
+
   for (auto sample : all_samples) {
     const frm::Metric &metric_data_0 = sample_metric_data_[0].count(sample) != 0
                                            ? sample_metric_data_[0][sample]
@@ -188,7 +189,7 @@ void Evaluator::PrintDataAvgSquaredDifference() {
     const frm::Metric &metric_data_1 = sample_metric_data_[1].count(sample) != 0
                                            ? sample_metric_data_[1][sample]
                                            : frm::Metric();
-    for (auto property_info : map_property_to_squared_difference) {
+    for (auto property_info : map_property_to_squared_difference_) {
       // 只计算double或者int类型的数值差异
       if (metrics.at(property_info.first) != "DOUBLE" &&
           metrics.at(property_info.first) != "INT")
@@ -196,37 +197,52 @@ void Evaluator::PrintDataAvgSquaredDifference() {
       // 如果该属性不齐全, 则记录为无效数值
       if (metric_data_0.count(property_info.first) == 0 ||
           metric_data_1.count(property_info.first) == 0) {
-        map_property_to_num_valid_data.at(property_info.first).second++;
+        map_property_to_num_valid_data_.at(property_info.first).second++;
         continue;
       }
       // 否则记录该属性的差异
-      map_property_to_num_valid_data.at(property_info.first).first++;
+      map_property_to_num_valid_data_.at(property_info.first).first++;
       const frm::MetricValue &value_0 = metric_data_0.at(property_info.first);
-      const frm::MetricValue &value_1 = metric_data_0.at(property_info.first);
+      const frm::MetricValue &value_1 = metric_data_1.at(property_info.first);
+      double difference = 0;
       if (std::holds_alternative<double>(value_0) &&
-          std::holds_alternative<double>(value_1)) {
-        map_property_to_squared_difference.at(property_info.first) +=
-            std::pow(std::get<double>(value_0) - std::get<double>(value_1), 2);
-      } else if (std::holds_alternative<int>(value_0) &&
-                 std::holds_alternative<int>(value_1)) {
-        map_property_to_squared_difference.at(property_info.first) +=
-            std::pow(std::get<int>(value_0) - std::get<int>(value_1), 2);
-      }
+          std::holds_alternative<double>(value_1))
+        difference = std::get<double>(value_0) - std::get<double>(value_1);
+      else if (std::holds_alternative<int>(value_0) &&
+               std::holds_alternative<int>(value_1))
+        difference = std::get<int>(value_0) - std::get<int>(value_1);
+      // 更新squared_difference
+      map_property_to_squared_difference_.at(property_info.first) +=
+          std::pow(difference, 2);
+      // 更新max_difference
+      if (std::abs(difference) >
+          map_property_to_max_difference_.at(property_info.first).second)
+        map_property_to_max_difference_.at(property_info.first) =
+            std::pair<std::string, double>(sample, std::abs(difference));
     }
   }
+}
 
-  for (auto property_info : map_property_to_squared_difference) {
-    double squared_difference =
-        std::sqrt(map_property_to_squared_difference.at(property_info.first) /
-                  map_property_to_num_valid_data.at(property_info.first).first);
-
-    std::cout
-        << std::format(
-               "度量: {}, 有效数据{}个, 无效数据{}个\nsquared difference: {}",
-               property_info.first,
-               map_property_to_num_valid_data.at(property_info.first).first,
-               map_property_to_num_valid_data.at(property_info.first).second,
-               squared_difference)
-        << std::endl;
+void Evaluator::PrintDataDifference() {
+  for (auto property_info : map_property_to_squared_difference_) {
+    std::size_t num_valid_data =
+        map_property_to_num_valid_data_.at(property_info.first).first;
+    std::size_t num_invalid_data =
+        map_property_to_num_valid_data_.at(property_info.first).second;
+    double squared_difference = std::sqrt(
+        map_property_to_squared_difference_.at(property_info.first) /
+        map_property_to_num_valid_data_.at(property_info.first).first);
+    std::pair<std::string, double> max_difference =
+        map_property_to_max_difference_.at(property_info.first);
+    std::cout << std::format(
+                     "metric name: {},\nvalid data: {}/{},\navg squared "
+                     "difference: {},\n"
+                     "max difference: ({}, {})",
+                     property_info.first, //
+                     num_valid_data,
+                     num_valid_data + num_invalid_data, //
+                     squared_difference,                //
+                     max_difference.first, max_difference.second)
+              << std::endl;
   }
 }
