@@ -8,7 +8,8 @@
                 "uv_mesh.obj"
             ],
             "metrics": [
-                {"type": "DOUBLE", "name": "distortion"}         
+                {"type": "DOUBLE", "name": "distortion"},    
+                {"type": "DOUBLE", "name": "length"}
             ]
         }
     ],
@@ -16,13 +17,12 @@
         {
             "step_idx"  : 1,
             "input_files":[
-                "a.obj",
-                "b.txt"
+                "uv_mesh.obj"
             ],
             "output_files":[
-                "a.obj",
-                "b.txt"    
-            ]
+                ".gird"
+            ],
+            "metrics": []
         }
     ],
     "Dissection":[

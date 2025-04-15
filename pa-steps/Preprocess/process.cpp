@@ -25,9 +25,11 @@ void MainProcess() {
   // 写入metrics
   std::unordered_map<std::string, std::string> metrics;
   metrics["distortion"] = "double";
+  metrics["length"] = "double";
 
   std::unordered_map<std::string, frm::MetricValue> metric_values;
   metric_values["distortion"] = bil_para->GetDistortion();
+  metric_values["length"] = 4.00;
 
   fout = frm::CreateMetricsFilestream();
   frm::WriteMetricJsonFile(fout, metrics, metric_values);
