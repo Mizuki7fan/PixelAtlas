@@ -45,10 +45,3 @@ struct MeshTraits : public OpenMesh::DefaultTraits {
 
 // typedef OpenMesh::TriMesh_ArrayKernelT<MeshTraits> Mesh;
 typedef OpenMesh::PolyMesh_ArrayKernelT<MeshTraits> Mesh;
-
-bool is_flip_ok_openmesh(Mesh::EdgeHandle &eh,
-                         Mesh &mesh_); // just copy the code from openmesh
-bool flip_openmesh(Mesh::EdgeHandle &eh, Mesh &mesh_);
-
-bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d> &tri,
-                            const OpenMesh::Vec3d &p);

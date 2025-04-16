@@ -26,9 +26,12 @@ public:
 
 private:                          // functions
   bool PrepareWorkingDirectory(); // 准备work文件夹
-
+  bool PrepareWorkingDirectoryForIndividualRunning();
   bool
   SelectRunTargets(); // 根据依赖的前置工具和文件通配符, 确定本次运行所有的目标
+  bool SelectRunTargetsOfFirstCmd();
+  bool SelectRunTargetsOfFollowingCmd();
+
 private:
   std::vector<StepArguments> all_step_list;
   std::unordered_map<std::string, std::size_t> map_step_name_to_step_idx;

@@ -74,35 +74,51 @@ bool CommonProgram::PrepareWorkingDirectory() {
     fs::create_directories(g_curr_debug_dir);
   }
 
-  if (g_use_individual_model_dir && run_targets.size() == 1) {
-    g_curr_debug_dir = g_curr_debug_dir / run_targets[0].filename();
-    if (!fs::exists(g_curr_debug_dir)) {
-      fs::create_directories(g_curr_debug_dir);
-    }
-  }
-
   g_curr_log_dir = g_curr_working_dir / "log";
-  fs::create_directories(g_curr_log_dir);
-  if (g_use_individual_model_dir && run_targets.size() == 1) {
-    g_curr_log_dir = g_curr_log_dir / run_targets[0].filename();
-    if (!fs::exists(g_curr_log_dir)) {
-      fs::create_directories(g_curr_log_dir);
-    }
-  }
+  if (!fs::exists(g_curr_log_dir))
+    fs::create_directories(g_curr_log_dir);
 
   g_curr_result_dir = g_curr_working_dir / "result";
-  fs::create_directories(g_curr_result_dir);
-  if (g_use_individual_model_dir && run_targets.size() == 1) {
-    g_curr_result_dir = g_curr_result_dir / run_targets[0].filename();
-    if (!fs::exists(g_curr_result_dir)) {
-      fs::create_directories(g_curr_result_dir);
-    }
+  if (!fs::exists(g_curr_result_dir))
+    fs::create_directories(g_curr_result_dir);
+
+  return true;
+}
+
+bool CommonProgram::PrepareWorkingDirectoryForIndividualRunning() {
+  if (!g_use_individual_model_dir || run_targets.size() != 1)
+    return true;
+
+  // debug
+  g_curr_debug_dir = g_curr_debug_dir / run_targets[0].filename();
+  if (!fs::exists(g_curr_debug_dir)) {
+    fs::create_directories(g_curr_debug_dir);
+  }
+
+  // log
+  g_curr_log_dir = g_curr_log_dir / run_targets[0].filename();
+  if (!fs::exists(g_curr_log_dir)) {
+    fs::create_directories(g_curr_log_dir);
+  }
+
+  // result
+  g_curr_result_dir = g_curr_result_dir / run_targets[0].filename();
+  if (!fs::exists(g_curr_result_dir)) {
+    fs::create_directories(g_curr_result_dir);
   }
 
   return true;
 }
 
 bool CommonProgram::SelectRunTargets() {
+  if (curr_cmd_idx == 0)
+    return SelectRunTargetsOfFirstCmd();
+  else
+    return SelectRunTargetsOfFollowingCmd();
+  return true;
+}
+
+bool CommonProgram::SelectRunTargetsOfFirstCmd() {
   // 匹配规则
   fs::path project_root_dir = fs::current_path() / ".." / "..";
   fs::path project_asset_dir = project_root_dir / "asset";
@@ -138,6 +154,37 @@ bool CommonProgram::SelectRunTargets() {
         for (auto run_file : run_targets)
           std::cout << run_file << std::endl;
       }
+    }
+  }
+  return true;
+}
+
+bool CommonProgram::SelectRunTargetsOfFollowingCmd() {
+  // 算当前工具的输入文件所依赖的前序步骤
+  std::unordered_map<std::string, std::size_t> map_input_file_to_step_idx;
+  for (std::size_t step_idx = 0; step_idx < curr_cmd_idx; ++step_idx) {
+    std::cout << all_step_list[step_idx].step_name << std::endl;
+    for (const std::string &input_file_name :
+         all_step_list[step_idx].output_files) {
+      std::cout << input_file_name << std::endl;
+      map_input_file_to_step_idx[input_file_name] = step_idx;
+    }
+  }
+
+  fs::path project_root_dir = fs::current_path() / ".." / "..";
+
+  if (!g_single_filename.empty()) {
+    for (auto input_file_name : all_step_list[curr_cmd_idx].input_files) {
+      PA_ASSERT_WITH_MSG(
+          map_input_file_to_step_idx.count(input_file_name) != 0,
+          std::format("当前输入文件{}的前序步骤不存在", input_file_name));
+      std::size_t curr_input_file_output_cmd_idx =
+          map_input_file_to_step_idx.at(input_file_name);
+      const fs::path &curr_working_dir = g_curr_working_dir / "..";
+      fs::path curr_input_file_dir =
+          curr_working_dir /
+          std::format("{}_{}", curr_input_file_output_cmd_idx,
+                      all_step_list[curr_input_file_output_cmd_idx].step_name);
     }
   }
 
@@ -234,10 +281,12 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
   if (curr_cmd_idx == std::numeric_limits<std::size_t>::max())
     std::cerr << "invalid command: " << argv[0] << std::endl;
 
-  // 选择本次运行需要处理的模型
-  SelectRunTargets();
   // 准备当前工具运行需要的文件夹
   PrepareWorkingDirectory();
+  // 选择本次运行需要处理的模型
+  SelectRunTargets();
+  // 为单独文件单独建立文件夹
+  PrepareWorkingDirectoryForIndividualRunning();
 };
 
 } // namespace frm
