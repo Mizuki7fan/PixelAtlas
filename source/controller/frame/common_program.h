@@ -1,5 +1,6 @@
 #pragma once
-#include "command_structures.h"
+#include "action_arguments.h"
+#include "global_defs.h"
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -33,7 +34,7 @@ private:                          // functions
   bool SelectRunTargetsOfFollowingCmd();
 
 private:
-  std::vector<StepArguments> all_step_list;
+  std::vector<ActionArguments> all_action_list;
   std::unordered_map<std::string, std::size_t> map_step_name_to_step_idx;
   std::size_t curr_cmd_idx;
   std::string curr_cmd_name;

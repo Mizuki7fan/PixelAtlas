@@ -1,10 +1,10 @@
 {
     "Preprocess":[
         {
-            "step_idx": 0,
-            "input_files":[
+            "idx": 0,
+            "input":[
             ],
-            "output_files":[
+            "output":[
                 "uv_mesh.obj"
             ],
             "metrics": [
@@ -15,11 +15,11 @@
     ],
     "Pixelation":[
         {
-            "step_idx"  : 1,
-            "input_files":[
+            "idx"  : 1,
+            "input":[
                 "uv_mesh.obj"
             ],
-            "output_files":[
+            "output":[
                 ".gird"
             ],
             "metrics": []
@@ -27,12 +27,12 @@
     ],
     "Dissection":[
         {
-            "step_idx"  : 2,
-            "input_files":[
+            "idx"  : 2,
+            "input":[
                 "a.obj",
                 "b.txt"
             ],
-            "output_files":[
+            "output":[
                 "a.obj",
                 "b.txt"    
             ]
@@ -40,12 +40,12 @@
     ],
     "GutterGeneration":[
         {
-            "step_idx"  : 3,
-            "input_files":[
+            "idx"  : 3,
+            "input":[
                 "a.obj",
                 "b.txt"
             ],
-            "output_files":[
+            "output":[
                 "a.obj",
                 "b.txt"    
             ]

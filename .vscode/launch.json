@@ -5,7 +5,7 @@
             "name": "generate project",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pa-script/etc/reset_compile_commands.py",
+            "program": "${workspaceFolder}/script/etc/reset_compile_commands.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "cwd": "${workspaceFolder}"
@@ -21,12 +21,11 @@
                 "-d","1",
                 "-p","4",
                 "-t","1800",
-                "--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
-                //"--single","00019.obj",//单一执行模式, 只执行一个文件
+                "--batch",".*0001.*",//批量执行
+                //"--single","00019.obj",//单一执行
                 "--dataset","PolyAtlas-Sample-30",
-                //"--use_individual_model_dir",
-                "--parallel_level","process",
-                "--run_name","base111",
+                "--use_individual_instance_dir",
+                "--work_name","base",
                 "--clean"
                 ],//参数
         },
@@ -46,7 +45,7 @@
                 "--dataset","PolyAtlas-Sample-30",
                 //"--use_individual_model_dir",
                 "--parallel_level","process",
-                "--run_name","base",
+                "--work_name","base",
                 "--clean"
                 ],//参数
         },
@@ -61,12 +60,12 @@
                 "-d","1",
                 "-p","4",
                 "-t","1800",
-                //"--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
-                "--single","00012.obj",//单一执行模式, 只执行一个文件
+                "--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
+                //"--single","00012.obj",//单一执行模式, 只执行一个文件
                 "--dataset","PolyAtlas-Sample-30",
                 //"--use_individual_model_dir",
                 "--parallel_level","process",
-                "--run_name","base",
+                "--work_name","base",
                 "--clean"
                 ],//参数
         },

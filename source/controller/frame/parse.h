@@ -1,11 +1,9 @@
 #pragma once
-
-#include "assert.hpp"
-#include "command_structures.h"
+#include "action_arguments.h"
 
 namespace frm {
 std::vector<std::string> SplitString(const std::string &full_string,
                                      const std::string &delimiter);
 
-std::vector<StepArguments> LoadAllStepList();
+std::vector<ActionArguments> LoadAllStepList();
 } // namespace frm

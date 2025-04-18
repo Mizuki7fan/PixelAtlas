@@ -2,6 +2,7 @@
 #include "common_program.h"
 
 namespace frm::global {
+
 int DebugLevel() { return frm::GetDebugLevel(); }
 
 fs::path CurrDebugDir() { return frm::GetCurrDebugDir(); }

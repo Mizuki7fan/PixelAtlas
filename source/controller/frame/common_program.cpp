@@ -9,57 +9,64 @@
 namespace po = boost::program_options;
 
 namespace frm {
-// work目录
-static fs::path g_working_dir;
-// 当前工具目录
-static fs::path g_curr_working_dir;
-// 当前调试输出目录
-static fs::path g_curr_debug_dir;
-fs::path GetCurrDebugDir() { return g_curr_debug_dir; };
+// 本批次运行的名字, 例如work_baseline;
+static std::string g_work_name = "";
+std::string GetWorkName() { return g_work_name; }
+
+// work目录 本批次运行的目录
+static fs::path g_work_dir;
+
+// 工具的目录, 例如0_Preprocess
+static fs::path g_action_dir;
+
+// 工具的调试目录
+static fs::path g_action_debug_dir;
+
 // 当前日志输出目录
-static fs::path g_curr_log_dir;
+static fs::path g_action_log_dir;
+
 // 当前结果输出目录
-static fs::path g_curr_result_dir;
-fs::path GetCurrResultDir() { return g_curr_result_dir; };
+static fs::path g_action_result_dir;
+
 // 调试等级
-static int g_debug_level_arg = 0;
-int GetDebugLevel() { return g_debug_level_arg; };
+static int g_debug_level = 0;
+int GetDebugLevel() { return g_debug_level; };
+
 // 当前处理的文件名
-static fs::path g_curr_file = "";
-fs::path GetCurrFile() { return g_curr_file; };
+static fs::path g_instance_name = "";
+
 // 批量执行时的文件名通配符
-static std::string g_batch_filename_regex_ = ".*.*";
+static std::string g_batch_instance_regex = ".*.*";
+
 // 单一文件执行时的文件名
-static std::string g_single_filename = "alien.obj";
+static std::string g_single_instance = "alien.obj";
+
 // 数据集名
-static std::string g_dataset_str = ".";
-std::string GetDatasetStr() { return g_dataset_str; };
+static std::string g_dataset_name = ".";
+
 // 并行数
 static int g_num_parallel_cnt = 1;
 // 是否每个文件独立新建文件夹
-static bool g_use_individual_model_dir = false;
-bool GetUseIndividualModelDir() { return g_use_individual_model_dir; }
+
+static bool g_use_individual_instance_dir = false;
+
 // 程序执行最大用时
 static int g_max_time_elapsed = 1800;
 int GetMaxTimeElapsed() { return g_max_time_elapsed; };
-// 并行级别: 默认为进程级的并行, 也可以设置为线程级并行(thread), 不并行
-static std::string g_parallel_level = "process";
-static bool g_clean_cache = false;
 
-static std::string g_run_name = "";
-std::string GetRunName() { return g_run_name; }
+static bool g_clean_action_cache = false;
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
-  g_working_dir = fs::current_path() / std::format("../work_{}", g_run_name);
-  // 如果没有work文件夹则新建
-  if (!fs::exists(g_working_dir))
-    fs::create_directories(g_working_dir);
+  g_work_dir = fs::current_path() / std::format("../work_{}", g_work_name);
+  g_action_dir =
+      g_work_dir /
+      std::format("{}_{}", curr_cmd_idx, all_step_list[curr_cmd_idx].step_name);
+
+  if (!fs::exists(g_work_dir))
+    fs::create_directories(g_work_dir);
 
   // 检查并刷新本步骤的工作目录
-  g_curr_working_dir =
-      g_working_dir /
-      std::format("{}_{}", curr_cmd_idx, all_step_list[curr_cmd_idx].step_name);
 
   if (g_clean_cache) {
     if (fs::exists(g_curr_working_dir))
@@ -111,10 +118,37 @@ bool CommonProgram::PrepareWorkingDirectoryForIndividualRunning() {
 }
 
 bool CommonProgram::SelectRunTargets() {
+  // 匹配规则
+  fs::path project_root_dir = fs::current_path() / ".." / "..";
+  fs::path project_asset_dir = project_root_dir / "asset";
+  // 指定数据集
+  fs::path run_dataset_dir = project_asset_dir / g_dataset_str;
+  run_targets.clear();
+
+  // 从dataset中选择本次运行的文件
+  if (!g_single_filename.empty()) {
+    g_curr_file = run_dataset_dir / g_single_filename;
+    PA_ASSERT_WITH_MSG(fs::exists(g_curr_file),
+                       std::format("{}不存在", g_curr_file.string()));
+    run_targets.push_back(g_curr_file);
+  } else if (!g_batch_filename_regex_.empty()) {
+    std::smatch match;
+    std::string &file_regex = g_batch_filename_regex_;
+    std::regex pattern(file_regex);
+    for (const auto &entry :
+         std::filesystem::directory_iterator(run_dataset_dir)) {
+      if (entry.is_directory())
+        continue;
+      //
+      std::string filename = entry.path().filename().string();
+      if (std::regex_match(filename, match, pattern)) {
+        run_targets.push_back(entry.path().string());
+      }
+    }
+  }
+
   if (curr_cmd_idx == 0)
-    return SelectRunTargetsOfFirstCmd();
-  else
-    return SelectRunTargetsOfFollowingCmd();
+    return true;
   return true;
 }
 
@@ -161,6 +195,8 @@ bool CommonProgram::SelectRunTargetsOfFirstCmd() {
 
 bool CommonProgram::SelectRunTargetsOfFollowingCmd() {
   // 算当前工具的输入文件所依赖的前序步骤
+  run_targets.clear();
+
   std::unordered_map<std::string, std::size_t> map_input_file_to_step_idx;
   for (std::size_t step_idx = 0; step_idx < curr_cmd_idx; ++step_idx) {
     std::cout << all_step_list[step_idx].step_name << std::endl;
@@ -185,9 +221,68 @@ bool CommonProgram::SelectRunTargetsOfFollowingCmd() {
           curr_working_dir /
           std::format("{}_{}", curr_input_file_output_cmd_idx,
                       all_step_list[curr_input_file_output_cmd_idx].step_name);
+      fs::path curr_input_file =
+          curr_input_file_dir / "result" /
+          std::format("{}-{}", g_single_filename, input_file_name);
+      if (!fs::exists(curr_input_file))
+        return false;
+      else {
+        g_input_file_full_path[input_file_name] = curr_input_file;
+      }
+    }
+    run_targets.push_back(g_single_filename);
+  } else if (!g_batch_filename_regex_.empty()) {
+    // 填充run_targets
+    std::unordered_map<std::string, bool> map_model_name_is_valid;
+    for (auto input_file_name : all_step_list[curr_cmd_idx].input_files) {
+      // 遍历该命令的所有输入文件
+      PA_ASSERT_WITH_MSG(
+          map_input_file_to_step_idx.count(input_file_name) != 0,
+          std::format("当前输入文件{}的前序步骤不存在", input_file_name));
+      std::size_t curr_input_file_output_cmd_idx =
+          map_input_file_to_step_idx.at(input_file_name);
+      const fs::path &curr_working_dir = g_curr_working_dir / "..";
+      fs::path curr_input_file_dir =
+          curr_working_dir /
+          std::format("{}_{}", curr_input_file_output_cmd_idx,
+                      all_step_list[curr_input_file_output_cmd_idx].step_name) /
+          "result";
+      if (map_model_name_is_valid.empty()) {
+        for (const auto &entry : fs::directory_iterator(curr_input_file_dir)) {
+          if (entry.is_directory())
+            continue;
+          std::string filename = entry.path().filename().string();
+          if (filename.size() > input_file_name.size()) {
+            std::size_t suffix_pos = filename.size() - input_file_name.size();
+            if (filename.substr(suffix_pos) == input_file_name) {
+              std::string model_name = filename.substr(0, suffix_pos - 1);
+              if (map_model_name_is_valid.count(model_name) == 0) {
+                // 需要检测model_name是否满足通配条件
+
+                map_model_name_is_valid[model_name] = true;
+                run_targets.push_back(model_name);
+              }
+            }
+          }
+        }
+      } else {
+        // 搜索该目录下所有包含input_file_name的文件, 并识别模型名
+        for (auto &[model_name, is_valid] : map_model_name_is_valid) {
+          if (!is_valid)
+            continue;
+          fs::path curr_input_file =
+              curr_input_file_dir /
+              std::format("{}-{}", model_name, input_file_name);
+          if (fs::exists(curr_input_file)) {
+            map_model_name_is_valid[model_name] = true;
+            run_targets.push_back(model_name);
+          } else {
+            map_model_name_is_valid[model_name] = false;
+          }
+        }
+      }
     }
   }
-
   return true;
 }
 
@@ -211,37 +306,27 @@ int CommonProgram::Run(const std::function<void()> &func) const {
 CommonProgram::CommonProgram(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   desc.add_options()("help,h", "帮助信息") //
-      ("debug,d", po::value<int>(&g_debug_level_arg)->default_value(0),
+      ("debug,d", po::value<int>(&g_debug_level)->default_value(0),
        "调试等级") //
       ("batch",
-       po::value<std::string>(&g_batch_filename_regex_)->default_value(""),
-       "文件名正则") //
-      ("single", po::value<std::string>(&g_single_filename)->default_value(""),
-       "单一执行文件") //
-      ("dataset", po::value<std::string>(&g_dataset_str)->default_value(""),
-       "数据集名称") //
+       po::value<std::string>(&g_batch_instance_regex)->default_value(""),
+       "批量执行") //
+      ("single", po::value<std::string>(&g_single_instance)->default_value(""),
+       "单一执行") //
+      ("dataset", po::value<std::string>(&g_dataset_name)->default_value(""),
+       "数据集") //
       ("parallel,p", po::value<int>(&g_num_parallel_cnt)->default_value(1),
-       "并行执行数")     //
-      ("parallel_level", // 并行级别, 取值必须为thread或者process
-       po::value<std::string>(&g_parallel_level)
-           ->default_value("process")              // 默认进程级并行
-           ->notifier([](const std::string &val) { // 参数校验lambda
-             if (val != "process" && val != "thread") {
-               throw po::validation_error(
-                   po::validation_error::invalid_option_value, "parallel_level",
-                   val);
-             }
-           }),
-       "并行级别 (process|thread)") //
-      ("use_individual_model_dir",
-       po::bool_switch(&g_use_individual_model_dir)->default_value(false),
-       "是否每个文件独立建立文件夹") //
+       "并行数") //
+      ("use_individual_instance_dir",
+       po::bool_switch(&g_use_individual_instance_dir)->default_value(false),
+       "是否每个instance独立建立文件夹") //
       ("max_time_elapsed,t",
-       po::value<int>(&g_max_time_elapsed)->default_value(1800), "最大耗时") //
-      ("clean", po::bool_switch(&g_clean_cache)->default_value(false),
-       "是否清理单步缓存")(
-          "run_name", po::value<std::string>(&g_run_name)->default_value(""),
-          "设置运行批次名");
+       po::value<int>(&g_max_time_elapsed)->default_value(1800),
+       "最大耗时") //
+      ("clean", po::bool_switch(&g_clean_action_cache)->default_value(false),
+       "是否清理单步缓存") //
+      ("work_name", po::value<std::string>(&g_work_name)->default_value(""),
+       "设置运行批次名");
 
   po::variables_map vm;
   try {
@@ -257,7 +342,14 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
     PA_ASSERT_WITH_MSG(0, "输入异常");
   }
 
-  if (g_batch_filename_regex_.empty() && g_single_filename.empty()) {
+  PA_ASSERT_WITH_MSG(g_batch_instance_regex.empty() &&
+                         g_single_instance.empty(),
+                     "single和batch都未指定需要处理的文件");
+  PA_ASSERT_WITH_MSG(!g_batch_instance_regex.empty() &&
+                         !g_single_instance.empty(),
+                     "single和batch都指定了需要处理的文件");
+
+  if (g_batch_instance_regex.empty() && g_single_instance.empty()) {
     std::cerr << "error: 未指定需要处理的文件" << std::endl;
     std::cerr << desc << std::endl;
     exit(0);

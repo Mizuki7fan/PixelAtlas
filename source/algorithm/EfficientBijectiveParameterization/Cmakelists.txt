@@ -1,21 +1,17 @@
 #Efficient Bijective Parameterization by Jianping Su
 project(EfficientBijectiveParameterization)
 
-# add_definitions(/D_USE_MATH_DEFINES)
-# #"You have to define _USE_MATH_DEFINES in the compiler settings!"
-
 if (${LINSYSSOLVER} STREQUAL "Eigen")
     add_definitions(-DUSE_EIGEN)
 elseif(${LINSYSSOLVER} STREQUAL "MKL")
 add_definitions(-DUSE_MKL)
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/pa-interface)
+include_directories(${CMAKE_SOURCE_DIR}/source/interface)
 include_directories(${EIGEN_PATH})
 include_directories(SYSTEM ${TRIANGLE_PATH})
 include_directories(SYSTEM ${CGAL_PATH}/include)
 include_directories(${BOOST_PATH}/include/boost-1_87)
-
 
 file (GLOB SRCFILES
     ParaFun.cpp

@@ -51,13 +51,3 @@ if __name__ == "__main__":
             os.unlink(filepath)
         else:
             shutil.rmtree(filepath)
-
-    # cmake_cmd = [
-    #     "cmake",
-    #     "-G", "Ninja",
-    #     "-B", build_path,
-    #     "-S", project_root
-    # ]
-
-    # if os.name=="nt":
-    #     subprocess.run(f'"{vs_tools_path}" && cmake {" ".join(cmake_cmd[1:])}', shell=True, cwd=build_path, env=env)
