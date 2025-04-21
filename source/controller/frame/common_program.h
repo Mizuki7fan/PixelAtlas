@@ -30,17 +30,13 @@ private:                          // functions
   bool PrepareWorkingDirectoryForIndividualRunning();
   bool
   SelectRunTargets(); // 根据依赖的前置工具和文件通配符, 确定本次运行所有的目标
-  bool SelectRunTargetsOfFirstCmd();
-  bool SelectRunTargetsOfFollowingCmd();
 
 private:
-  std::vector<ActionArguments> all_action_list;
-  std::unordered_map<std::string, std::size_t> map_step_name_to_step_idx;
-  std::size_t curr_cmd_idx;
-  std::string curr_cmd_name;
-  fs::path curr_cmd_path;
+  std::vector<ActionArguments> all_action_list_;
+  std::unordered_map<std::string, std::size_t> map_action_name_to_action_idx;
+  std::size_t curr_action_idx_;
 
   // 通过正则表达式筛选出来的例子
-  std::vector<fs::path> run_targets;
+  std::vector<fs::path> run_targets_;
 };
 } // namespace frm
