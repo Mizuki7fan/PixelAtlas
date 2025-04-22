@@ -10,13 +10,13 @@ namespace frm {
 
 std::ofstream CreateResultFilestream(const std::string &path) {
   // 生成输出的路径
-  fs::path curr_result_dir = global::CurrResultDir();
+  fs::path curr_result_dir = global::ActionResultDir();
   std::string path_str;
-  if (global::UseIndividualModelDir()) {
+  if (global::UseIndividualInstanceDir()) {
     path_str = std::format("{}/{}", curr_result_dir.string(), path);
   } else {
     path_str = std::format("{}/{}-{}", curr_result_dir.string(),
-                           global::CurrFile().filename().string(), path);
+                           global::InstancePath().filename().string(), path);
   }
   if (global::DebugLevel() > 0) {
     std::cout << "CreateResultFilestream: " << path_str << std::endl;
@@ -26,20 +26,20 @@ std::ofstream CreateResultFilestream(const std::string &path) {
 
 std::ofstream CreateDebugFilestream(const std::string &path) {
   // 生成输出的路径
-  fs::path curr_debug_dir = global::CurrDebugDir();
-  return std::ofstream(global::CurrDebugDir() / path);
+  fs::path curr_debug_dir = global::ActionDebugDir();
+  return std::ofstream(global::ActionDebugDir() / path);
 }
 
 std::ofstream CreateMetricsFilestream() {
   // 生成输出的路径
   std::string path_str;
-  if (global::UseIndividualModelDir()) {
-    path_str =
-        std::format("{}/{}", global::CurrResultDir().string(), "metrics.json");
+  if (global::UseIndividualInstanceDir()) {
+    path_str = std::format("{}/{}", global::ActionResultDir().string(),
+                           "metrics.json");
   } else {
     path_str =
-        std::format("{}/{}-metrics.json", global::CurrResultDir().string(),
-                    global::CurrFile().filename().string());
+        std::format("{}/{}-metrics.json", global::ActionResultDir().string(),
+                    global::InstancePath().filename().string());
   }
   if (global::DebugLevel() > 0) {
     std::cout << "CreateMetricsFilestream: " << path_str << std::endl;

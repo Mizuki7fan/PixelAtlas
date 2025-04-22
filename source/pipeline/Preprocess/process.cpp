@@ -9,9 +9,9 @@
 namespace fs = std::filesystem;
 
 void MainProcess() {
-  fs::path model_path = frm::global::CurrFile();
+  fs::path instance_path = frm::global::InstancePath();
   cgl::SurfaceMesh3 tri_mesh;
-  CGAL::IO::read_OBJ(model_path.string(), tri_mesh);
+  CGAL::IO::read_OBJ(instance_path.string(), tri_mesh);
   std::unique_ptr<BiljectivePara> bil_para =
       std::make_unique<BiljectivePara>(tri_mesh);
 

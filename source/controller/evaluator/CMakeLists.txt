@@ -1,5 +1,5 @@
 set(SUBPROJ_NAME evaluator)
-include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
+include_directories(${SOURCE_CODE_PATH}/controller)
 include_directories(${BOOST_PATH}/include/boost-1_87)
 
 file (GLOB EVALUATOR_FILES
@@ -11,7 +11,7 @@ file (GLOB EVALUATOR_FILES
 add_executable(${SUBPROJ_NAME} ${EVALUATOR_FILES})
 
 target_link_libraries(${SUBPROJ_NAME} PRIVATE
-    pa_frame
+    frame
 )
 
 # 设置要包含的boost库

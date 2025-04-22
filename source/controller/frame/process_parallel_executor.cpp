@@ -34,13 +34,13 @@ bool ProcessParallelExecutor::Exec() {
         std::vector<std::string> args{"-d",                                 //
                                       std::to_string(global::DebugLevel()), //
                                       "--dataset",
-                                      global::DatasetStr(),
+                                      global::DatasetName(),
                                       "--single", //
                                       target.filename().string(),
-                                      "--run_name",
-                                      global::RunName()};
-        if (global::UseIndividualModelDir())
-          args.emplace_back("--use_individual_model_dir");
+                                      "--work_name",
+                                      global::WorkName()};
+        if (global::UseIndividualInstanceDir())
+          args.emplace_back("use_individual_instance_dir");
 
         processes.emplace_back(
             bp::child(bp::exe = m_exe_path,    //

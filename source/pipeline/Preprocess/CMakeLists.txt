@@ -23,7 +23,7 @@ file(GLOB cpp_files
 add_executable(${PROJECT_NAME} ${cpp_files})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    pa_frame
+    frame
     EfficientBijectiveParameterization
     Triangle-Interface
     CGAL-Interface

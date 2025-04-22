@@ -42,6 +42,12 @@ inline void AssertInternal(bool condition, const std::string &expr,
   AssertInternal(static_cast<bool>(expr), #expr, "", __FILE__, __LINE__,       \
                  __FUNCTION__)
 
+// expr“应当”为假, 否则触发, 等效于if(true) print
+#define PA_FALSE_ASSERT_WITH_MSG(expr, msg)                                    \
+  AssertInternal(!static_cast<bool>(expr), #expr, (msg), __FILE__, __LINE__,   \
+                 __FUNCTION__)
+
+// expr“应当”为真, 否则触发, 等效于if(false) print
 #define PA_ASSERT_WITH_MSG(expr, msg)                                          \
   AssertInternal(static_cast<bool>(expr), #expr, (msg), __FILE__, __LINE__,    \
                  __FUNCTION__)

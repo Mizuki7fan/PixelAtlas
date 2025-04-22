@@ -6,11 +6,11 @@ namespace fs = std::filesystem;
 namespace frm::global {
 
 int DebugLevel();
-fs::path CurrDebugDir();
-fs::path CurrResultDir();
-std::string DatasetStr();
-fs::path CurrFile();
+fs::path ActionDebugDir();
+fs::path ActionResultDir();
+std::string DatasetName();
+fs::path InstancePath();
 int MaxTimeElapsed();
-bool UseIndividualModelDir();
-std::string RunName();
+bool UseIndividualInstanceDir();
+std::string WorkName();
 } // namespace frm::global

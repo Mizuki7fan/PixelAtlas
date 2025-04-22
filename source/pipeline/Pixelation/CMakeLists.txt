@@ -1,6 +1,6 @@
 project(Pixelation)
 
-include_directories(${CMAKE_SOURCE_DIR}/pa-controller)
+include_directories(${SOURCE_CODE_PATH}/controller)
 
 file(GLOB cpp_files
     main.cpp
@@ -11,5 +11,5 @@ file(GLOB cpp_files
  add_executable(${PROJECT_NAME} ${cpp_files})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    pa_frame
+    frame
 )

@@ -5,11 +5,11 @@ namespace frm::global {
 
 int DebugLevel() { return frm::GetDebugLevel(); }
 
-fs::path CurrDebugDir() { return frm::GetCurrDebugDir(); }
-fs::path CurrResultDir() { return frm::GetCurrResultDir(); }
-fs::path CurrFile() { return frm::GetCurrFile(); }
-std::string DatasetStr() { return frm::GetDatasetStr(); }
+fs::path ActionDebugDir() { return frm::GetActionDebugDir(); }
+fs::path ActionResultDir() { return frm::GetActionResultDir(); }
+fs::path InstancePath() { return frm::GetInstancePath(); }
+std::string DatasetName() { return frm::GetDatasetName(); }
 int MaxTimeElapsed() { return frm::GetMaxTimeElapsed(); }
-bool UseIndividualModelDir() { return frm::GetUseIndividualModelDir(); }
-std::string RunName() { return frm::GetRunName(); }
+bool UseIndividualInstanceDir() { return frm::GetUseIndividualInstanceDir(); }
+std::string WorkName() { return frm::GetWorkName(); }
 } // namespace frm::global

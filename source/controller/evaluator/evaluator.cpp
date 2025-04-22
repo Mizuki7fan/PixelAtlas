@@ -45,7 +45,7 @@ void Evaluator::LoadData() {
         project_run_dir / std::format("work_{}", work_name_[work_idx]);
     fs::path curr_cmd_result_dir =
         curr_work_dir /
-        std::format("{}_{}", cmd_idx_, all_step_list_[cmd_idx_].step_name) /
+        std::format("{}_{}", cmd_idx_, all_step_list_[cmd_idx_].name) /
         "result";
 
     std::vector<fs::path> all_directories;

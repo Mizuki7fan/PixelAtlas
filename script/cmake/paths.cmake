@@ -14,4 +14,6 @@ set (EIGEN_PATH ${MyLib}/eigen-3.4.0)
 set (TRIANGLE_PATH ${MyLib}/triangle)
 set (OpenMesh_PATH ${MyLib}/OpenMesh-11.0)
 
+set (SOURCE_CODE_PATH ${CMAKE_SOURCE_DIR}/source)
+
 #${CMAKE_SOURCE_DIR}=项目根目录=G:/PixelAtlas
