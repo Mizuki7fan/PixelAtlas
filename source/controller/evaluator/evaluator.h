@@ -1,7 +1,7 @@
 #pragma once
 #include <array>
 #include <filesystem>
-#include <frame/action_arguments.h>
+#include <frame/action_args.h>
 #include <frame/metric.h>
 #include <string>
 
@@ -21,7 +21,7 @@ private:
   LoadDataFromNoIndividualModelDir(const std::vector<fs::path> &all_files, //
                                    int curr_work_idx);
   void LoadDataFromIndividualModelDir();
-  std::vector<ActionArguments> all_step_list_;
+  std::vector<frm::ActionArguments> all_action_list_;
   std::array<std::unordered_map<std::string, frm::Metric>, 2>
       sample_metric_data_;
   std::string work_name_[2];

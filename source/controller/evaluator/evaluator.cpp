@@ -2,7 +2,6 @@
 #include <boost/json.hpp>
 #include <boost/program_options.hpp>
 #include <frame/assert.hpp>
-#include <frame/parse.h>
 #include <fstream>
 #include <iostream>
 
@@ -34,18 +33,18 @@ Evaluator::Evaluator(int argc, char *argv[]) {
 }
 
 void Evaluator::LoadData() {
-  all_step_list_ = frm::LoadAllStepList();
+  all_action_list_ = frm::LoadAllActionList();
   PA_ASSERT_WITH_MSG(cmd_idx_ != -1, "输入cmd_idx无效");
 
   fs::path project_root_dir = fs::current_path() / ".." / "..";
-  fs::path project_run_dir = project_root_dir / "run";
+  fs::path project_run_dir = project_root_dir / "z-run";
 
   for (std::size_t work_idx = 0; work_idx < 2; ++work_idx) {
     fs::path curr_work_dir =
         project_run_dir / std::format("work_{}", work_name_[work_idx]);
     fs::path curr_cmd_result_dir =
         curr_work_dir /
-        std::format("{}_{}", cmd_idx_, all_step_list_[cmd_idx_].name) /
+        std::format("{}_{}", cmd_idx_, all_action_list_[cmd_idx_].name) /
         "result";
 
     std::vector<fs::path> all_directories;
@@ -83,7 +82,7 @@ void Evaluator::LoadDataFromNoIndividualModelDir(
     model_name = model_name.substr(0, pos);
     std::cout << "model_name: " << model_name << std::endl;
     std::ifstream ifs(file_name);
-    frm::LoadMetricJsonFile(ifs, all_step_list_[cmd_idx_].metrics,
+    frm::LoadMetricJsonFile(ifs, all_action_list_[cmd_idx_].metrics,
                             metric_data[model_name]);
     ifs.close();
   }
@@ -98,7 +97,7 @@ void Evaluator::PrintData() {
 
   std::cout << std::format("{:<{}}", "model_name", kColWidth);
 
-  for (auto metric_name : all_step_list_[cmd_idx_].metrics) {
+  for (auto metric_name : all_action_list_[cmd_idx_].metrics) {
     // 使用复合格式字符串实现双左对齐
     std::cout << std::format(
         "{:<{}}",
@@ -152,7 +151,7 @@ void Evaluator::PrintData() {
 
 void Evaluator::AnalyseDataDifference() {
   const std::unordered_map<std::string, std::string> &metrics =
-      all_step_list_[cmd_idx_].metrics;
+      all_action_list_[cmd_idx_].metrics;
   std::set<std::string> all_samples;
   for (std::size_t i = 0; i < 2; ++i)
     for (auto data : sample_metric_data_[i])

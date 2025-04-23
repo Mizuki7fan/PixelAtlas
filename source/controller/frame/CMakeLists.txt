@@ -4,13 +4,12 @@ include_directories(${BOOST_PATH}/include/boost-1_87)
 
 file (GLOB FRAME_FILES
     assert.hpp
-    action_arguments.h
+    action_args.h
+    action_args.cpp
     global_defs.cpp
     global_defs.h
     io.cpp
     io.h
-    parse.cpp
-    parse.h
     common_program.cpp
     common_program.h
     process_parallel_executor.cpp

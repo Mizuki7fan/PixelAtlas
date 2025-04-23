@@ -24,7 +24,7 @@
                 "--batch",".*0001.*",//批量执行
                 //"--single","00019.obj",//单一执行
                 "--dataset","PolyAtlas-Sample-30",
-                //"--use_individual_instance_dir",
+                "//--use_individual_instance_dir",
                 "--work_name","base",
                 "--clean"
                 ],//参数
@@ -40,10 +40,10 @@
                 "-d","1",
                 "-p","4",
                 "-t","1800",
-                //"--batch",".*0001.*",//批量执行
-                "--single","00019.obj",//单一执行
+                "--batch",".*00010.*",//批量执行
+                //"--single","00010.obj",//单一执行
                 "--dataset","PolyAtlas-Sample-30",
-                //"--use_individual_instance_dir",
+                "--use_individual_instance_dir",
                 "--work_name","base",
                 "--clean"
                 ],//参数
@@ -82,8 +82,7 @@
                 "--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
                 //"--single","00012.obj",//单一执行模式, 只执行一个文件
                 "--dataset","PolyAtlas-Sample-30",
-                //"use_individual_instance_dir",
-                "--parallel_level","process",
+                //"--use_individual_instance_dir",
                 "--work_name","base",
                 "--clean"
                 ],//参数
@@ -98,7 +97,7 @@
             "args": [
                 "-d","1",
                 "--cmd_idx","0",
-                "--work1","base111",
+                "--work1","base",
                 "--work2","reference"
                 ],//参数
         },

@@ -40,7 +40,7 @@ bool ProcessParallelExecutor::Exec() {
                                       "--work_name",
                                       global::WorkName()};
         if (global::UseIndividualInstanceDir())
-          args.emplace_back("use_individual_instance_dir");
+          args.emplace_back("--use_individual_instance_dir");
 
         processes.emplace_back(
             bp::child(bp::exe = m_exe_path,    //

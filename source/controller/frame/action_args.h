@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+namespace frm {
 // all-steps.json文件的内容
 struct ActionArguments { // 表示步骤的各种参数
   int idx = -1;          //
@@ -11,3 +12,6 @@ struct ActionArguments { // 表示步骤的各种参数
   std::unordered_set<std::string> outputs;              // 当前action的输出文件
   std::unordered_map<std::string, std::string> metrics; // 当前action的度量
 };
+
+std::vector<ActionArguments> LoadAllActionList();
+} // namespace frm

@@ -1,6 +1,5 @@
 #include "common_program.h"
 #include "assert.hpp"
-#include "parse.h"
 #include "process_parallel_executor.h"
 #include <boost/program_options.hpp>
 #include <iostream>
@@ -160,143 +159,6 @@ bool CommonProgram::CheckRunTargetInputValidity(const fs::path &path) {
   // }
 }
 
-// bool CommonProgram::SelectRunTargetsOfFirstCmd() {
-//   // 匹配规则
-//   fs::path project_root_dir = fs::current_path() / ".." / "..";
-//   fs::path project_asset_dir = project_root_dir / "asset";
-//   // 指定数据集
-//   fs::path run_dataset_dir = project_asset_dir / g_dataset_name;
-//   run_targets_.clear();
-
-//   if (!g_single_filename.empty()) {
-//     g_curr_file = run_dataset_dir / g_single_filename;
-//     PA_ASSERT(fs::exists(g_curr_file));
-//     run_targets_.push_back(g_curr_file);
-//   } else if (!g_batch_filename_regex_.empty()) {
-//     // 按照正则表达式匹配
-//     std::smatch match;
-//     std::string &file_regex = g_batch_filename_regex_;
-//     std::regex pattern(file_regex);
-
-//     // 如果当前工具为第一个工具
-//     if (curr_cmd_idx == 0) {
-//       for (const auto &entry :
-//            std::filesystem::directory_iterator(run_dataset_dir)) {
-//         if (entry.is_directory())
-//           continue;
-//         //
-//         std::string filename = entry.path().filename().string();
-//         if (std::regex_match(filename, match, pattern)) {
-//           run_targets_.push_back(entry.path().string());
-//         }
-//       }
-//       if (g_debug_level_arg > 1) {
-//         std::cout << std::format("共成功匹配{}个例子:", run_targets_.size())
-//                   << std::endl;
-//         for (auto run_file : run_targets)
-//           std::cout << run_file << std::endl;
-//       }
-//     }
-//   }
-//   return true;
-// }
-
-// bool CommonProgram::SelectRunTargetsOfFollowingCmd() {
-//   // 算当前工具的输入文件所依赖的前序步骤
-//   run_targets_.clear();
-
-//   std::unordered_map<std::string, std::size_t> map_input_file_to_step_idx;
-//   for (std::size_t step_idx = 0; step_idx < curr_cmd_idx; ++step_idx) {
-//     std::cout << all_step_list[step_idx].step_name << std::endl;
-//     for (const std::string &input_file_name :
-//          all_step_list[step_idx].output_files) {
-//       std::cout << input_file_name << std::endl;
-//       map_input_file_to_step_idx[input_file_name] = step_idx;
-//     }
-//   }
-
-//   fs::path project_root_dir = fs::current_path() / ".." / "..";
-
-//   if (!g_single_filename.empty()) {
-//     for (auto input_file_name : all_step_list[curr_cmd_idx].input_files) {
-//       PA_ASSERT_WITH_MSG(
-//           map_input_file_to_step_idx.count(input_file_name) != 0,
-//           std::format("当前输入文件{}的前序步骤不存在", input_file_name));
-//       std::size_t curr_input_file_output_cmd_idx =
-//           map_input_file_to_step_idx.at(input_file_name);
-//       const fs::path &curr_working_dir = g_curr_working_dir / "..";
-//       fs::path curr_input_file_dir =
-//           curr_working_dir /
-//           std::format("{}_{}", curr_input_file_output_cmd_idx,
-//                       all_step_list[curr_input_file_output_cmd_idx].step_name);
-//       fs::path curr_input_file =
-//           curr_input_file_dir / "result" /
-//           std::format("{}-{}", g_single_filename, input_file_name);
-//       if (!fs::exists(curr_input_file))
-//         return false;
-//       else {
-//         g_input_file_full_path[input_file_name] = curr_input_file;
-//       }
-//     }
-//     run_targets_.push_back(g_single_filename);
-//   } else if (!g_batch_filename_regex_.empty()) {
-//     // 填充run_targets
-//     std::unordered_map<std::string, bool> map_model_name_is_valid;
-//     for (auto input_file_name : all_step_list[curr_cmd_idx].input_files) {
-//       // 遍历该命令的所有输入文件
-//       PA_ASSERT_WITH_MSG(
-//           map_input_file_to_step_idx.count(input_file_name) != 0,
-//           std::format("当前输入文件{}的前序步骤不存在", input_file_name));
-//       std::size_t curr_input_file_output_cmd_idx =
-//           map_input_file_to_step_idx.at(input_file_name);
-//       const fs::path &curr_working_dir = g_curr_working_dir / "..";
-//       fs::path curr_input_file_dir =
-//           curr_working_dir /
-//           std::format("{}_{}", curr_input_file_output_cmd_idx,
-//                       all_step_list[curr_input_file_output_cmd_idx].step_name)
-//                       /
-//           "result";
-//       if (map_model_name_is_valid.empty()) {
-//         for (const auto &entry : fs::directory_iterator(curr_input_file_dir))
-//         {
-//           if (entry.is_directory())
-//             continue;
-//           std::string filename = entry.path().filename().string();
-//           if (filename.size() > input_file_name.size()) {
-//             std::size_t suffix_pos = filename.size() -
-//             input_file_name.size(); if (filename.substr(suffix_pos) ==
-//             input_file_name) {
-//               std::string model_name = filename.substr(0, suffix_pos - 1);
-//               if (map_model_name_is_valid.count(model_name) == 0) {
-//                 // 需要检测model_name是否满足通配条件
-
-//                 map_model_name_is_valid[model_name] = true;
-//                 run_targets_.push_back(model_name);
-//               }
-//             }
-//           }
-//         }
-//       } else {
-//         // 搜索该目录下所有包含input_file_name的文件, 并识别模型名
-//         for (auto &[model_name, is_valid] : map_model_name_is_valid) {
-//           if (!is_valid)
-//             continue;
-//           fs::path curr_input_file =
-//               curr_input_file_dir /
-//               std::format("{}-{}", model_name, input_file_name);
-//           if (fs::exists(curr_input_file)) {
-//             map_model_name_is_valid[model_name] = true;
-//             run_targets_.push_back(model_name);
-//           } else {
-//             map_model_name_is_valid[model_name] = false;
-//           }
-//         }
-//       }
-//     }
-//   }
-//   return true;
-// }
-
 int CommonProgram::Run(const std::function<void()> &func) const {
   if (run_targets_.size() == 0)
     return 0;
@@ -362,7 +224,7 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
                            "single和batch都指定了需要处理的文件");
 
   // 加载all-step.json文件
-  all_action_list_ = LoadAllStepList();
+  all_action_list_ = LoadAllActionList();
   // 记录每个action_name的idx
   for (std::size_t action_idx = 0; action_idx < all_action_list_.size();
        ++action_idx)

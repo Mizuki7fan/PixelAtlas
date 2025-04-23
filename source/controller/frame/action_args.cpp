@@ -1,4 +1,4 @@
-#include "parse.h"
+#include "action_args.h"
 #include "assert.hpp"
 #include <boost/json.hpp>
 #include <filesystem>
@@ -9,22 +9,7 @@
 namespace fs = std::filesystem;
 
 namespace frm {
-// 该函数应该放到parse.h中
-std::vector<std::string> SplitString(const std::string &full_string,
-                                     const std::string &delimiter) {
-  std::vector<std::string> parts;
-  size_t start = 0;
-  size_t end = full_string.find(delimiter);
-  while (end != std::string::npos) {
-    parts.push_back(full_string.substr(start, end - start));
-    start = end + delimiter.length();
-    end = full_string.find(delimiter, start);
-  }
-  parts.push_back(full_string.substr(start, end));
-  return parts;
-}
-
-std::vector<ActionArguments> LoadAllStepList() {
+std::vector<ActionArguments> LoadAllActionList() {
   // 使用boost/json解析json文件
   std::vector<ActionArguments> all_action_list;
 
@@ -94,5 +79,4 @@ std::vector<ActionArguments> LoadAllStepList() {
   }
   return all_action_list;
 }
-
 } // namespace frm
