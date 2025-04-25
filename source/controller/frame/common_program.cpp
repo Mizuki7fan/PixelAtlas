@@ -47,6 +47,9 @@ static std::string g_single_instance = "alien.obj";
 static std::string g_dataset_name = ".";
 std::string GetDatasetName() { return g_dataset_name; };
 
+static ActionArguments g_action_args;
+const ActionArguments &GetActionArguments() { return g_action_args; };
+
 // 并行数
 static int g_num_parallel_cnt = 1;
 
@@ -130,7 +133,9 @@ bool CommonProgram::SelectRunTargets() {
     fs::path g_instance_full_path = run_dataset_dir / g_single_instance;
     PA_ASSERT_WITH_MSG(fs::exists(g_instance_full_path),
                        std::format("{}不存在", g_instance_full_path.string()));
-    run_targets_.push_back(g_instance_full_path);
+    // 验证该文件的前置输入是合法的
+    if (CheckRunTargetInputValidity(g_instance_full_path))
+      run_targets_.push_back(g_instance_full_path);
   } else if (!g_batch_instance_regex.empty()) {
     std::smatch match;
     std::string &file_regex = g_batch_instance_regex;
@@ -148,9 +153,25 @@ bool CommonProgram::SelectRunTargets() {
   return true;
 }
 
-bool CommonProgram::CheckRunTargetInputValidity(const fs::path &path) {
+bool CommonProgram::CheckRunTargetInputValidity(const fs::path &instance_path) {
   if (curr_action_idx_ == 0)
     return true;
+
+  std::string instance_name = instance_path.filename().string();
+
+  for (const std::string &input_name :
+       all_action_list_[curr_action_idx_].inputs) {
+    std::size_t input_file_action_idx =
+        map_input_file_to_action_idx[input_name];
+    fs::path input_file_path =
+        g_work_dir /
+        std::format("{}_{}", input_file_action_idx,
+                    all_action_list_[input_file_action_idx].name) /
+        "result" / std::format("{}-{}", instance_name, input_name);
+    if (!fs::exists(input_file_path))
+      return false;
+  }
+
   return true;
   // 计算当前步骤输入模型的
   // std::unordered_map<std::string, std::size_t> map_input_file_to_step_idx;
@@ -239,6 +260,7 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
   PA_ASSERT_WITH_MSG(curr_action_idx_ !=
                          std::numeric_limits<std::size_t>::max(),
                      std::format("无效的指令: {}", argv[0]));
+  g_action_args = all_action_list_[curr_action_idx_];
 
   // 统计当前步骤inputs的前置步骤的idx
   for (std::string input_file_name :

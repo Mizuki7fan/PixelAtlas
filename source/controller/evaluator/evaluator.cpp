@@ -37,7 +37,7 @@ void Evaluator::LoadData() {
   PA_ASSERT_WITH_MSG(cmd_idx_ != -1, "输入cmd_idx无效");
 
   fs::path project_root_dir = fs::current_path() / ".." / "..";
-  fs::path project_run_dir = project_root_dir / "z-run";
+  fs::path project_run_dir = project_root_dir / RUN_DIR_NAME;
 
   for (std::size_t work_idx = 0; work_idx < 2; ++work_idx) {
     fs::path curr_work_dir =

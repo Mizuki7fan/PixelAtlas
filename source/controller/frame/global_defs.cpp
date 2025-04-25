@@ -12,4 +12,5 @@ std::string DatasetName() { return frm::GetDatasetName(); }
 int MaxTimeElapsed() { return frm::GetMaxTimeElapsed(); }
 bool UseIndividualInstanceDir() { return frm::GetUseIndividualInstanceDir(); }
 std::string WorkName() { return frm::GetWorkName(); }
+const ActionArguments &ActionArgs() { return frm::GetActionArguments(); }
 } // namespace frm::global

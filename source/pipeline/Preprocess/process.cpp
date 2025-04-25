@@ -9,6 +9,7 @@
 namespace fs = std::filesystem;
 
 void MainProcess() {
+  frm::ActionArguments action_args = frm::global::ActionArgs();
   fs::path instance_path = frm::global::InstancePath();
   cgl::SurfaceMesh3 tri_mesh;
   CGAL::IO::read_OBJ(instance_path.string(), tri_mesh);
@@ -18,7 +19,7 @@ void MainProcess() {
   bil_para->Load(); // 读入网格、完成shell的构建
   bil_para->Parameterization();
 
-  std::ofstream fout = frm::CreateResultFilestream("uv_mesh.obj");
+  std::ofstream fout = frm::CreateOutputFilestream("uv_mesh.obj");
   bil_para->WriteUVMesh(fout);
   fout.close();
 

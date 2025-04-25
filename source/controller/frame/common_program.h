@@ -19,6 +19,7 @@ int GetMaxTimeElapsed();
 std::string GetDatasetName();
 std::string GetWorkName();
 fs::path GetInstancePath();
+const ActionArguments &GetActionArguments();
 
 class CommonProgram {
 public:

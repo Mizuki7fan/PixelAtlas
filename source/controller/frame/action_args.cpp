@@ -14,7 +14,7 @@ std::vector<ActionArguments> LoadAllActionList() {
   std::vector<ActionArguments> all_action_list;
 
   fs::path all_action_list_file_path =
-      fs::current_path() / ".." / ".." / ACTIONLIST_FILE;
+      fs::current_path() / ".." / ".." / ACTIONLIST_FILE_NAME;
 
   std::cout << "action_list_file: " << all_action_list_file_path.string()
             << std::endl;
@@ -72,6 +72,40 @@ std::vector<ActionArguments> LoadAllActionList() {
             std::string metric_type = metric_obj.at("type").as_string().c_str();
             std::string metric_name = metric_obj.at("name").as_string().c_str();
             curr_action.metrics[metric_name] = metric_type;
+          }
+        }
+        // 读入工具的参数
+        if (action_obj.contains("parameter")) {
+          const boost::json::array &action_parameter =
+              action_obj.at("parameter").get_array();
+          for (auto value : action_parameter) {
+            const boost::json::object &parameter_obj = value.get_object();
+            std::string parameter_type =
+                parameter_obj.at("type").as_string().c_str();
+            std::string parameter_name =
+                parameter_obj.at("name").as_string().c_str();
+            const auto &parameter_value = parameter_obj.at("value");
+            if (parameter_type == "INT") {
+              PA_ASSERT_WITH_MSG(
+                  parameter_value.is_number(),
+                  std::format("参数{}数据类型异常", parameter_name));
+              // as_int64返回的是int64_t, 即long long, 需要强制类型转换
+              curr_action.parameter.emplace(
+                  parameter_name, static_cast<int>(parameter_value.as_int64()));
+            } else if (parameter_type == "DOUBLE") {
+              PA_ASSERT_WITH_MSG(
+                  parameter_value.is_double(),
+                  std::format("参数{}数据类型异常", parameter_name));
+              curr_action.parameter.emplace(
+                  parameter_name, parameter_obj.at("value").as_double());
+            } else if (parameter_type == "STRING") {
+              PA_ASSERT_WITH_MSG(
+                  parameter_value.is_string(),
+                  std::format("参数{}数据类型异常", parameter_name));
+              curr_action.parameter.emplace(
+                  parameter_name,
+                  parameter_obj.at("value").as_string().c_str());
+            }
           }
         }
       }

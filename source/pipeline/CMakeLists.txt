@@ -2,4 +2,4 @@
 add_subdirectory(Preprocess)
 add_subdirectory(Pixelation)
 add_subdirectory(Dissection)
-add_subdirectory(GutterGeneraton)
+add_subdirectory(GutterGeneration)

@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 
 namespace frm {
 
-std::ofstream CreateResultFilestream(const std::string &path) {
+std::ofstream CreateOutputFilestream(const std::string &path) {
   // 生成输出的路径
   fs::path curr_result_dir = global::ActionResultDir();
   std::string path_str;
@@ -19,7 +19,7 @@ std::ofstream CreateResultFilestream(const std::string &path) {
                            global::InstancePath().filename().string(), path);
   }
   if (global::DebugLevel() > 0) {
-    std::cout << "CreateResultFilestream: " << path_str << std::endl;
+    std::cout << "CreateOutputFilestream: " << path_str << std::endl;
   }
   return std::ofstream(path_str);
 }
