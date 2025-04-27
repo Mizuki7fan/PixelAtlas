@@ -8,6 +8,9 @@
 namespace po = boost::program_options;
 
 namespace frm {
+static GlobalArguments g_;
+const GlobalArguments &GetGlobalArguments() { return g_; }
+
 // 本批次运行的名字, 例如work_baseline;
 static std::string g_work_name = "";
 std::string GetWorkName() { return g_work_name; }
@@ -236,6 +239,8 @@ CommonProgram::CommonProgram(int argc, char *argv[]) {
     std::cerr << desc << std::endl;
     PA_ASSERT_WITH_MSG(0, "输入异常");
   }
+
+  g_.work_name = "workname";
 
   PA_FALSE_ASSERT_WITH_MSG(g_batch_instance_regex.empty() &&
                                g_single_instance.empty(),

@@ -20,6 +20,7 @@ std::string GetDatasetName();
 std::string GetWorkName();
 fs::path GetInstancePath();
 const ActionArguments &GetActionArguments();
+const GlobalArguments &GetGlobalArguments();
 
 class CommonProgram {
 public:

@@ -5,4 +5,8 @@
 #include <frame/metric.h>
 
 namespace fs = std::filesystem;
-void MainProcess() { fs::path instance_path = frm::global::InstancePath(); }
+void MainProcess() {
+  std::string work_name = frm::global::GlobalArgs().work_name;
+  std::cout << work_name << std::endl;
+  fs::path instance_path = frm::global::InstancePath();
+}
