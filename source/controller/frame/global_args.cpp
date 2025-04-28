@@ -60,6 +60,24 @@ void GlobalArguments::Initialize(int argc, char **argv, const Token &) {
                            "single和batch都指定了需要处理的文件");
 
   all_action_list_ = LoadAllActionList();
+
+  std::unordered_map<std::string, std::size_t> map_output_name_to_action_idx;
+
+  for (std::size_t act_idx = 0; act_idx < CurrActionIdx(); ++act_idx)
+    for (const std::string &file_name : all_action_list_[act_idx].outputs)
+      map_output_name_to_action_idx[file_name] = act_idx;
+
+  for (const std::string &file_name :
+       all_action_list_[CurrActionIdx()].inputs) {
+    PA_ASSERT_WITH_MSG(map_output_name_to_action_idx.count(file_name) != 0,
+                       std::format("输入文件{}在输出文件中未找到", file_name));
+    std::size_t act_idx = map_output_name_to_action_idx[file_name];
+    map_input_name_to_full_path_[file_name] =
+        WorkDir() /
+        std::format("{}_{}", act_idx, all_action_list_[act_idx].name) /
+        "result" /
+        std::format("{}-{}", InstanceFullPath().filename().string(), file_name);
+  }
 }
 
 fs::path GlobalArguments::WorkDir() const {

@@ -74,5 +74,8 @@ private:
   mutable fs::path action_log_dir_;
   mutable fs::path dataset_dir_;
   mutable fs::path instance_full_path_;
+
+  // 标记当前步骤的输入所依赖的前置步骤的完整路径
+  std::unordered_map<std::string, fs::path> map_input_name_to_full_path_;
 };
 } // namespace frm

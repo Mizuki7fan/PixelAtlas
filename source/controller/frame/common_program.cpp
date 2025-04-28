@@ -83,11 +83,6 @@ bool CommonProgram::CheckRunTargetInputValidity(const fs::path &instance_path) {
   // }
 
   return true;
-  // 计算当前步骤输入模型的
-  // std::unordered_map<std::string, std::size_t> map_input_file_to_step_idx;
-  // for (std::size_t action_idx = 0; action_idx < curr_action_idx_;
-  //      ++action_idx) {
-  // }
 }
 
 int CommonProgram::Run(const std::function<void()> &func) const {
