@@ -2,15 +2,15 @@
 #include "EfficientBijectiveParameterization/BiljectivePara.h"
 #include <CGAL-Interface/CGAL-Interface.h>
 #include <filesystem>
-#include <frame/global_defs.h>
+#include <frame/global_args.h>
 #include <frame/io.h>
 #include <frame/metric.h>
 
 namespace fs = std::filesystem;
+using GA = frm::GlobalArguments;
 
 void MainProcess() {
-  frm::ActionArguments action_args = frm::global::ActionArgs();
-  fs::path instance_path = frm::global::InstancePath();
+  fs::path instance_path = GA::I().InstanceFullPath();
   cgl::SurfaceMesh3 tri_mesh;
   CGAL::IO::read_OBJ(instance_path.string(), tri_mesh);
   std::unique_ptr<BiljectivePara> bil_para =

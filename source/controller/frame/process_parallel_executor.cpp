@@ -1,9 +1,10 @@
 #include "process_parallel_executor.h"
-#include "global_defs.h"
+#include "global_args.h"
 #include <boost/process.hpp>
 #include <iostream>
 
 namespace frm {
+using GA = GlobalArguments;
 namespace bp = boost::process;
 
 ProcessParallelExecutor::ProcessParallelExecutor(
@@ -21,7 +22,7 @@ bool ProcessParallelExecutor::Exec() {
   std::deque<std::pair<bp::child, std::chrono::steady_clock::time_point>>
       processes;
   // 设置允许进程运行的最大时间
-  const auto max_duration = std::chrono::seconds(global::MaxTimeElapsed());
+  const auto max_duration = std::chrono::seconds(GA::I().MaxTimeElapsed());
 
   while (curr_target_idx < m_run_targets.size() || !processes.empty()) {
     // 如果当前运行进程数小于并行数, 且当前例子idx小于总的例子数
@@ -32,14 +33,14 @@ bool ProcessParallelExecutor::Exec() {
         const fs::path &target = m_run_targets[curr_target_idx];
         // 传递变量
         std::vector<std::string> args{"-d",                                 //
-                                      std::to_string(global::DebugLevel()), //
+                                      std::to_string(GA::I().DebugLevel()), //
                                       "--dataset",
-                                      global::DatasetName(),
+                                      GA::I().DataSetName(),
                                       "--single", //
                                       target.filename().string(),
                                       "--work_name",
-                                      global::WorkName()};
-        if (global::UseIndividualInstanceDir())
+                                      GA::I().WorkName()};
+        if (GA::I().UseIndividualInstanceDir())
           args.emplace_back("--use_individual_instance_dir");
 
         processes.emplace_back(

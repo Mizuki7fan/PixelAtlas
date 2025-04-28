@@ -40,8 +40,8 @@
                 "-d","1",
                 "-p","4",
                 "-t","1800",
-                "--batch",".*00010.*",//批量执行
-                //"--single","00010.obj",//单一执行
+                //"--batch",".*00010.*",//批量执行
+                "--single","00010.obj",//单一执行
                 "--dataset","PolyAtlas-Sample-30",
                 "--use_individual_instance_dir",
                 "--work_name","base",

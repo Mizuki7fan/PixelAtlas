@@ -6,8 +6,8 @@ file (GLOB FRAME_FILES
     assert.hpp
     action_args.h
     action_args.cpp
-    global_defs.cpp
-    global_defs.h
+    global_args.cpp
+    global_args.h
     io.cpp
     io.h
     common_program.cpp

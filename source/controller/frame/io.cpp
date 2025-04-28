@@ -1,5 +1,5 @@
 #include "io.h"
-#include "global_defs.h"
+#include "global_args.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -7,18 +7,20 @@
 namespace fs = std::filesystem;
 
 namespace frm {
+using GA = GlobalArguments;
 
 std::ofstream CreateOutputFilestream(const std::string &path) {
   // 生成输出的路径
-  fs::path curr_result_dir = global::ActionResultDir();
+  const fs::path &curr_result_dir = GA::I().ActionResultDir();
   std::string path_str;
-  if (global::UseIndividualInstanceDir()) {
+  if (GA::I().UseIndividualInstanceDir()) {
     path_str = std::format("{}/{}", curr_result_dir.string(), path);
   } else {
-    path_str = std::format("{}/{}-{}", curr_result_dir.string(),
-                           global::InstancePath().filename().string(), path);
+    path_str =
+        std::format("{}/{}-{}", curr_result_dir.string(),
+                    GA::I().InstanceFullPath().filename().string(), path);
   }
-  if (global::DebugLevel() > 0) {
+  if (GA::I().DebugLevel() > 0) {
     std::cout << "CreateOutputFilestream: " << path_str << std::endl;
   }
   return std::ofstream(path_str);
@@ -26,22 +28,21 @@ std::ofstream CreateOutputFilestream(const std::string &path) {
 
 std::ofstream CreateDebugFilestream(const std::string &path) {
   // 生成输出的路径
-  fs::path curr_debug_dir = global::ActionDebugDir();
-  return std::ofstream(global::ActionDebugDir() / path);
+  return std::ofstream(GA::I().ActionDebugDir() / path);
 }
 
 std::ofstream CreateMetricsFilestream() {
   // 生成输出的路径
   std::string path_str;
-  if (global::UseIndividualInstanceDir()) {
-    path_str = std::format("{}/{}", global::ActionResultDir().string(),
+  if (GA::I().UseIndividualInstanceDir()) {
+    path_str = std::format("{}/{}", GA::I().ActionResultDir().string(),
                            "metrics.json");
   } else {
     path_str =
-        std::format("{}/{}-metrics.json", global::ActionResultDir().string(),
-                    global::InstancePath().filename().string());
+        std::format("{}/{}-metrics.json", GA::I().ActionResultDir().string(),
+                    GA::I().InstanceFullPath().filename().string());
   }
-  if (global::DebugLevel() > 0) {
+  if (GA::I().DebugLevel() > 0) {
     std::cout << "CreateMetricsFilestream: " << path_str << std::endl;
   }
 
