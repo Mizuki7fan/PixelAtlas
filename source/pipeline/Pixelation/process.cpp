@@ -5,4 +5,8 @@
 #include <frame/metric.h>
 
 namespace fs = std::filesystem;
-void MainProcess() { std::cout << "pixelation main process" << std::endl; }
+using GA = frm::GlobalArguments;
+void MainProcess() {
+  fs::path instance_path = GA::I().InstanceFullPath();
+  std::cout << "pixelation main process" << std::endl;
+}

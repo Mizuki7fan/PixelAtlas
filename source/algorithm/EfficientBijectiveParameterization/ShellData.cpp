@@ -98,7 +98,7 @@ void ShellData::MeshImprove() {
 
   Eigen::MatrixXd uv2;
   GenerateTriangulate(V, E, H, uv2, shell_faces_);
-  int bnd_n = internal_bnd_.size();
+  int bnd_n = static_cast<int>(internal_bnd_.size());
 
   for (auto i = 0; i < shell_faces_.rows(); i++) {
     for (auto j = 0; j < shell_faces_.cols(); j++) {
