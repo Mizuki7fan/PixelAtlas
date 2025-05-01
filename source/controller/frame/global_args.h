@@ -34,6 +34,10 @@ public:
   fs::path InstanceFullPath() const;
   std::size_t CurrActionIdx() const;
 
+  const auto &MapInputNameToFullPath() const {
+    return map_input_name_to_full_path_;
+  }
+
 private:
   std::string CurrActionName() const;
 

@@ -7,6 +7,7 @@
 namespace frm {
 
 using GA = GlobalArguments;
+GlobalArguments &ga = GlobalArguments::I();
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
@@ -38,13 +39,12 @@ bool CommonProgram::PrepareWorkingDirectory() {
 // 确定本次运行的run_gargets
 bool CommonProgram::SelectRunTargets() {
   run_targets_.clear();
-  GlobalArguments &ga = GA::I();
   // 从dataset中选择本次运行的文件
   if (!GA::I()
            .SingleInstanceName()
            .empty()) { // 如果字符串g_single_instance不为空
     // 验证该文件的前置输入是合法的
-    if (CheckRunTargetInputValidity(GA::I().InstanceFullPath()))
+    if (CheckRunTargetInputValidity())
       run_targets_.push_back(GA::I().InstanceFullPath());
   } else if (!GA::I().BatchInstanceRegex().empty()) {
     std::smatch match;
@@ -56,16 +56,22 @@ bool CommonProgram::SelectRunTargets() {
         continue;
       std::string filename = entry.path().filename().string();
       if (std::regex_match(filename, match, pattern))
-        if (CheckRunTargetInputValidity(entry))
+        if (CheckRunTargetInputValidity())
           run_targets_.push_back(entry.path().string());
     }
   }
   return true;
 }
 
-bool CommonProgram::CheckRunTargetInputValidity(const fs::path &instance_path) {
-  if (GA::I().CleanActionCache() == 0)
-    return true;
+bool CommonProgram::CheckRunTargetInputValidity() {
+
+  for (const auto &[key, value] : GA::I().MapInputNameToFullPath()) {
+    if (GA::I().DebugLevel() > 0) {
+      std::cout << std::format("{}: {}", key, value.string());
+    }
+    if (!fs::exists(value))
+      return false;
+  }
 
   // std::string instance_name = instance_path.filename().string();
 

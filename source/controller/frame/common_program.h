@@ -31,7 +31,7 @@ private:                          // functions
   bool
   SelectRunTargets(); // 根据依赖的前置工具和文件通配符, 确定本次运行所有的目标
   // 检测当前run_target的前置输入是否完整
-  bool CheckRunTargetInputValidity(const fs::path &run_target);
+  bool CheckRunTargetInputValidity();
 
 private:
   // 通过正则表达式筛选出来的例子
