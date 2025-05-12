@@ -11,17 +11,17 @@ GlobalArguments &ga = GlobalArguments::I();
 
 bool CommonProgram::PrepareWorkingDirectory() {
   // 检查work文件夹是否存在
-
-  if (!fs::exists(GA::I().WorkDir()))
-    fs::create_directories(GA::I().WorkDir());
+  std::cout << global::WorkDir() << std::endl;
+  if (!fs::exists(global::WorkDir()))
+    fs::create_directories(global::WorkDir());
 
   // 检查并刷新本步骤的工作目录
-  if (GA::I().CleanActionCache())
-    if (fs::exists(GA::I().ActionDir()))
-      fs::remove_all(GA::I().ActionDir());
+  if (global::CleanActionCache())
+    if (fs::exists(global::ActionDir()))
+      fs::remove_all(global::ActionDir());
 
-  if (!fs::exists(GA::I().ActionDir()))
-    fs::create_directories(GA::I().ActionDir());
+  if (!fs::exists(global::ActionDir()))
+    fs::create_directories(global::ActionDir());
 
   if (!fs::exists(GA::I().ActionDebugDir())) {
     fs::create_directories(GA::I().ActionDebugDir());

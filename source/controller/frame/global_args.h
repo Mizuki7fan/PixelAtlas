@@ -9,9 +9,12 @@
 namespace fs = std::filesystem;
 
 namespace frm {
+
 class GlobalArguments {
 public:
   GlobalArguments() {}; // 显式声明构造函数
+
+public:
   // 对外开放函数
   static GlobalArguments &I(); // 取单例实例
   fs::path CurrActionPath() const { return curr_action_path_; }
@@ -21,12 +24,12 @@ public:
   int MaxTimeElapsed() const { return max_time_elapsed_; }
   std::string DataSetName() const { return dataset_name_; }
   std::string WorkName() const { return work_name_; }
-  bool CleanActionCache() const { return clean_action_cache_; }
+  bool CleanActionCacheImpl() const { return clean_action_cache_; }
   std::string SingleInstanceName() const { return single_instance_name_; }
   std::string BatchInstanceRegex() const { return batch_instance_regex_; }
   // 推算的值
-  fs::path WorkDir() const;
-  fs::path ActionDir() const;
+  fs::path WorkDirImpl() const;
+  fs::path ActionDirImpl() const;
   fs::path ActionResultDir() const;
   fs::path ActionDebugDir() const;
   fs::path ActionLogDir() const;
@@ -50,7 +53,6 @@ private:
 public:
   // 设置为非静态的方法
   void Initialize(int argc, char **argv, const Token &);
-
   GlobalArguments(const GlobalArguments &) = delete; // 禁用拷贝
   void operator=(const GlobalArguments &) = delete;  // 禁用赋值
 
@@ -82,4 +84,13 @@ private:
   // 标记当前步骤的输入所依赖的前置步骤的完整路径
   std::unordered_map<std::string, fs::path> map_input_name_to_full_path_;
 };
+
 } // namespace frm
+
+using GA = frm::GlobalArguments;
+namespace global {
+// 静态访问接口
+static fs::path WorkDir() { return GA::I().WorkDirImpl(); };
+static bool CleanActionCache() { return GA::I().CleanActionCacheImpl(); };
+static fs::path ActionDir() { return GA::I().ActionDirImpl(); };
+} // namespace global
