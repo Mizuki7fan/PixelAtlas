@@ -3,47 +3,37 @@
 #include "common_program.h"
 #include <filesystem>
 
-// 使用单例类来达成全局变量的功能,
-// 并通过友元类保证该单例类的初始化仅限于common_program类中
-
+// 使用单例类来达成全局变量的功能, 通过友元函数控制访问权限
 namespace fs = std::filesystem;
+// 前置声明全局访问函数
+namespace global {
+// 外部可见的函数, 前置声明
+fs::path WorkDir();
+fs::path InstanceFullPath();
+fs::path ActionDir();
+fs::path ActionDebugDir();
+fs::path ActionLogDir();
+fs::path ActionResultDir();
+bool UseIndividualInstanceDir();
+int DebugLevel();
+bool CleanActionCache();
+std::string SingleInstanceName();
+std::string BatchInstanceRegex();
+fs::path DatasetDir();
+int NumParallelCnt();
+fs::path CurrActionPath();
+int MaxTimeElapsed();
+std::string DatasetName();
+std::string WorkName();
+} // namespace global
 
 namespace frm {
 
+// 全局单例类
 class GlobalArguments {
 public:
-  GlobalArguments() {}; // 显式声明构造函数
-
-public:
-  // 对外开放函数
+  GlobalArguments();           // 显式声明构造函数
   static GlobalArguments &I(); // 取单例实例
-  fs::path CurrActionPath() const { return curr_action_path_; }
-  bool UseIndividualInstanceDir() const { return use_individual_instance_dir_; }
-  int DebugLevel() const { return debug_level_; }
-  int NumParallelCnt() const { return num_parallel_cnt_; }
-  int MaxTimeElapsed() const { return max_time_elapsed_; }
-  std::string DataSetName() const { return dataset_name_; }
-  std::string WorkName() const { return work_name_; }
-  bool CleanActionCacheImpl() const { return clean_action_cache_; }
-  std::string SingleInstanceName() const { return single_instance_name_; }
-  std::string BatchInstanceRegex() const { return batch_instance_regex_; }
-  // 推算的值
-  fs::path WorkDirImpl() const;
-  fs::path ActionDirImpl() const;
-  fs::path ActionResultDir() const;
-  fs::path ActionDebugDir() const;
-  fs::path ActionLogDir() const;
-  fs::path DatasetDir() const;
-  fs::path InstanceFullPath() const;
-  std::size_t CurrActionIdx() const;
-
-  const auto &MapInputNameToFullPath() const {
-    return map_input_name_to_full_path_;
-  }
-
-private:
-  std::string CurrActionName() const;
-
   class Token {
   private:
     Token() = default;
@@ -57,21 +47,34 @@ public:
   void operator=(const GlobalArguments &) = delete;  // 禁用赋值
 
 private:
-  // 原生值
-  fs::path curr_action_path_;
-  int debug_level_;
-  std::string batch_instance_regex_;
-  std::string single_instance_name_;
-  std::string dataset_name_;
-  int num_parallel_cnt_;
-  bool use_individual_instance_dir_;
-  int max_time_elapsed_;
-  bool clean_action_cache_;
-  std::string work_name_;
+  // 类构造时候就可以确定的值
   std::vector<ActionArguments> all_action_list_;
-  // 衍生值
+  // 类的成员变量, 由外部输入确定的值
+  fs::path curr_action_path_; // 当前action的路径
+  friend fs::path global::CurrActionPath();
+  int debug_level_; // 调试等级
+  friend int global::DebugLevel();
+  std::string batch_instance_regex_;
+  friend std::string global::BatchInstanceRegex();
+  std::string single_instance_name_;
+  friend std::string global::SingleInstanceName();
+  std::string dataset_name_;
+  friend std::string global::DatasetName();
+  int num_parallel_cnt_;
+  friend int global::NumParallelCnt();
+  bool use_individual_instance_dir_;
+  friend bool global::UseIndividualInstanceDir();
+  int max_time_elapsed_;
+  friend int global::MaxTimeElapsed();
+  bool clean_action_cache_;
+  friend bool global::CleanActionCache();
+  std::string work_name_;
+  friend std::string global::WorkName();
+
+  // 根据外部输入的值计算得到的衍生值, 计算衍生值的函数应该标记Impl后缀
   mutable fs::path work_dir_;
   mutable fs::path action_dir_;
+  friend fs::path global::ActionDir();
   mutable std::size_t curr_action_idx_ =
       std::numeric_limits<std::size_t>::max();
   mutable std::string curr_action_name_;
@@ -79,18 +82,24 @@ private:
   mutable fs::path action_debug_dir_;
   mutable fs::path action_log_dir_;
   mutable fs::path dataset_dir_;
+  friend fs::path global::DatasetDir();
   mutable fs::path instance_full_path_;
 
-  // 标记当前步骤的输入所依赖的前置步骤的完整路径
-  std::unordered_map<std::string, fs::path> map_input_name_to_full_path_;
+private: // 成员函数读写
+  fs::path WorkDirImpl() const;
+  friend fs::path global::WorkDir();
+  fs::path ActionDirImpl() const;
+  std::size_t CurrActionIdxImpl() const;
+  std::string CurrActionNameImpl() const;
+  fs::path ActionDebugDirImpl() const;
+  friend fs::path global::ActionDebugDir();
+  fs::path ActionResultDirImpl() const;
+  friend fs::path global::ActionResultDir();
+  fs::path ActionLogDirImpl() const;
+  friend fs::path global::ActionLogDir();
+  fs::path DatasetDirImpl() const;
+  fs::path InstanceFullPathImpl() const;
+  friend fs::path global::InstanceFullPath();
 };
 
 } // namespace frm
-
-using GA = frm::GlobalArguments;
-namespace global {
-// 静态访问接口
-static fs::path WorkDir() { return GA::I().WorkDirImpl(); };
-static bool CleanActionCache() { return GA::I().CleanActionCacheImpl(); };
-static fs::path ActionDir() { return GA::I().ActionDirImpl(); };
-} // namespace global

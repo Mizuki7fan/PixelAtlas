@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 using GA = frm::GlobalArguments;
 
 void MainProcess() {
-  fs::path instance_path = GA::I().InstanceFullPath();
+  fs::path instance_path = global::InstanceFullPath();
   cgl::SurfaceMesh3 tri_mesh;
   CGAL::IO::read_OBJ(instance_path.string(), tri_mesh);
   std::unique_ptr<BiljectivePara> bil_para =

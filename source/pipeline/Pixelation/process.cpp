@@ -7,6 +7,6 @@
 namespace fs = std::filesystem;
 using GA = frm::GlobalArguments;
 void MainProcess() {
-  fs::path instance_path = GA::I().InstanceFullPath();
+  fs::path instance_path = global::InstanceFullPath();
   std::cout << "pixelation main process" << std::endl;
 }
