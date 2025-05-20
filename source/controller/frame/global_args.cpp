@@ -22,6 +22,14 @@ fs::path ActionLogDir() { return frm::GlobalArguments::I().ActionLogDirImpl(); }
 fs::path ActionResultDir() {
   return frm::GlobalArguments::I().ActionResultDirImpl();
 }
+
+fs::path ActionResultDir(std::size_t idx) {
+  std::string action_name =
+      frm::GlobalArguments::I().all_action_list_[idx].name;
+  fs::path work_dir = frm::GlobalArguments::I().WorkDirImpl();
+  return work_dir / std::format("{}_{}", idx, action_name) / "result";
+}
+
 bool UseIndividualInstanceDir() {
   return frm::GlobalArguments::I().use_individual_instance_dir_;
 }
@@ -43,6 +51,10 @@ fs::path DatasetDir() { return frm::GlobalArguments::I().DatasetDirImpl(); }
 
 int NumParallelCnt() { return frm::GlobalArguments::I().num_parallel_cnt_; }
 
+std::size_t CurrActionIdx() {
+  return frm::GlobalArguments::I().CurrActionIdxImpl();
+}
+
 fs::path CurrActionPath() {
   return frm::GlobalArguments::I().curr_action_path_;
 }
@@ -51,12 +63,31 @@ int MaxTimeElapsed() { return frm::GlobalArguments::I().max_time_elapsed_; }
 std::string DatasetName() { return frm::GlobalArguments::I().dataset_name_; }
 std::string WorkName() { return frm::GlobalArguments::I().work_name_; }
 
+const std::unordered_map<std::string, std::size_t> &ActionInputs() {
+  std::size_t curr_action_idx = frm::GlobalArguments::I().CurrActionIdxImpl();
+  return frm::GlobalArguments::I().map_input_to_action_[curr_action_idx];
+}
+
 } // namespace global
 
 namespace frm {
 GlobalArguments::GlobalArguments() {
   // 读入all_action_list
   all_action_list_ = LoadAllActionList();
+  map_input_to_action_.resize(all_action_list_.size());
+
+  for (std::size_t action_idx = 0; action_idx < all_action_list_.size();
+       ++action_idx) {
+    for (std::string input_name : all_action_list_[action_idx].inputs) {
+      for (std::size_t i = 0; i < action_idx; ++i) {
+        for (std::string output_name : all_action_list_[i].outputs) {
+          if (input_name == output_name) {
+            map_input_to_action_[action_idx][input_name] = i;
+          }
+        }
+      }
+    }
+  }
 }
 
 GlobalArguments &GlobalArguments::I() {

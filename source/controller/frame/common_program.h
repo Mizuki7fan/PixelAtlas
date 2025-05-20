@@ -31,10 +31,10 @@ private:                          // functions
   bool
   SelectRunTargets(); // 根据依赖的前置工具和文件通配符, 确定本次运行所有的目标
   // 检测当前run_target的前置输入是否完整
-  bool CheckRunTargetInputValidity();
+  bool CheckRunTargetInputValidity(const std::string &instance_name) const;
 
 private:
   // 通过正则表达式筛选出来的例子
-  std::vector<fs::path> run_targets_;
+  std::vector<std::string> run_targets_;
 };
 } // namespace frm

@@ -10,10 +10,12 @@ namespace global {
 // 外部可见的函数, 前置声明
 fs::path WorkDir();
 fs::path InstanceFullPath();
+// 考虑设置ActionDir()和CurrActionDir()
 fs::path ActionDir();
 fs::path ActionDebugDir();
 fs::path ActionLogDir();
 fs::path ActionResultDir();
+fs::path ActionResultDir(std::size_t action_idx);
 bool UseIndividualInstanceDir();
 int DebugLevel();
 bool CleanActionCache();
@@ -21,10 +23,13 @@ std::string SingleInstanceName();
 std::string BatchInstanceRegex();
 fs::path DatasetDir();
 int NumParallelCnt();
+std::size_t CurrActionIdx();
 fs::path CurrActionPath();
 int MaxTimeElapsed();
 std::string DatasetName();
 std::string WorkName();
+const std::unordered_map<std::string, std::size_t> &ActionInputs();
+
 } // namespace global
 
 namespace frm {
@@ -77,6 +82,7 @@ private:
   friend fs::path global::ActionDir();
   mutable std::size_t curr_action_idx_ =
       std::numeric_limits<std::size_t>::max();
+  friend std::size_t global::CurrActionIdx();
   mutable std::string curr_action_name_;
   mutable fs::path action_result_dir_;
   mutable fs::path action_debug_dir_;
@@ -84,6 +90,12 @@ private:
   mutable fs::path dataset_dir_;
   friend fs::path global::DatasetDir();
   mutable fs::path instance_full_path_;
+
+  // 记录action的所有输入依赖action_idx
+  std::vector<std::unordered_map<std::string, std::size_t>>
+      map_input_to_action_;
+  friend const std::unordered_map<std::string, std::size_t> &
+  global::ActionInputs();
 
 private: // 成员函数读写
   fs::path WorkDirImpl() const;
@@ -95,6 +107,7 @@ private: // 成员函数读写
   friend fs::path global::ActionDebugDir();
   fs::path ActionResultDirImpl() const;
   friend fs::path global::ActionResultDir();
+  friend fs::path global::ActionResultDir(std::size_t);
   fs::path ActionLogDirImpl() const;
   friend fs::path global::ActionLogDir();
   fs::path DatasetDirImpl() const;

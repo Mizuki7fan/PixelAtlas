@@ -43,8 +43,8 @@ bool CommonProgram::SelectRunTargets() {
   if (!global::SingleInstanceName()
            .empty()) { // 如果字符串g_single_instance不为空
     // 验证该文件的前置输入是合法的
-    if (CheckRunTargetInputValidity())
-      run_targets_.push_back(global::InstanceFullPath());
+    if (CheckRunTargetInputValidity(global::SingleInstanceName()))
+      run_targets_.push_back(global::SingleInstanceName());
   } else if (!global::BatchInstanceRegex().empty()) {
     std::smatch match;
     const std::string &file_regex = global::BatchInstanceRegex();
@@ -55,38 +55,29 @@ bool CommonProgram::SelectRunTargets() {
         continue;
       std::string filename = entry.path().filename().string();
       if (std::regex_match(filename, match, pattern))
-        if (CheckRunTargetInputValidity())
-          run_targets_.push_back(entry.path().string());
+        if (CheckRunTargetInputValidity(filename))
+          run_targets_.push_back(entry.path().filename().string());
     }
   }
   return true;
 }
 
-bool CommonProgram::CheckRunTargetInputValidity() {
+bool CommonProgram::CheckRunTargetInputValidity(
+    const std::string &instance_name) const {
+  fs::path instance_full_path = global::DatasetDir() / instance_name;
+  if (!fs::exists(instance_full_path))
+    return false;
 
-  // for (const auto &[key, value] : global::MapInputNameToFullPath()) {
-  //   if (global::DebugLevel() > 0) {
-  //     std::cout << std::format("{}: {}", key, value.string());
-  //   }
-  //   if (!fs::exists(value))
-  //     return false;
-  // }
-
-  // std::string instance_name = instance_path.filename().string();
-
-  // for (const std::string &input_name :
-  //      all_action_list_[curr_action_idx_].inputs) {
-  //   std::size_t input_file_action_idx =
-  //       map_input_file_to_action_idx[input_name];
-  //   fs::path input_file_path =
-  //       g_work_dir /
-  //       std::format("{}_{}", input_file_action_idx,
-  //                   all_action_list_[input_file_action_idx].name) /
-  //       "result" / std::format("{}-{}", instance_name, input_name);
-  //   if (!fs::exists(input_file_path))
-  //     return false;
-  // }
-
+  if (global::CurrActionIdx() != 0) {
+    // 需要检查当前工具的输入依赖文件是否都存在
+    for (const auto &[input_name, action_idx] : global::ActionInputs()) {
+      fs::path input_full_path =
+          global::ActionResultDir(action_idx) /
+          std::format("{}-{}", instance_name, input_name);
+      if (!fs::exists(input_full_path))
+        return false;
+    }
+  }
   return true;
 }
 
