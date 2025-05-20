@@ -1,10 +1,11 @@
 #include "process.h"
-#include "EfficientBijectiveParameterization/BiljectivePara.h"
 #include <CGAL-Interface/CGAL-Interface.h>
+#include <EfficientBijectiveParameterization/BiljectivePara.h>
 #include <filesystem>
 #include <frame/global_args.h>
 #include <frame/io.h>
 #include <frame/metric.h>
+
 
 namespace fs = std::filesystem;
 using GA = frm::GlobalArguments;
@@ -28,7 +29,7 @@ void MainProcess() {
   metrics["distortion"] = "double";
   metrics["length"] = "double";
 
-  std::unordered_map<std::string, frm::MetricValue> metric_values;
+  std::unordered_map<std::string, frm::ValueType> metric_values;
   metric_values["distortion"] = bil_para->GetDistortion();
   metric_values["length"] = 4.00;
 

@@ -1,5 +1,5 @@
 #include "global_args.h"
-#include "assert.hpp"
+#include "pa_assert.hpp"
 #include <boost/program_options.hpp>
 #include <iostream>
 
@@ -66,6 +66,18 @@ std::string WorkName() { return frm::GlobalArguments::I().work_name_; }
 const std::unordered_map<std::string, std::size_t> &ActionInputs() {
   std::size_t curr_action_idx = frm::GlobalArguments::I().CurrActionIdxImpl();
   return frm::GlobalArguments::I().map_input_to_action_[curr_action_idx];
+}
+
+const std::unordered_set<std::string> &ActionOutputs() {
+  std::size_t curr_action_idx = frm::GlobalArguments::I().CurrActionIdxImpl();
+  return frm::GlobalArguments::I().all_action_list_[curr_action_idx].outputs;
+}
+
+const std::unordered_map<std::string, frm::ValueType> &ActionHyperParameters() {
+  std::size_t curr_action_idx = frm::GlobalArguments::I().CurrActionIdxImpl();
+  return frm::GlobalArguments::I()
+      .all_action_list_[curr_action_idx]
+      .hpyer_parameters;
 }
 
 } // namespace global

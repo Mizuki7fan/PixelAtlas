@@ -23,6 +23,16 @@ public:
     static bool loadVTK(const char *filename, SurfaceMesh3 &Mesh);
   };
 
+  class UV {
+  public:
+    static bool NormalizeUVToUnitSquare(SurfaceMesh3 &uv_mesh);
+  };
+
+  // 算模型的bbox
+  static bool CalcBBox(const cgl::SurfaceMesh3 &mesh,
+                       std::array<double, 3> &bbMin,
+                       std::array<double, 3> &bbMax, cgl::Point3II &center);
+
   std::array<CGAL::SM_Vertex_index, 3>
   GetFaceVertices(const cgl::SurfaceMesh3 &mesh,
                   const CGAL::SM_Face_index &face);

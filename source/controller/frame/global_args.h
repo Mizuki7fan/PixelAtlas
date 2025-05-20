@@ -1,6 +1,7 @@
 #pragma once
 #include "action_args.h"
 #include "common_program.h"
+#include "io.h"
 #include <filesystem>
 
 // 使用单例类来达成全局变量的功能, 通过友元函数控制访问权限
@@ -29,6 +30,8 @@ int MaxTimeElapsed();
 std::string DatasetName();
 std::string WorkName();
 const std::unordered_map<std::string, std::size_t> &ActionInputs();
+const std::unordered_set<std::string> &ActionOutputs();
+const std::unordered_map<std::string, frm::ValueType> &ActionHyperParameters();
 
 } // namespace global
 
@@ -96,6 +99,9 @@ private:
       map_input_to_action_;
   friend const std::unordered_map<std::string, std::size_t> &
   global::ActionInputs();
+  friend const std::unordered_set<std::string> &global::ActionOutputs();
+  friend const std::unordered_map<std::string, frm::ValueType> &
+  global::ActionHyperParameters();
 
 private: // 成员函数读写
   fs::path WorkDirImpl() const;

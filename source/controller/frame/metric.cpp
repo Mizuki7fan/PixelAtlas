@@ -5,7 +5,7 @@ namespace frm {
 void LoadMetricJsonFile(
     std::ifstream &json_str,                                     //
     const std::unordered_map<std::string, std::string> &metrics, //
-    std::unordered_map<std::string, MetricValue> &metric_values) {
+    std::unordered_map<std::string, ValueType> &metric_values) {
   // metrics标记每个度量的名字和类型
   // metric_values存储每个度量的值
 
@@ -28,7 +28,7 @@ void LoadMetricJsonFile(
 void WriteMetricJsonFile(
     std::ofstream &json_file,                                    //
     const std::unordered_map<std::string, std::string> &metrics, //
-    const std::unordered_map<std::string, MetricValue> &metric_values) {
+    const std::unordered_map<std::string, ValueType> &metric_values) {
   boost::json::object obj;
   for (auto [metric_name, metric_value] : metric_values) {
     std::cout << metric_name << std::endl;

@@ -1,7 +1,7 @@
 #include "evaluator.h"
 #include <boost/json.hpp>
 #include <boost/program_options.hpp>
-#include <frame/assert.hpp>
+#include <frame/pa_assert.hpp>
 #include <fstream>
 #include <iostream>
 
@@ -201,8 +201,8 @@ void Evaluator::AnalyseDataDifference() {
       }
       // 否则记录该属性的差异
       map_property_to_num_valid_data_.at(property_info.first).first++;
-      const frm::MetricValue &value_0 = metric_data_0.at(property_info.first);
-      const frm::MetricValue &value_1 = metric_data_1.at(property_info.first);
+      const frm::ValueType &value_0 = metric_data_0.at(property_info.first);
+      const frm::ValueType &value_1 = metric_data_1.at(property_info.first);
       double difference = 0;
       if (std::holds_alternative<double>(value_0) &&
           std::holds_alternative<double>(value_1))

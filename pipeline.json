@@ -20,7 +20,7 @@
             "output":[
                 ".gird"
             ],
-            "parameter":[
+            "hyper-parameter":[
                 {"type": "INT", "name": "grid_size", "value": 50}
             ],
             "metrics": []

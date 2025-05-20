@@ -4,7 +4,9 @@
 #include <CGAL/Polygon_mesh_processing/compute_normal.h>
 #include <CGAL/centroid.h>
 
-#include <frame/assert.hpp>
+#include <frame/global_args.h>
+#include <frame/pa_assert.hpp>
+
 namespace cgl {
 std::array<CGAL::SM_Vertex_index, 3>
 MeshOperation::GetFaceVertices(const cgl::SurfaceMesh3 &mesh, //
@@ -139,4 +141,46 @@ bool MeshOperation::IO::loadVTK(const char *filename, SurfaceMesh3 &Mesh) {
   mesh_full_path[CGAL::SM_Vertex_index(0)] = filename;
   return true;
 }
+
+bool MeshOperation::CalcBBox(const cgl::SurfaceMesh3 &mesh,
+                             std::array<double, 3> &bbMin,
+                             std::array<double, 3> &bbMax,
+                             cgl::Point3II &center) {
+  cgl::Point3II point = mesh.point(CGAL::SM_Vertex_index(0));
+  bbMin = bbMax = {point.x(), point.y(), point.z()};
+  for (auto vertex : mesh.vertices()) {
+    const cgl::Point3II &p = mesh.point(vertex);
+    for (int i = 0; i < 3; ++i) {
+      if (bbMin[i] > p[i])
+        bbMin[i] = p[i];
+      if (bbMax[i] < p[i])
+        bbMax[i] = p[i];
+    }
+  }
+
+  center =
+      cgl::Point3II(0.5 * (bbMin[0] + bbMax[0]), 0.5 * (bbMin[1] + bbMax[1]),
+                    0.5 * (bbMin[2] + bbMax[2]));
+  return true;
+}
+
+bool MeshOperation::UV::NormalizeUVToUnitSquare(SurfaceMesh3 &uv_mesh) {
+  double eps = 1e-6;
+  std::array<double, 3> bbMin, bbMax;
+  cgl::Point3II center;
+  CalcBBox(uv_mesh, bbMin, bbMax, center);
+  double range = std::max(bbMax[0] - bbMin[0], bbMax[1] - bbMin[1]);
+  for (auto vertex : uv_mesh.vertices()) {
+    PA_ASSERT_WITH_MSG(uv_mesh.point(vertex).z() < eps, "网格顶点有z坐标");
+    cgl::Vec3II vec = uv_mesh.point(vertex) - center;
+    vec /= range;
+    uv_mesh.point(vertex) = cgl::Point3II(0.5, 0.5, 0) + vec;
+  }
+  if (global::DebugLevel() > 1) {
+    CalcBBox(uv_mesh, bbMin, bbMax, center);
+  }
+
+  return true;
+}
+
 } // namespace cgl

@@ -1,5 +1,5 @@
 #include "action_args.h"
-#include "assert.hpp"
+#include "pa_assert.hpp"
 #include <boost/json.hpp>
 #include <filesystem>
 #include <fstream>
@@ -75,9 +75,9 @@ std::vector<ActionArguments> LoadAllActionList() {
           }
         }
         // 读入工具的参数
-        if (action_obj.contains("parameter")) {
+        if (action_obj.contains("hyper-parameter")) {
           const boost::json::array &action_parameter =
-              action_obj.at("parameter").get_array();
+              action_obj.at("hyper-parameter").get_array();
           for (auto value : action_parameter) {
             const boost::json::object &parameter_obj = value.get_object();
             std::string parameter_type =
@@ -90,19 +90,19 @@ std::vector<ActionArguments> LoadAllActionList() {
                   parameter_value.is_number(),
                   std::format("参数{}数据类型异常", parameter_name));
               // as_int64返回的是int64_t, 即long long, 需要强制类型转换
-              curr_action.parameter.emplace(
+              curr_action.hpyer_parameters.emplace(
                   parameter_name, static_cast<int>(parameter_value.as_int64()));
             } else if (parameter_type == "DOUBLE") {
               PA_ASSERT_WITH_MSG(
                   parameter_value.is_double(),
                   std::format("参数{}数据类型异常", parameter_name));
-              curr_action.parameter.emplace(
+              curr_action.hpyer_parameters.emplace(
                   parameter_name, parameter_obj.at("value").as_double());
             } else if (parameter_type == "STRING") {
               PA_ASSERT_WITH_MSG(
                   parameter_value.is_string(),
                   std::format("参数{}数据类型异常", parameter_name));
-              curr_action.parameter.emplace(
+              curr_action.hpyer_parameters.emplace(
                   parameter_name,
                   parameter_obj.at("value").as_string().c_str());
             }

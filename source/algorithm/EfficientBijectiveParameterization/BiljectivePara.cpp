@@ -162,6 +162,8 @@ void BiljectivePara::WriteUVMesh(std::ofstream &of_obj) {
     uv_mesh_.point(vertex) = cgl::Point3II(pos[0], pos[1], 0.0);
   }
 
+  // 将uv_mesh放缩到(0,1)范围, 且中心为(0.5,0.5)
+  cgl::MeshOperation::UV::NormalizeUVToUnitSquare(uv_mesh_);
   CGAL::IO::write_OBJ(of_obj, uv_mesh_);
 }
 

@@ -3,7 +3,7 @@ set(SUBPROJ_NAME frame)
 include_directories(${BOOST_PATH}/include/boost-1_87)
 
 file (GLOB FRAME_FILES
-    assert.hpp
+    pa_assert.hpp
     action_args.h
     action_args.cpp
     global_args.cpp
