@@ -1,5 +1,6 @@
 #include "ShellData.h"
 #include "Utility.h"
+#include <AlgoKit/BoundaryLoop.h>
 #include <Triangle-Interface/TriangleInterface.h>
 #include <iostream>
 #include <numbers>
@@ -149,7 +150,7 @@ void ShellData::AddNewPatch(const Eigen::MatrixXd &V_in,  //
   Eigen::VectorXi bnd;
   Eigen::MatrixXd bnd_uv;
   std::vector<std::vector<int>> all_bnds;
-  GetBoundaryLoop(F_ref, all_bnds);
+  AlgoKit::GetBoundaryLoop(F_ref, all_bnds);
   int num_holes = static_cast<int>(all_bnds.size()) - 1;
 
   std::sort(all_bnds.begin(), all_bnds.end(),

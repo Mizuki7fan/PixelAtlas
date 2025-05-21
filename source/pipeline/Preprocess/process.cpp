@@ -6,7 +6,6 @@
 #include <frame/io.h>
 #include <frame/metric.h>
 
-
 namespace fs = std::filesystem;
 using GA = frm::GlobalArguments;
 

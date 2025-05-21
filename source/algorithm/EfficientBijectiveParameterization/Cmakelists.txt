@@ -8,6 +8,7 @@ add_definitions(-DUSE_MKL)
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/source/interface)
+include_directories(${CMAKE_SOURCE_DIR}/source/algorithm)
 include_directories(${EIGEN_PATH})
 include_directories(SYSTEM ${TRIANGLE_PATH})
 include_directories(SYSTEM ${CGAL_PATH}/include)
@@ -30,4 +31,5 @@ target_link_libraries(EfficientBijectiveParameterization PRIVATE
     Triangle-Interface
     LinSysSolver-Interface
     CGAL-Interface
+    AlgoKit
 )

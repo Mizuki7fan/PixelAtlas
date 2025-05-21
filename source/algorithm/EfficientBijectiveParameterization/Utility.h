@@ -12,6 +12,3 @@ void Tutte(const int &V_N,                //
 void MapVerticesToCircle(const Eigen::MatrixXd &V,   //
                          const Eigen::VectorXi &bnd, //
                          Eigen::MatrixXd &UV);
-
-void GetBoundaryLoop(const Eigen::MatrixXi &F_ref, //
-                     std::vector<std::vector<int>> &boundaryEdges);

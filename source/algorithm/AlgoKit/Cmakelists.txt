@@ -1,0 +1,19 @@
+#通用算法大杂烩
+project(AlgoKit)
+include_directories(${EIGEN_PATH})
+include_directories(${SOURCE_CODE_PATH}/interface)
+include_directories(SYSTEM ${CGAL_PATH}/include)
+include_directories(${BOOST_PATH}/include/boost-1_87)
+
+
+file (GLOB SRCFILES
+    BoundaryLoop.h
+    BoundaryLoop.cpp
+    MeshDijkstraWithCache.h
+    MeshDijkstraWithCache.cpp
+)
+add_library(AlgoKit ${SRCFILES})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    CGAL-Interface
+)

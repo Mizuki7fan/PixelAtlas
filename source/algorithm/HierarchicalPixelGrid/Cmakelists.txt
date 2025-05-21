@@ -1,0 +1,8 @@
+project(HierarchicalPixelGrid)
+#一种多层级的正方形格点结构
+file (GLOB SRCFILES
+    HierarchicalPixelGrid.h
+    HierarchicalPixelGrid.cpp
+)
+
+add_library(HierarchicalPixelGrid ${SRCFILES})
