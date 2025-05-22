@@ -8,10 +8,11 @@ MeshDijkstraWithCache::MeshDijkstraWithCache(const cgl::SurfaceMesh3 &mesh)
 
   VV.resize(mesh.num_vertices());
   VE.resize(mesh.num_vertices());
+  VVp.resize(mesh.num_vertices());
 
   for (auto vertex : mesh.vertices()) {
-    VV.reserve(6);
-    VE.reserve(6);
+    VV[vertex.idx()].reserve(6);
+    VE[vertex.idx()].reserve(6);
     for (auto halfedge : mesh.halfedges_around_target(mesh.halfedge(vertex))) {
       VV[vertex.idx()].push_back(mesh.source(halfedge).idx());
       VE[vertex.idx()].push_back(mesh.edge(halfedge).idx());
@@ -49,6 +50,7 @@ std::pair<double, bool> MeshDijkstraWithCache::GetVertexVertexDistnace(
 
   std::vector<int> &is_visited = vertex_is_visited_[idx_0];
   std::vector<double> &distance = vertex_distance_[idx_0];
+  std::vector<int> &vertex_prev = VVp[idx_0];
   std::priority_queue<DijkstraNode> &que = vertex_dijkstra_que_[idx_0];
   if (is_visited.size() == 0) {
     // 首次对idx_0展开搜索
@@ -56,6 +58,8 @@ std::pair<double, bool> MeshDijkstraWithCache::GetVertexVertexDistnace(
     distance.resize(mesh_.num_vertices(), DBL_MAX);
     distance[idx_0] = 0.0;
     que.push(DijkstraNode(idx_0, 0.0));
+    vertex_prev.resize(mesh_.num_vertices(), -1);
+    vertex_prev[idx_0] = idx_0;
   }
 
   while (!que.empty()) {
@@ -73,10 +77,44 @@ std::pair<double, bool> MeshDijkstraWithCache::GetVertexVertexDistnace(
       if (distance[node.idx] + EL[edge_idx] < distance[vertex_idx]) {
         distance[vertex_idx] = distance[node.idx] + EL[edge_idx];
         que.push(DijkstraNode(vertex_idx, distance[vertex_idx]));
+        vertex_prev[vertex_idx] = node.idx;
       }
     }
     if (node.idx == idx_1)
       return {distance[node.idx], false};
   }
   return {-1, false};
+}
+
+std::pair<double, std::vector<CGAL::SM_Halfedge_index>>
+MeshDijkstraWithCache::GetVertexPath(const CGAL::SM_Vertex_index &vertex_0,
+                                     const CGAL::SM_Vertex_index &vertex_1) {
+  GetVertexVertexDistnace(vertex_0, vertex_1);
+  int idx_0, idx_1;
+  if (vertex_0.idx() < vertex_1.idx()) {
+    idx_0 = vertex_0.idx();
+    idx_1 = vertex_1.idx();
+  } else {
+    idx_0 = vertex_1.idx();
+    idx_1 = vertex_0.idx();
+  }
+
+  std::vector<CGAL::SM_Halfedge_index> path;
+  path.reserve(mesh_.num_edges());
+
+  std::vector<int> &v_p = VVp[idx_0];
+  int curr_idx = idx_1;
+
+  while (v_p[curr_idx] != curr_idx) {
+    int prev_idx = v_p[curr_idx];
+    for (auto halfedge : mesh_.halfedges_around_target(
+             mesh_.halfedge(CGAL::SM_Vertex_index(curr_idx)))) {
+      if (mesh_.source(halfedge).idx() == static_cast<std::size_t>(prev_idx)) {
+        path.push_back(halfedge);
+        break;
+      }
+    }
+    curr_idx = prev_idx;
+  }
+  return {vertex_distance_[idx_0][idx_1], path};
 }

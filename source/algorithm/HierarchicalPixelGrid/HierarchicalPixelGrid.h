@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <vector>
 
 class GridFace;
 class GridEdge;
@@ -56,7 +57,7 @@ class GridVertex {
 public:
   int id = -1;
   int X = -1, Y = -1;
-  std::array<double, 2> position_;
+  std::array<double, 2> coord;
 
   GridHalfEdge *lBeginHalfEdge = NULL, *lEndHalfEdge = NULL,
                *rBeginHalfEdge = NULL, *rEndHalfEdge = NULL,
@@ -72,7 +73,16 @@ public:
 class HierarchicalPixelGrid {
 public:
   explicit HierarchicalPixelGrid(int grid_size);
+  void SetGridBBox(const std::array<double, 2> &bbMin,
+                   const std::array<double, 2> &bbMax);
+  void Run();
 
 private:
+  void create();
   const int grid_size_;
+  std::array<double, 2> bbMin_, bbMax_;
+  std::vector<GridVertex> V;
+  std::vector<GridFace> F;
+  std::vector<GridHalfEdge> He;
+  std::vector<GridEdge> E;
 };

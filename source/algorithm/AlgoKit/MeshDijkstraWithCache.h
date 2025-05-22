@@ -19,6 +19,9 @@ public:
   std::pair<double, bool>
   GetVertexVertexDistnace(const CGAL::SM_Vertex_index vertex_0,
                           const CGAL::SM_Vertex_index vertex_1);
+  std::pair<double, std::vector<CGAL::SM_Halfedge_index>>
+  GetVertexPath(const CGAL::SM_Vertex_index &vertex_0,
+                const CGAL::SM_Vertex_index &vertex_1);
 
 private:
   const cgl::SurfaceMesh3 &mesh_;
@@ -30,5 +33,6 @@ private:
 private:
   std::vector<std::vector<int>> VV;
   std::vector<std::vector<int>> VE;
+  std::vector<std::vector<int>> VVp;
   std::vector<double> EL;
 };

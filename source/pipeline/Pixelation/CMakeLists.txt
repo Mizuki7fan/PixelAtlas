@@ -20,4 +20,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     frame
     CGAL-Interface
     AlgoKit
+    HierarchicalPixelGrid
 )
