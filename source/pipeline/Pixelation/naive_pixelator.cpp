@@ -4,13 +4,7 @@
 #include <AlgoKit/BasicGeometry.h>
 
 NaivePixelator::NaivePixelator(const cgl::SurfaceMesh3 &uv_mesh, int grid_size)
-    : uv_mesh_(uv_mesh), grid_size_(grid_size) {
-  // 构建uv_mesh的AABB
-  CGAL::Polygon_mesh_processing::build_AABB_tree(uv_mesh_, aabb_uv_mesh_);
-  aabb_uv_mesh_.accelerate_distance_queries();
-  // 可能不需要使用AABB数据结构, 而是算每个三角面片所影响的grid格点,
-  // 这样效率更高, 以后可以替换
-};
+    : uv_mesh_(uv_mesh), grid_size_(grid_size) {};
 
 void NaivePixelator::run() {
   // create_grid();
@@ -22,38 +16,55 @@ void NaivePixelator::run() {
     CGAL::IO::write_OBJ(filestream, uv_mesh_);
     filestream.close();
   }
-  for (std::size_t i = 0; i < grid_->V.size(); ++i) {
-    std::array<double, 2> &coord = grid_->V[i].coord;
-    cgl::Point3II query(coord[0], coord[1], 0);
-    auto location = CGAL::Polygon_mesh_processing::locate_with_AABB_tree(
-        query, aabb_uv_mesh_, uv_mesh_);
-    CGAL::SM_Face_index face = location.first;
-    CGAL::SM_Vertex_index face_vertex[3];
-    CGAL::SM_Halfedge_index halfedge = uv_mesh_.halfedge(face);
-    face_vertex[0] = uv_mesh_.target(halfedge);
-    face_vertex[1] = uv_mesh_.target(uv_mesh_.next(halfedge));
-    face_vertex[2] = uv_mesh_.target(uv_mesh_.next(uv_mesh_.next(halfedge)));
-    // 判定点是否在面内
-    bool is_inside = AlgoKit::CheckPointInTriangle2D(
-        coord[0], coord[1], //
-        uv_mesh_.point(face_vertex[0]).x(),
-        uv_mesh_.point(face_vertex[0]).y(), //
-        uv_mesh_.point(face_vertex[1]).x(),
-        uv_mesh_.point(face_vertex[1]).y(), //
-        uv_mesh_.point(face_vertex[2]).x(), uv_mesh_.point(face_vertex[2]).y());
-    if (is_inside)
-      grid_->V[i].state = GridVertex::STATE::in_mesh;
-    else
-      grid_->V[i].state = GridVertex::STATE::outof_mesh;
+
+  std::vector<GridElement> map_vtx_to_grid_element(uv_mesh_.num_vertices(),
+                                                   std::monostate());
+
+  for (CGAL::SM_Vertex_index vertex : uv_mesh_.vertices()) {
+    std::array<double, 2> coord_ = {uv_mesh_.point(vertex).x(),
+                                    uv_mesh_.point(vertex).y()};
+    map_vtx_to_grid_element[vertex.idx()] = grid_->LocateGridElement(coord_);
   }
 
-  for (std::size_t i = 0; i < grid_->F.size(); ++i) {
-    GridFace &face = grid_->F[i];
-    if (face.ldVertex->state == GridVertex::STATE::in_mesh ||
-        face.luVertex->state == GridVertex::STATE::in_mesh ||
-        face.rdVertex->state == GridVertex::STATE::in_mesh ||
-        face.ruVertex->state == GridVertex::STATE::in_mesh) {
-      face.state = GridFace::STATE::in_mesh;
+  for (CGAL::SM_Edge_index eh : uv_mesh_.edges()) {
+    std::array<CGAL::SM_Vertex_index, 2> edge_vertex;
+    edge_vertex[0] = uv_mesh_.source(uv_mesh_.halfedge(eh, 0));
+    edge_vertex[1] = uv_mesh_.source(uv_mesh_.halfedge(eh, 1));
+
+    // 根据grid_element0确定边所划过的面的上下界
+    std::array<int, 2> bbMin = {grid_size_, grid_size_}, bbMax = {0, 0};
+    auto UpdateEdgeGridBBox = [&](const GridFace *face) {
+      if (face == NULL)
+        return;
+      bbMin[0] = (bbMin[0] > face->X_) ? face->X_ : bbMin[0];
+      bbMin[1] = (bbMin[1] > face->Y_) ? face->Y_ : bbMin[1];
+      bbMax[0] = (bbMax[0] < face->X_) ? face->X_ : bbMax[0];
+      bbMax[1] = (bbMax[1] < face->Y_) ? face->Y_ : bbMax[1];
+    };
+
+    for (int i = 0; i < 2; ++i) {
+      GridElement &element = map_vtx_to_grid_element[edge_vertex[i].idx()];
+      if (std::holds_alternative<GridFace>(element)) {
+        GridFace &face = std::get<GridFace>(element);
+        UpdateEdgeGridBBox(&face);
+      } else if (std::holds_alternative<GridEdge>(element)) {
+        GridHalfEdge *lhalfedge = std::get<GridEdge>(element).HalfEdge0;
+        UpdateEdgeGridBBox(lhalfedge->Face);
+        GridHalfEdge *rhalfedge = std::get<GridEdge>(element).HalfEdge1;
+        UpdateEdgeGridBBox(rhalfedge->Face);
+      } else if (std::holds_alternative<GridVertex>(element)) {
+        GridVertex &vertex = std::get<GridVertex>(element);
+        UpdateEdgeGridBBox(vertex.ldFace);
+        UpdateEdgeGridBBox(vertex.rdFace);
+        UpdateEdgeGridBBox(vertex.luFace);
+        UpdateEdgeGridBBox(vertex.ruFace);
+      }
+    }
+
+    if (global::DebugLevel() > 0) {
+      std::cout << std::format("bbox: [{} {}]x[{} {}]", bbMin[0], bbMin[1],
+                               bbMax[0], bbMax[1])
+                << std::endl;
     }
   }
 

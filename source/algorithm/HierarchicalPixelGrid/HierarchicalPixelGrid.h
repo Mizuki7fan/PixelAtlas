@@ -1,12 +1,16 @@
 #pragma once
 #include <array>
 #include <fstream>
+#include <variant>
 #include <vector>
 
 class GridFace;
 class GridEdge;
 class GridHalfEdge;
 class GridVertex;
+
+using GridElement =
+    std::variant<GridVertex, GridEdge, GridFace, std::monostate>;
 
 class GridFace {
 public:
@@ -58,7 +62,7 @@ class GridVertex {
 public:
   int id = -1;
   int X = -1, Y = -1;
-  std::array<double, 2> coord;
+  std::array<int, 2> coord;
 
   GridHalfEdge *lBeginHalfEdge = NULL, *lEndHalfEdge = NULL,
                *rBeginHalfEdge = NULL, *rEndHalfEdge = NULL,
@@ -75,11 +79,12 @@ public:
 };
 
 class HierarchicalPixelGrid {
+  // Grid的坐标根据grid_size进行放缩，具体来说，是将坐标映射到[0,grid_size]x[0,grid_size]区间内
 public:
   explicit HierarchicalPixelGrid(int grid_size);
-  void SetGridBBox(const std::array<double, 2> &bbMin,
-                   const std::array<double, 2> &bbMax);
   void Run();
+  // 定位coord在grid中的位置
+  GridElement LocateGridElement(const std::array<double, 2> &coord);
   void PrintFindVEF(std::ofstream &file);
   void PrintQuadMeshOBJ(std::ofstream &file);
   std::vector<GridVertex> V;

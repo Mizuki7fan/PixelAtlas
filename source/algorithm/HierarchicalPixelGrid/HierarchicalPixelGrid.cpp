@@ -6,7 +6,6 @@ HierarchicalPixelGrid::HierarchicalPixelGrid(int grid_size)
 }
 
 void HierarchicalPixelGrid::create() {
-  double pixel_unit_size = 1.0 / grid_size_;
 
   V.resize((grid_size_ + 1) * (grid_size_ + 1));
   for (int y_ = 0; y_ < grid_size_ + 1; y_++) {
@@ -15,7 +14,7 @@ void HierarchicalPixelGrid::create() {
       v.X = x_;
       v.Y = y_;
       v.id = x_ + y_ * (grid_size_ + 1);
-      v.coord = {x_ * pixel_unit_size, y_ * pixel_unit_size};
+      v.coord = {x_, y_};
     }
   }
 
@@ -178,20 +177,28 @@ void HierarchicalPixelGrid::PrintFindVEF(std::ofstream &file) {
     GridVertex *vertex_2 = F[i].ruVertex;
     GridVertex *vertex_3 = F[i].rdVertex;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_0->coord[0], vertex_0->coord[1],
-                        vertex_1->coord[0], vertex_1->coord[1])
+                        vertex_0->coord[0] / grid_size_,
+                        vertex_0->coord[1] / grid_size_,
+                        vertex_1->coord[0] / grid_size_,
+                        vertex_1->coord[1] / grid_size_)
          << std::endl;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_1->coord[0], vertex_1->coord[1],
-                        vertex_2->coord[0], vertex_2->coord[1])
+                        vertex_1->coord[0] / grid_size_,
+                        vertex_1->coord[1] / grid_size_,
+                        vertex_2->coord[0] / grid_size_,
+                        vertex_2->coord[1] / grid_size_)
          << std::endl;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_2->coord[0], vertex_2->coord[1],
-                        vertex_3->coord[0], vertex_3->coord[1])
+                        vertex_2->coord[0] / grid_size_,
+                        vertex_2->coord[1] / grid_size_,
+                        vertex_3->coord[0] / grid_size_,
+                        vertex_3->coord[1] / grid_size_)
          << std::endl;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_3->coord[0], vertex_3->coord[1],
-                        vertex_0->coord[0], vertex_0->coord[1])
+                        vertex_3->coord[0] / grid_size_,
+                        vertex_3->coord[1] / grid_size_,
+                        vertex_0->coord[0] / grid_size_,
+                        vertex_0->coord[1] / grid_size_)
          << std::endl;
   }
 }
@@ -236,8 +243,9 @@ void HierarchicalPixelGrid::PrintQuadMeshOBJ(std::ofstream &file) {
   }
 
   for (std::size_t i = 0; i < quad_idx_; ++i) {
-    file << std::format("v {} {} 0", V[map_quad_vid_to_grid_vid[i]].coord[0],
-                        V[map_quad_vid_to_grid_vid[i]].coord[1])
+    file << std::format("v {} {} 0",
+                        V[map_quad_vid_to_grid_vid[i]].coord[0] / grid_size_,
+                        V[map_quad_vid_to_grid_vid[i]].coord[1] / grid_size_)
          << std::endl;
   }
 
@@ -251,4 +259,51 @@ void HierarchicalPixelGrid::PrintQuadMeshOBJ(std::ofstream &file) {
                         map_grid_vid_to_quad_vid[F[i].luVertex->id] + 1)
          << std::endl;
   }
+}
+
+GridElement
+HierarchicalPixelGrid::LocateGridElement(const std::array<double, 2> &coord) {
+  constexpr double EPS = 1e-6;
+
+  if (coord[0] < 0.0 - EPS || coord[0] > 1.0 + EPS || coord[1] < 0.0 - EPS ||
+      coord[1] > 1.0 + EPS)
+    return std::monostate();
+
+  const double x_scaled = coord[0] * grid_size_;
+  const double y_scaled = coord[1] * grid_size_;
+
+  // 3. 分离整数和小数部分 (考虑边界)
+  auto decompose = [&](double val) -> std::pair<int, double> {
+    int integer = static_cast<int>(std::floor(val + EPS)); // 防止0.999999被误判
+    double fraction = val - integer;
+    // 处理右边界 (e.g. grid_size=5, val=5.0 → integer=5)
+    if (std::abs(fraction - 1.0) < EPS) {
+      integer += 1;
+      fraction = 0.0;
+    }
+    return {integer, fraction};
+  };
+  const std::pair<int, double> x_decompose = decompose(x_scaled);
+  const std::pair<int, double> y_decompose = decompose(y_scaled);
+
+  // 4. 判断是否为顶点 (双坐标均为整数)
+  const bool x_is_int =
+      (x_decompose.second < EPS) || (1.0 - x_decompose.second < EPS);
+  const bool y_is_int =
+      (y_decompose.second < EPS) || (1.0 - y_decompose.second < EPS);
+
+  // 5. 判断是否为边 (x坐标为整数，y坐标为小数)
+  if (x_is_int && y_is_int) {
+    return V[y_decompose.first * grid_size_ + x_decompose.first];
+  } else if (!x_is_int && y_is_int) {
+    GridVertex &vertex = V[y_decompose.first * grid_size_ + x_decompose.first];
+    return *vertex.rBeginHalfEdge->Edge;
+  } else if (x_is_int && !y_is_int) {
+    GridVertex &vertex = V[y_decompose.first * grid_size_ + x_decompose.first];
+    return *vertex.uBeginHalfEdge->Edge;
+  } else {
+    return F[y_decompose.first * grid_size_ + x_decompose.first];
+  }
+
+  return std::monostate();
 }
