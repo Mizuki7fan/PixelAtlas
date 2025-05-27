@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <fstream>
 #include <vector>
 
 class GridFace;
@@ -23,8 +24,8 @@ public:
   enum LocateInParent { ld, rd, lu, ru, undefined };
   LocateInParent which_son = undefined;
 
-  enum F_State { in_mesh, outof_mesh, on_boundary, unknown };
-  F_State state = outof_mesh;
+  enum STATE { in_mesh, outof_mesh, on_boundary, unknown };
+  STATE state = outof_mesh;
 
   bool is_valid = false;
 };
@@ -68,6 +69,9 @@ public:
 
   GridVertex *parent = NULL;
   GridVertex *son = NULL;
+
+  enum STATE { in_mesh, outof_mesh, on_boundary, unknown };
+  STATE state = unknown;
 };
 
 class HierarchicalPixelGrid {
@@ -76,13 +80,15 @@ public:
   void SetGridBBox(const std::array<double, 2> &bbMin,
                    const std::array<double, 2> &bbMax);
   void Run();
+  void PrintFindVEF(std::ofstream &file);
+  void PrintQuadMeshOBJ(std::ofstream &file);
+  std::vector<GridVertex> V;
+  std::vector<GridFace> F;
+  std::vector<GridHalfEdge> He;
+  std::vector<GridEdge> E;
 
 private:
   void create();
   const int grid_size_;
   std::array<double, 2> bbMin_, bbMax_;
-  std::vector<GridVertex> V;
-  std::vector<GridFace> F;
-  std::vector<GridHalfEdge> He;
-  std::vector<GridEdge> E;
 };

@@ -1,7 +1,9 @@
 #include "HierarchicalPixelGrid.h"
 
 HierarchicalPixelGrid::HierarchicalPixelGrid(int grid_size)
-    : grid_size_(grid_size) {}
+    : grid_size_(grid_size) {
+  create();
+}
 
 void HierarchicalPixelGrid::create() {
   double pixel_unit_size = 1.0 / grid_size_;
@@ -163,5 +165,90 @@ void HierarchicalPixelGrid::create() {
     else
       he0.Edge->HalfEdge1 = &he1;
     HeId++;
+  }
+}
+
+void HierarchicalPixelGrid::PrintFindVEF(std::ofstream &file) {
+  file << "PE" << std::endl;
+  for (std::size_t i = 0; i < F.size(); ++i) {
+    if (F[i].state != GridFace::in_mesh)
+      continue;
+    GridVertex *vertex_0 = F[i].ldVertex;
+    GridVertex *vertex_1 = F[i].luVertex;
+    GridVertex *vertex_2 = F[i].ruVertex;
+    GridVertex *vertex_3 = F[i].rdVertex;
+    file << std::format("{} {} 0 {} {} 0 0 0 64", //
+                        vertex_0->coord[0], vertex_0->coord[1],
+                        vertex_1->coord[0], vertex_1->coord[1])
+         << std::endl;
+    file << std::format("{} {} 0 {} {} 0 0 0 64", //
+                        vertex_1->coord[0], vertex_1->coord[1],
+                        vertex_2->coord[0], vertex_2->coord[1])
+         << std::endl;
+    file << std::format("{} {} 0 {} {} 0 0 0 64", //
+                        vertex_2->coord[0], vertex_2->coord[1],
+                        vertex_3->coord[0], vertex_3->coord[1])
+         << std::endl;
+    file << std::format("{} {} 0 {} {} 0 0 0 64", //
+                        vertex_3->coord[0], vertex_3->coord[1],
+                        vertex_0->coord[0], vertex_0->coord[1])
+         << std::endl;
+  }
+}
+
+void HierarchicalPixelGrid::PrintQuadMeshOBJ(std::ofstream &file) {
+  std::vector<int> map_grid_vid_to_quad_vid(V.size(), -1);
+  std::vector<int> map_quad_vid_to_grid_vid;
+  map_quad_vid_to_grid_vid.reserve(V.size());
+  std::size_t quad_idx_ = 0;
+  for (std::size_t i = 0; i < F.size(); ++i) {
+    if (F[i].state != GridFace::in_mesh)
+      continue;
+    GridVertex *vertex_0 = F[i].ldVertex;
+    GridVertex *vertex_1 = F[i].luVertex;
+    GridVertex *vertex_2 = F[i].ruVertex;
+    GridVertex *vertex_3 = F[i].rdVertex;
+
+    if (map_grid_vid_to_quad_vid[vertex_0->id] == -1) {
+      map_grid_vid_to_quad_vid[static_cast<std::size_t>(vertex_0->id)] =
+          static_cast<int>(quad_idx_);
+      map_quad_vid_to_grid_vid.push_back(vertex_0->id);
+      quad_idx_++;
+    }
+    if (map_grid_vid_to_quad_vid[vertex_1->id] == -1) {
+      map_grid_vid_to_quad_vid[static_cast<std::size_t>(vertex_1->id)] =
+          static_cast<int>(quad_idx_);
+      map_quad_vid_to_grid_vid.push_back(vertex_1->id);
+      quad_idx_++;
+    }
+    if (map_grid_vid_to_quad_vid[vertex_2->id] == -1) {
+      map_grid_vid_to_quad_vid[static_cast<std::size_t>(vertex_2->id)] =
+          static_cast<int>(quad_idx_);
+      map_quad_vid_to_grid_vid.push_back(vertex_2->id);
+      quad_idx_++;
+    }
+    if (map_grid_vid_to_quad_vid[vertex_3->id] == -1) {
+      map_grid_vid_to_quad_vid[static_cast<std::size_t>(vertex_3->id)] =
+          static_cast<int>(quad_idx_);
+      map_quad_vid_to_grid_vid.push_back(vertex_3->id);
+      quad_idx_++;
+    }
+  }
+
+  for (std::size_t i = 0; i < quad_idx_; ++i) {
+    file << std::format("v {} {} 0", V[map_quad_vid_to_grid_vid[i]].coord[0],
+                        V[map_quad_vid_to_grid_vid[i]].coord[1])
+         << std::endl;
+  }
+
+  for (std::size_t i = 0; i < F.size(); ++i) {
+    if (F[i].state != GridFace::in_mesh)
+      continue;
+    file << std::format("f {} {} {} {}",
+                        map_grid_vid_to_quad_vid[F[i].ldVertex->id] + 1,
+                        map_grid_vid_to_quad_vid[F[i].rdVertex->id] + 1,
+                        map_grid_vid_to_quad_vid[F[i].ruVertex->id] + 1,
+                        map_grid_vid_to_quad_vid[F[i].luVertex->id] + 1)
+         << std::endl;
   }
 }
