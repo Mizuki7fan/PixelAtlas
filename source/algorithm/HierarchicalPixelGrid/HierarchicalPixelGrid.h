@@ -85,8 +85,10 @@ public:
   void Run();
   // 定位coord在grid中的位置
   GridElement LocateGridElement(const std::array<double, 2> &coord);
+  const GridVertex &Vertex(int X, int Y) { return V[Y * grid_size_ + Y + X]; }
   void PrintFindVEF(std::ofstream &file);
   void PrintQuadMeshOBJ(std::ofstream &file);
+
   std::vector<GridVertex> V;
   std::vector<GridFace> F;
   std::vector<GridHalfEdge> He;

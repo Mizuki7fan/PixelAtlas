@@ -294,13 +294,17 @@ HierarchicalPixelGrid::LocateGridElement(const std::array<double, 2> &coord) {
 
   // 5. 判断是否为边 (x坐标为整数，y坐标为小数)
   if (x_is_int && y_is_int) {
-    return V[y_decompose.first * grid_size_ + x_decompose.first];
+    return V[y_decompose.first * (grid_size_ + 1) + x_decompose.first];
   } else if (!x_is_int && y_is_int) {
-    GridVertex &vertex = V[y_decompose.first * grid_size_ + x_decompose.first];
-    return *vertex.rBeginHalfEdge->Edge;
+    GridVertex &vertex =
+        V[y_decompose.first * (grid_size_ + 1) + x_decompose.first];
+    return (vertex.rBeginHalfEdge != NULL) ? (*vertex.rBeginHalfEdge->Edge)
+                                           : (*vertex.rEndHalfEdge->Edge);
   } else if (x_is_int && !y_is_int) {
-    GridVertex &vertex = V[y_decompose.first * grid_size_ + x_decompose.first];
-    return *vertex.uBeginHalfEdge->Edge;
+    GridVertex &vertex =
+        V[y_decompose.first * (grid_size_ + 1) + x_decompose.first];
+    return (vertex.uBeginHalfEdge != NULL) ? (*vertex.uBeginHalfEdge->Edge)
+                                           : (*vertex.uEndHalfEdge->Edge);
   } else {
     return F[y_decompose.first * grid_size_ + x_decompose.first];
   }
