@@ -1,7 +1,7 @@
 #pragma once
 #include <CGAL-Interface/CGAL-Interface.h>
 #include <queue>
-
+namespace AlgoKit {
 struct DijkstraNode {
   int idx;
   double distance;
@@ -36,3 +36,4 @@ private:
   std::vector<std::vector<int>> VVp;
   std::vector<double> EL;
 };
+} // namespace AlgoKit

@@ -1,5 +1,5 @@
 #include "MeshDijkstraWithCache.h"
-
+namespace AlgoKit {
 MeshDijkstraWithCache::MeshDijkstraWithCache(const cgl::SurfaceMesh3 &mesh)
     : mesh_(mesh) {
   vertex_distance_.resize(mesh_.num_vertices());
@@ -118,3 +118,4 @@ MeshDijkstraWithCache::GetVertexPath(const CGAL::SM_Vertex_index &vertex_0,
   }
   return {vertex_distance_[idx_0][idx_1], path};
 }
+} // namespace AlgoKit

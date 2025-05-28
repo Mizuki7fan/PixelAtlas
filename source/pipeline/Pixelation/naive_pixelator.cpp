@@ -2,7 +2,7 @@
 #include "frame/global_args.h"
 #include "frame/io.h"
 #include "frame/pa_assert.hpp"
-#include <AlgoKit/BasicGeometry.h>
+#include <AlgoKit/IntersectionDetection2D.h>
 
 NaivePixelator::NaivePixelator(const cgl::SurfaceMesh3 &uv_mesh, int grid_size)
     : uv_mesh_(uv_mesh), grid_size_(grid_size) {};
