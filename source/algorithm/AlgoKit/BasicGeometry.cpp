@@ -3,7 +3,8 @@ namespace AlgoKit {
 int Orient2D(const double &px, const double &py,   //
              const double &p0x, const double &p0y, //
              const double &p1x, const double &p1y) {
-  // 判定点线关系, 算叉乘
+  // 判定点线关系, 返回-1, 0, 1
+  // 0表示共线
   const double dl = (p0x - px) * (p1y - py);
   const double dr = (p0y - py) * (p1x - px);
   const double det = dl - dr;
@@ -141,6 +142,66 @@ END_x_y_12:;
   }
 END_x_y_20:;
 
+  return true;
+}
+
+// 检测box和线段的相交
+bool CheckBoxLineSegmentIntersection(const std::array<double, 2> &bbmin,
+                                     const std::array<double, 2> &bbmax,
+                                     const std::array<double, 2> &v0, //
+                                     const std::array<double, 2> &v1) {
+  // v0和v1的坐标同时小于或同时大于bbox
+  if (v0[0] < bbmin[0] && v1[0] < bbmin[0])
+    return false;
+  if (v0[0] > bbmax[0] && v1[0] > bbmax[0])
+    return false;
+  if (v0[1] < bbmin[1] && v1[1] < bbmin[1])
+    return false;
+  if (v0[1] > bbmax[1] && v1[1] > bbmax[1])
+    return false;
+
+  // v0或v1位于bbox内部
+  if (v0[0] >= bbmin[0] && v0[0] <= bbmax[0] && v0[1] >= bbmin[1] &&
+      v0[1] <= bbmax[1])
+    return true;
+  if (v1[0] >= bbmin[0] && v1[0] <= bbmax[0] && v1[1] >= bbmin[1] &&
+      v1[1] <= bbmax[1])
+    return true;
+
+  int x_diff_sign = v1[0] > v0[0] ? 1 : v1[0] == v0[0] ? 0 : -1;
+  int y_diff_sign = v1[1] > v0[1] ? 1 : v1[1] == v0[1] ? 0 : -1;
+
+  if (x_diff_sign * y_diff_sign == 1) {
+    // seg向上倾斜, 算bbox的lu点和rd点与seg的关系
+    int ori_bbox_left_up =
+        Orient2D(bbmin[0], bbmax[1], v0[0], v0[1], v1[0], v1[1]);
+    if (ori_bbox_left_up == 0)
+      return true;
+    int ori_bbox_right_down =
+        Orient2D(bbmax[0], bbmin[1], v0[0], v0[1], v1[0], v1[1]);
+    if (ori_bbox_right_down == 0)
+      return true;
+    return ori_bbox_right_down * ori_bbox_left_up == -1;
+  } else if (x_diff_sign * y_diff_sign == -1) {
+    // seg向下倾斜, 算bbox的ld点和ru点与seg的关系
+    int ori_bbox_left_down =
+        Orient2D(bbmin[0], bbmin[1], v0[0], v0[1], v1[0], v1[1]);
+    if (ori_bbox_left_down == 0)
+      return true;
+    int ori_bbox_right_up =
+        Orient2D(bbmax[0], bbmax[1], v0[0], v0[1], v1[0], v1[1]);
+    if (ori_bbox_right_up == 0)
+      return true;
+    return ori_bbox_right_up * ori_bbox_left_down == -1;
+  } else if (x_diff_sign == 0 && y_diff_sign != 0) {
+    // seg竖直, 算bbox的lu点和rd点与seg的关系
+    return v0[0] >= bbmin[0] && v0[0] <= bbmax[0];
+  } else if (x_diff_sign != 0 && y_diff_sign == 0) {
+    // seg水平, 算bbox的ld点和ru点与seg的关系
+    return v0[1] >= bbmin[1] && v0[1] <= bbmax[1];
+  } else if (x_diff_sign == 0 && y_diff_sign == 0)
+    // seg退化为单个点, 由于前面检测过v0/v1是否在内部, 此处可以直接判负
+    return false;
   return true;
 }
 } // namespace AlgoKit

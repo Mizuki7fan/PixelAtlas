@@ -10,6 +10,7 @@ public:
 private:
   std::unique_ptr<HierarchicalPixelGrid> grid_ = nullptr;
   const cgl::SurfaceMesh3 &uv_mesh_;
-
   const int grid_size_;
+
+  std::ofstream dbg_file;
 };

@@ -20,4 +20,11 @@ bool CheckBoxTriangleIntersection(const std::array<double, 2> &bbmin,
                                   const std::array<double, 2> &v0, //
                                   const std::array<double, 2> &v1, //
                                   const std::array<double, 2> &v2);
+
+// 检测box和线段的相交
+bool CheckBoxLineSegmentIntersection(const std::array<double, 2> &bbmin,
+                                     const std::array<double, 2> &bbmax,
+                                     const std::array<double, 2> &v0, //
+                                     const std::array<double, 2> &v1);
+
 }; // namespace AlgoKit
