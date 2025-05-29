@@ -6,7 +6,6 @@
 #include <frame/metric.h>
 
 namespace fs = std::filesystem;
-using GA = frm::GlobalArguments;
 void MainProcess() {
   fs::path instance_path = global::InstanceFullPath();
   // 读取超参数grid_size
@@ -18,4 +17,8 @@ void MainProcess() {
 
   NaivePixelator pixelator(uv_mesh, grid_size);
   pixelator.run();
+
+  std::ofstream grid_file = frm::CreateOutputFilestream("grid.grid");
+  pixelator.write_grid(grid_file);
+  grid_file.close();
 }

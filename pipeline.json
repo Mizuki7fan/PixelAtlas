@@ -18,7 +18,7 @@
                 "uv_mesh.obj"
             ],
             "output":[
-                ".gird"
+                "grid.grid"
             ],
             "hyper-parameter":[
                 {"type": "INT", "name": "grid_size", "value": 50}
@@ -30,12 +30,10 @@
         {
             "idx"  : 2,
             "input":[
-                "a.obj",
-                "b.txt"
+                "grid.grid"
             ],
             "output":[
-                "a.obj",
-                "b.txt"    
+                "grid-dissction.txt"
             ]
                 }
     ],

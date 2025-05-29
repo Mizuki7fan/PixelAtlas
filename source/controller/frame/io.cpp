@@ -12,6 +12,8 @@ using GA = GlobalArguments;
 
 std::ofstream CreateOutputFilestream(const std::string &path) {
   if (global::DebugLevel() > 1) {
+    const GA &ga = GlobalArguments::I();
+    std::cout << "path: " << path << std::endl;
     for (auto str : global::ActionOutputs())
       std::cout << str << std::endl;
     std::cout << global::ActionOutputs().count(path) << std::endl;
@@ -37,7 +39,16 @@ std::ofstream CreateOutputFilestream(const std::string &path) {
 
 std::ofstream CreateDebugFilestream(const std::string &path) {
   // 生成输出的路径
-  return std::ofstream(global::ActionDebugDir() / path);
+  const fs::path &curr_debug_dir = global::ActionDebugDir();
+  std::string path_str;
+  if (global::UseIndividualInstanceDir()) {
+    path_str = std::format("{}/{}", curr_debug_dir.string(), path);
+  } else {
+    path_str =
+        std::format("{}/{}-{}", curr_debug_dir.string(),
+                    global::InstanceFullPath().filename().string(), path);
+  }
+  return std::ofstream(path_str);
 }
 
 std::ofstream CreateMetricsFilestream() {

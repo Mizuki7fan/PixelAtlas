@@ -59,8 +59,8 @@
                 "-d","1",
                 "-p","4",
                 "-t","1800",
-                //"--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
-                "--single","00012.obj",//单一执行模式, 只执行一个文件
+                "--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
+                //"--single","00014.obj",//单一执行模式, 只执行一个文件
                 "--dataset","PolyAtlas-Sample-30",
                 //"--use_individual_instance_dir",
                 "--work_name","base",
@@ -75,7 +75,45 @@
             "console": "integratedTerminal",//执行cout输出在哪个终端
             "cwd": "${workspaceRoot}/z-run/bin_Debug",//指定工作目录
             "args": [
+                "-d","3",
+                "-p","4",
+                "-t","1800",
+                //"--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
+                "--single","00012.obj",//单一执行模式, 只执行一个文件
+                "--dataset","PolyAtlas-Sample-30",
+                //"--use_individual_instance_dir",
+                "--work_name","base",
+                "--clean"
+                ],//参数
+        },
+        {
+            "name": "rel-dissection",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/z-run/bin_Release/Dissection.exe",//程序入口
+            "console": "integratedTerminal",//执行cout输出在哪个终端
+            "cwd": "${workspaceRoot}/z-run/bin_Release",//指定工作目录
+            "args": [
                 "-d","1",
+                "-p","4",
+                "-t","1800",
+                //"--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件
+                "--single","00012.obj",//单一执行模式, 只执行一个文件
+                "--dataset","PolyAtlas-Sample-30",
+                //"--use_individual_instance_dir",
+                "--work_name","base",
+                "--clean"
+                ],//参数
+        },
+        {
+            "name": "dbg-dissection",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/z-run/bin_Debug/Dissection.exe",//程序入口
+            "console": "integratedTerminal",//执行cout输出在哪个终端
+            "cwd": "${workspaceRoot}/z-run/bin_Debug",//指定工作目录
+            "args": [
+                "-d","3",
                 "-p","4",
                 "-t","1800",
                 //"--batch",".*0001.*",//批量执行模式, 根据给定的通配符并行执行多个文件

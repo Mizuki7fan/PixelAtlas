@@ -88,6 +88,7 @@ public:
   const GridVertex &Vertex(int X, int Y) { return V[Y * grid_size_ + Y + X]; }
   void PrintFindVEF(std::ofstream &file);
   void PrintQuadMeshOBJ(std::ofstream &file);
+  void PrintElement(const GridElement &element, std::ofstream &file);
 
   std::vector<GridVertex> V;
   std::vector<GridFace> F;

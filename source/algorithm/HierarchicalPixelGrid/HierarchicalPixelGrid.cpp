@@ -177,28 +177,28 @@ void HierarchicalPixelGrid::PrintFindVEF(std::ofstream &file) {
     GridVertex *vertex_2 = F[i].ruVertex;
     GridVertex *vertex_3 = F[i].rdVertex;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_0->coord[0] / grid_size_,
-                        vertex_0->coord[1] / grid_size_,
-                        vertex_1->coord[0] / grid_size_,
-                        vertex_1->coord[1] / grid_size_)
+                        vertex_0->coord[0] / static_cast<double>(grid_size_),
+                        vertex_0->coord[1] / static_cast<double>(grid_size_),
+                        vertex_1->coord[0] / static_cast<double>(grid_size_),
+                        vertex_1->coord[1] / static_cast<double>(grid_size_))
          << std::endl;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_1->coord[0] / grid_size_,
-                        vertex_1->coord[1] / grid_size_,
-                        vertex_2->coord[0] / grid_size_,
-                        vertex_2->coord[1] / grid_size_)
+                        vertex_1->coord[0] / static_cast<double>(grid_size_),
+                        vertex_1->coord[1] / static_cast<double>(grid_size_),
+                        vertex_2->coord[0] / static_cast<double>(grid_size_),
+                        vertex_2->coord[1] / static_cast<double>(grid_size_))
          << std::endl;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_2->coord[0] / grid_size_,
-                        vertex_2->coord[1] / grid_size_,
-                        vertex_3->coord[0] / grid_size_,
-                        vertex_3->coord[1] / grid_size_)
+                        vertex_2->coord[0] / static_cast<double>(grid_size_),
+                        vertex_2->coord[1] / static_cast<double>(grid_size_),
+                        vertex_3->coord[0] / static_cast<double>(grid_size_),
+                        vertex_3->coord[1] / static_cast<double>(grid_size_))
          << std::endl;
     file << std::format("{} {} 0 {} {} 0 0 0 64", //
-                        vertex_3->coord[0] / grid_size_,
-                        vertex_3->coord[1] / grid_size_,
-                        vertex_0->coord[0] / grid_size_,
-                        vertex_0->coord[1] / grid_size_)
+                        vertex_3->coord[0] / static_cast<double>(grid_size_),
+                        vertex_3->coord[1] / static_cast<double>(grid_size_),
+                        vertex_0->coord[0] / static_cast<double>(grid_size_),
+                        vertex_0->coord[1] / static_cast<double>(grid_size_))
          << std::endl;
   }
 }
@@ -244,8 +244,10 @@ void HierarchicalPixelGrid::PrintQuadMeshOBJ(std::ofstream &file) {
 
   for (std::size_t i = 0; i < quad_idx_; ++i) {
     file << std::format("v {} {} 0",
-                        V[map_quad_vid_to_grid_vid[i]].coord[0] / grid_size_,
-                        V[map_quad_vid_to_grid_vid[i]].coord[1] / grid_size_)
+                        V[map_quad_vid_to_grid_vid[i]].coord[0] /
+                            static_cast<double>(grid_size_),
+                        V[map_quad_vid_to_grid_vid[i]].coord[1] /
+                            static_cast<double>(grid_size_))
          << std::endl;
   }
 
@@ -261,6 +263,41 @@ void HierarchicalPixelGrid::PrintQuadMeshOBJ(std::ofstream &file) {
   }
 }
 
+void HierarchicalPixelGrid::PrintElement(const GridElement &element,
+                                         std::ofstream &file) {
+  if (std::holds_alternative<GridFace>(element)) {
+    const GridFace &face = std::get<GridFace>(element);
+    file << std::format("PE") << std::endl;
+    std::array<double, 2> ld_ = {
+        face.ldVertex->coord[0] / static_cast<double>(grid_size_),
+        face.ldVertex->coord[1] / static_cast<double>(grid_size_)};
+    std::array<double, 2> rd_ = {
+        face.rdVertex->coord[0] / static_cast<double>(grid_size_),
+        face.rdVertex->coord[1] / static_cast<double>(grid_size_)};
+    std::array<double, 2> ru_ = {
+        face.ruVertex->coord[0] / static_cast<double>(grid_size_),
+        face.ruVertex->coord[1] / static_cast<double>(grid_size_)};
+    std::array<double, 2> lu_ = {
+        face.luVertex->coord[0] / static_cast<double>(grid_size_),
+        face.luVertex->coord[1] / static_cast<double>(grid_size_)};
+
+    file << std::format("{} {} 0 {} {} 0", ld_[0], ld_[1], rd_[0], rd_[1])
+         << std::endl;
+    file << std::format("{} {} 0 {} {} 0", rd_[0], rd_[1], ru_[0], ru_[1])
+         << std::endl;
+    file << std::format("{} {} 0 {} {} 0", ru_[0], ru_[1], lu_[0], lu_[1])
+         << std::endl;
+    file << std::format("{} {} 0 {} {} 0", lu_[0], lu_[1], ld_[0], ld_[1])
+         << std::endl;
+  } else if (std::holds_alternative<GridVertex>(element)) {
+    const GridVertex &vertex = std::get<GridVertex>(element);
+    file << std::format("P\n{} {} 0",
+                        vertex.coord[0] / static_cast<double>(grid_size_),
+                        vertex.coord[1] / static_cast<double>(grid_size_))
+         << std::endl;
+  }
+  //
+}
 GridElement
 HierarchicalPixelGrid::LocateGridElement(const std::array<double, 2> &coord) {
   constexpr double EPS = 1e-6;

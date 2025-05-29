@@ -27,10 +27,6 @@ void NaivePixelator::run() {
     map_vtx_to_grid_element[vertex.idx()] = grid_->LocateGridElement(coord_);
   }
 
-  if (global::DebugLevel() > 0) {
-    dbg_file = frm::CreateDebugFilestream(std::format("eh.findvef"));
-  }
-
   for (CGAL::SM_Edge_index eh : uv_mesh_.edges()) {
     std::array<CGAL::SM_Vertex_index, 2> edge_vertex;
     edge_vertex[0] = uv_mesh_.source(uv_mesh_.halfedge(eh, 0));
@@ -71,35 +67,6 @@ void NaivePixelator::run() {
       }
     }
 
-    if (global::DebugLevel() > 0) {
-      int area = (bbMax[0] - bbMin[0]) * (bbMax[1] - bbMin[1]);
-      if (area > 4) {
-        dbg_file << "PE" << std::endl;
-        dbg_file << std::format("{} {} 0 {} {} 0",
-                                uv_mesh_.point(edge_vertex[0]).x(),
-                                uv_mesh_.point(edge_vertex[0]).y(),
-                                uv_mesh_.point(edge_vertex[1]).x(),
-                                uv_mesh_.point(edge_vertex[1]).y())
-                 << std::endl;
-        GridVertex vertex[4];
-        vertex[0] = grid_->Vertex(bbMin[0], bbMin[1]);
-        vertex[1] = grid_->Vertex(bbMax[0], bbMin[1]);
-        vertex[2] = grid_->Vertex(bbMax[0], bbMax[1]);
-        vertex[3] = grid_->Vertex(bbMin[0], bbMax[1]);
-        for (int i = 0; i < 4; ++i) {
-          dbg_file << std::format(
-                          "{} {} 0 {} {} 0", //
-                          vertex[i].coord[0] / static_cast<double>(grid_size_),
-                          vertex[i].coord[1] / static_cast<double>(grid_size_),
-                          vertex[(i + 1) % 4].coord[0] /
-                              static_cast<double>(grid_size_),
-                          vertex[(i + 1) % 4].coord[1] /
-                              static_cast<double>(grid_size_))
-                   << std::endl;
-        }
-      }
-    }
-
     std::array<double, 2> coord_0 = {uv_mesh_.point(edge_vertex[0]).x(),
                                      uv_mesh_.point(edge_vertex[0]).y()};
     std::array<double, 2> coord_1 = {uv_mesh_.point(edge_vertex[1]).x(),
@@ -109,11 +76,13 @@ void NaivePixelator::run() {
     std::array<int, 2> range = {bbMax[0] - bbMin[0], bbMax[1] - bbMin[1]};
     for (int i = 0; i < range[0]; ++i)
       for (int j = 0; j < range[1]; ++j) {
-        const GridVertex &vertex = grid_->Vertex(bbMin[0] + i, bbMin[0] + j);
+        const GridVertex &vertex = grid_->Vertex(bbMin[0] + i, bbMin[1] + j);
+
         GridFace *face = vertex.ruFace;
         PA_ASSERT_WITH_MSG(face != NULL, "GridFace is NULL");
         if (face->state == GridFace::STATE::in_mesh)
           continue;
+
         if (AlgoKit::CheckBoxLineSegmentIntersection(
                 {face->ldVertex->coord[0] / static_cast<double>(grid_size_),
                  face->ldVertex->coord[1] /
@@ -127,10 +96,6 @@ void NaivePixelator::run() {
       };
   }
 
-  if (global::DebugLevel() > 0) {
-    dbg_file.close();
-  }
-
   // 还有一种情况:对于部分非常狭长的三角形, 可能刺过某个grid格点,
   if (global::DebugLevel() > 0) {
     std::ofstream filestream = frm::CreateDebugFilestream("grid.findvef");
@@ -140,4 +105,14 @@ void NaivePixelator::run() {
     grid_->PrintQuadMeshOBJ(filestream);
     filestream.close();
   }
+}
+
+void NaivePixelator::write_grid(std::ofstream &out) {
+  out << std::format("{}", grid_size_) << std::endl;
+  for (auto &face : grid_->F) {
+    if (face.state == GridFace::STATE::in_mesh)
+      out << face.id << " ";
+  }
+  out << std::endl;
+  out.close();
 }
